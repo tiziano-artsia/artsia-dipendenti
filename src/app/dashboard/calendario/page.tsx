@@ -554,7 +554,7 @@ export default function Calendario() {
                                             
                                             ? 'bg-gradient-to-br from-emerald-50/80 to-blue-50/60 border-emerald-300/70 shadow-emerald-200/50 hover:border-emerald-400'
                                             : isFestivo
-                                                ? 'bg-gradient-to-br from-purple-50/80 to-pink-50/80 border-red-500 shadow-purple-200/50 hover:border-purple-400'
+                                                ? 'bg-gradient-to-br from-purple-50/80 to-pink-50/80 border-red-400 shadow-purple-200/50 hover:border-red-500'
                                             : isWeekend
                                                 ? 'bg-gray-200 border-zinc-200/60'
                                                 : 'bg-white/90 border-zinc-200/50 hover:border-emerald-300/70'
@@ -651,7 +651,7 @@ export default function Calendario() {
                         </div>
 
                         <div className="flex items-center gap-3 px-4 md:px-6 py-3 md:py-4 bg-white/70 backdrop-blur-xl rounded-2xl border border-zinc-200/50 shadow-lg">
-                            <div className="w-5 h-5 bg-zinc-200 rounded-xl border-2 border-zinc-300"></div>
+                            <div className="w-5 h-5 bg-gray-200 rounded-xl border-2 border-zinc-300"></div>
                             <span className="flex items-center gap-2">
             <Calendar className="w-4 h-4 text-zinc-600" />
             Weekend
