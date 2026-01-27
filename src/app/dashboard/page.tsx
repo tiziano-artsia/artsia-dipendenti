@@ -253,7 +253,7 @@ export default function Dashboard() {
                                 color: 'from-orange-500 to-red-600',
                                 description: 'Carica per dipendente'
                             }] : []),
-                            ].map(({ href, onClick, label, icon: Icon, color, description }) => (
+                            ].map(({ href, label, icon: Icon, color, description }) => (
                             <a
                                 key={label}
                                 href={href}

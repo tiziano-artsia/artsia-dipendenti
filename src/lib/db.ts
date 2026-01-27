@@ -283,6 +283,7 @@ export async function getPayslips(filter: Partial<Pick<PayslipDoc, "employeeId" 
 
 export async function createPayslip(data: {
     employeeId: number;
+    employeeName: string;
     mese: string;
     anno: string;
     netto: string;

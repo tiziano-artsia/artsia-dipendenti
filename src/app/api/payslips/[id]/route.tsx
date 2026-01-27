@@ -1,17 +1,18 @@
-// pages/api/payslips/[id]/download.ts
 import { NextRequest, NextResponse } from 'next/server';
-import { connectDB } from '@/lib/db';
-import { getPayslipById } from '@/lib/db';
-import { EmployeeModel } from '@/lib/db';
+import { connectDB, getPayslipById, EmployeeModel } from '@/lib/db';
 import fs from 'fs';
 import path from 'path';
 
-export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
+export async function GET(
+    request: NextRequest,
+    context: { params: Promise<{ id: string }> }
+) {
     await connectDB();
 
-    const id = Number(params.id);
-    const payslip = await getPayslipById(id);
+    const { id } = await context.params;
+    const payslipId = Number(id);
 
+    const payslip = await getPayslipById(payslipId);
     if (!payslip) {
         return NextResponse.json({ error: 'Busta paga non trovata' }, { status: 404 });
     }
@@ -27,6 +28,7 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
     }
 
     const fileBuffer = fs.readFileSync(filePath);
+
     return new NextResponse(fileBuffer, {
         headers: {
             'Content-Type': 'application/pdf',

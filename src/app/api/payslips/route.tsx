@@ -49,7 +49,7 @@ export async function POST(request: NextRequest) {
         });
 
         const { fields, files } = await new Promise<{ fields: any; files: any }>((resolve, reject) => {
-            form.parse(request, (err, fields, files) => {
+            form.parse(request, (err : any, fields : any, files : any) => {
                 if (err) {
                     console.error('Errore nel parsing del form:', err);
                     reject(err);
