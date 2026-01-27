@@ -2,14 +2,31 @@
 
 import { useAuth } from '@/hooks/useAuth';
 import { useStats } from '@/hooks/useStats';
-import { Calendar, Clock, Home, FileText, CheckCircle, LogOut, Briefcase, Sun, Loader2, Plane, DollarSign, Eye, EyeOff, Euro, Download } from 'lucide-react';
+import {
+    Calendar,
+    Clock,
+    Home,
+    FileText,
+    CheckCircle,
+    LogOut,
+    Briefcase,
+    Sun,
+    Loader2,
+    Plane,
+    DollarSign,
+    Eye,
+    EyeOff,
+    Euro,
+    Download,
+    EuroIcon
+} from 'lucide-react';
 import { useState } from 'react';
 
 export default function Dashboard() {
     const { user, logout, token } = useAuth();
     const { stats, loading } = useStats();
     const [showPayslips, setShowPayslips] = useState(false); // Toggle visibilità importi
-
+    const isAdmin = user?.role === 'admin';
     const handleLogout = () => {
         logout();
         window.location.href = '/login';
@@ -140,62 +157,66 @@ export default function Dashboard() {
                     ))}
                 </div>
 
-                {/* SEZIONE Buste Paga con Toggle Occhio */}
-                <div className="bg-white/60 backdrop-blur-3xl rounded-3xl shadow-2xl p-8 md:p-10 border border-white/70 hover:shadow-3xl transition-all duration-700">
-                    <div className="flex items-center justify-between mb-10">
-                        <div className="flex items-center gap-4">
-                            <FileText className="w-12 h-12 text-indigo-600 shrink-0" />
-                            <h2 className="text-4xl font-black tracking-tight bg-gradient-to-r from-zinc-800 to-slate-700 bg-clip-text text-transparent">
-                                Ultime Buste Paga
-                            </h2>
-                        </div>
-                        {/* Toggle Visibilità Importi */}
-                        <button
-                            onClick={() => setShowPayslips(!showPayslips)}
-                            className="flex items-center gap-2 px-4 py-2 bg-white/80 backdrop-blur-xl rounded-2xl border border-zinc-200 hover:border-indigo-300 hover:shadow-md transition-all duration-300 text-sm font-mono uppercase tracking-wider"
-                            title={showPayslips ? "Nascondi importi" : "Mostra importi"}
-                        >
-                            {showPayslips ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                            <span>{showPayslips ? 'Nascondi' : 'Mostra'}</span>
-                        </button>
-                    </div>
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                        {payslipsRecent.map(({ id, meseAnno, netto, nettoHidden }) => (
-                            <a
-                                key={id}
-                                href={`/api/payslips/${id}/download?token=${token}`}
-                                download={`busta-paga-${meseAnno.toLowerCase().replace(' ', '-')}.pdf`}
-                                className="group relative p-6 bg-white/90 backdrop-blur-xl border border-zinc-200/50 rounded-2xl hover:shadow-xl hover:border-indigo-300 hover:-translate-y-1 transition-all duration-400 overflow-hidden flex flex-col"
+
+                {/* SEZIONE Buste Paga - SOLO PER NON-ADMIN */}
+                {user?.role !== 'admin' && (
+                    <div className="bg-white/60 backdrop-blur-3xl rounded-3xl shadow-2xl p-8 md:p-10 border border-white/70 hover:shadow-3xl transition-all duration-700">
+                        <div className="flex items-center justify-between mb-10">
+                            <div className="flex items-center gap-4">
+                                <FileText className="w-12 h-12 text-indigo-600 shrink-0" />
+                                <h2 className="text-4xl font-black tracking-tight bg-gradient-to-r from-zinc-800 to-slate-700 bg-clip-text text-transparent">
+                                    Ultime Buste Paga
+                                </h2>
+                            </div>
+                            {/* Toggle Visibilità Importi */}
+                            <button
+                                onClick={() => setShowPayslips(!showPayslips)}
+                                className="flex items-center gap-2 px-4 py-2 bg-white/80 backdrop-blur-xl rounded-2xl border border-zinc-200 hover:border-indigo-300 hover:shadow-md transition-all duration-300 text-sm font-mono uppercase tracking-wider"
+                                title={showPayslips ? "Nascondi importi" : "Mostra importi"}
                             >
-                                <div className="absolute inset-0 bg-gradient-to-r from-indigo-500/5 to-purple-500/5 opacity-0 group-hover:opacity-100 transition-opacity" />
-                                
-                                <div className="relative z-10 flex items-start justify-between mb-3">
-                                    <h3 className="font-black text-xl text-zinc-800 group-hover:text-indigo-700">
-                                        {meseAnno}
-                                    </h3>
-                                    <Euro className="w-5 h-5 text-indigo-500 group-hover:scale-110 transition-transform" />
-                                </div>
-                                
-                                <p className="text-2xl font-black text-indigo-600 mb-2">
-                                    {showPayslips ? netto : nettoHidden}
-                                </p>
-                                
-                                <div className="flex items-center gap-2 text-xs font-mono text-zinc-500 uppercase tracking-wider">
-                                    <span>Scarica PDF</span>
-                                     <Download className="w-5 h-5 text-indigo-500 group-hover:scale-110 transition-transform" />
-                                </div>
+                                {showPayslips ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                                <span>{showPayslips ? 'Nascondi' : 'Mostra'}</span>
+                            </button>
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                            {payslipsRecent.map(({ id, meseAnno, netto, nettoHidden }) => (
+                                <a
+                                    key={id}
+                                    href={`/api/payslips/${id}/download?token=${token}`}
+                                    download={`busta-paga-${meseAnno.toLowerCase().replace(' ', '-')}.pdf`}
+                                    className="group relative p-6 bg-white/90 backdrop-blur-xl border border-zinc-200/50 rounded-2xl hover:shadow-xl hover:border-indigo-300 hover:-translate-y-1 transition-all duration-400 overflow-hidden flex flex-col"
+                                >
+                                    <div className="absolute inset-0 bg-gradient-to-r from-indigo-500/5 to-purple-500/5 opacity-0 group-hover:opacity-100 transition-opacity" />
+
+                                    <div className="relative z-10 flex items-start justify-between mb-3">
+                                        <h3 className="font-black text-xl text-zinc-800 group-hover:text-indigo-700">
+                                            {meseAnno}
+                                        </h3>
+                                        <Euro className="w-5 h-5 text-indigo-500 group-hover:scale-110 transition-transform" />
+                                    </div>
+
+                                    <p className="text-2xl font-black text-indigo-600 mb-2">
+                                        {showPayslips ? netto : nettoHidden}
+                                    </p>
+
+                                    <div className="flex items-center gap-2 text-xs font-mono text-zinc-500 uppercase tracking-wider">
+                                        <span>Scarica PDF</span>
+                                        <Download className="w-5 h-5 text-indigo-500 group-hover:scale-110 transition-transform" />
+                                    </div>
+                                </a>
+                            ))}
+                            <a
+                                href="/dashboard/buste-paga"
+                                className="group p-6 bg-gradient-to-br from-indigo-50 to-purple-50 border-2 border-dashed border-indigo-200 hover:border-indigo-400 rounded-2xl hover:shadow-lg hover:-translate-y-1 transition-all duration-400 flex flex-col items-center justify-center text-center"
+                            >
+                                <FileText className="w-12 h-12 text-indigo-400 mb-4 group-hover:scale-110 transition-transform" />
+                                <h3 className="font-black text-xl text-zinc-700 mb-2">Vedi Tutte</h3>
+                                <p className="text-sm text-zinc-500">Archivio completo buste paga</p>
                             </a>
-                        ))}
-                        <a
-                            href="/dashboard/buste-paga"
-                            className="group p-6 bg-gradient-to-br from-indigo-50 to-purple-50 border-2 border-dashed border-indigo-200 hover:border-indigo-400 rounded-2xl hover:shadow-lg hover:-translate-y-1 transition-all duration-400 flex flex-col items-center justify-center text-center"
-                        >
-                            <FileText className="w-12 h-12 text-indigo-400 mb-4 group-hover:scale-110 transition-transform" />
-                            <h3 className="font-black text-xl text-zinc-700 mb-2">Vedi Tutte</h3>
-                            <p className="text-sm text-zinc-500">Archivio completo buste paga</p>
-                        </a>
+                        </div>
                     </div>
-                </div>
+                )}
+
 
                 {/* Quick Actions (3 card) */}
                 <div className="bg-white/60 backdrop-blur-3xl rounded-3xl shadow-2xl p-8 md:p-10 border border-white/70 hover:shadow-3xl transition-all duration-700">
@@ -224,8 +245,15 @@ export default function Dashboard() {
                                 icon: CheckCircle,
                                 color: 'from-emerald-500 to-green-600',
                                 description: 'Approva richieste'
-                            }
-                        ].map(({ href, label, icon: Icon, color, description }) => (
+                            },
+                            ...(isAdmin? [{
+                                href: '/dashboard/buste-paga',
+                                label: 'Buste Paga',
+                                icon: EuroIcon,
+                                color: 'from-orange-500 to-red-600',
+                                description: 'Carica per dipendente'
+                            }] : []),
+                            ].map(({ href, onClick, label, icon: Icon, color, description }) => (
                             <a
                                 key={label}
                                 href={href}

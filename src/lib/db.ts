@@ -249,3 +249,51 @@ export async function updateAbsenceStatus(absenceId: number | string, status: Ab
     return result.modifiedCount > 0;
 }
 
+export type PayslipDoc = {
+    id: number;
+    employeeId: number;
+    employeeName: string;
+    mese: string;
+    anno: string;
+    netto: string;
+    filePath: string;
+    createdAt: Date;
+    updatedAt: Date;
+};
+
+const payslipSchema = new Schema<PayslipDoc>(
+    {
+        id: { type: Number, required: true, unique: true, index: true },
+        employeeId: { type: Number, required: true, index: true },
+        employeeName: { type: String, required: true },
+        mese: { type: String, required: true },
+        anno: { type: String, required: true },
+        netto: { type: String, required: true },
+        filePath: { type: String, required: true },
+    },
+    { timestamps: true }
+);
+export const PayslipModel: Model<PayslipDoc> =
+    mongoose.models.Payslip || mongoose.model<PayslipDoc>("Payslip", payslipSchema);
+
+export async function getPayslips(filter: Partial<Pick<PayslipDoc, "employeeId" | "mese" | "anno">> = {}) {
+    await connectDB();
+    return PayslipModel.find(filter).sort({ createdAt: -1 }).lean();
+}
+
+export async function createPayslip(data: {
+    employeeId: number;
+    mese: string;
+    anno: string;
+    netto: string;
+    filePath: string;
+}) {
+    await connectDB();
+    const doc = await PayslipModel.create({ ...data, id: Date.now() });
+    return doc.toObject();
+}
+
+export async function getPayslipById(id: number) {
+    await connectDB();
+    return PayslipModel.findOne({ id }).lean();
+}
