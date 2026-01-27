@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import jwt from 'jsonwebtoken';
-import { getAbsences } from '@/lib/db';
+import {type AbsenceDoc, getAbsences} from '@/lib/db';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
 
@@ -28,26 +28,23 @@ export async function GET(request: NextRequest) {
             return NextResponse.json({ error: 'Non autenticato' }, { status: 401 });
         }
 
-        // 🔥 Fetch tutte le assenze APPROVATE dell'utente
-        const filter = {
+        // 🔥 Fetch assenze APPROVATE utente
+        const assenze = await getAbsences({
             employeeId: user.id,
-            status: 'approved' // 🔥 SOLO APPROVATE
-        };
+            status: 'approved'
+        });
 
-        const assenze = await getAbsences(filter);
-
-        // 🔥 CALCOLA STATISTICHE
+        // 🔥 STATISTICHE Type-safe
         const stats = {
             ferie: 0,
             permessi: 0,
             smartworking: 0,
             malattia: 0
-            
         };
 
-        assenze.forEach((assenza: any) => {
-            const tipo = (assenza.type || '').toLowerCase();
-            const durata = assenza.durata || assenza.duration || 0;
+        assenze.forEach((assenza: AbsenceDoc) => {
+            const tipo = assenza.type;
+            const durata = Number(assenza.durata);
 
             switch (tipo) {
                 case 'ferie':
@@ -70,7 +67,7 @@ export async function GET(request: NextRequest) {
             data: stats
         });
 
-    } catch (error) {
+    } catch (error: unknown) {
         console.error('❌ Stats API error:', error);
         return NextResponse.json(
             { error: 'Errore server' },

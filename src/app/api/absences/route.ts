@@ -2,10 +2,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getAbsences, createAbsence, updateAbsenceStatus } from '@/lib/db';
 import jwt from 'jsonwebtoken';
+import {type} from "node:os";
 
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
 
 interface JWTPayload {
+    email: string;
     id: number;
     role: string;
 }
@@ -103,16 +105,20 @@ export async function POST(request: NextRequest) {
         }
 
         const newAbsence = await createAbsence({
+            _id: undefined,
+            tipo: "",
             employeeId: user.id,
             type,                    // malattia OK!
             dataInizio,              // YYYY-MM-DD
             durata: Number(durata),
             motivo: motivo || '',
             status: 'pending',
-            approvedBy: null
+            approvedBy: null,
+            data: dataInizio,
+            stato: "",
         });
 
-        // 🔥 FORMATTA DATA ITALIANA nella risposta
+        // FORMATTA DATA ITALIANA nella risposta
         const response = {
             ...newAbsence,
             dataInizio: new Date(newAbsence.dataInizio).toLocaleDateString('it-IT')
@@ -120,7 +126,7 @@ export async function POST(request: NextRequest) {
 
         console.log('✅ Nuova assenza:', response);
         return NextResponse.json({ success: true, data: response });
-    } catch (error) {
+    } catch (error: any) {
         console.error('POST absence error:', error);
         return NextResponse.json({ error: 'Errore server', details: error.message }, { status: 500 });
     }

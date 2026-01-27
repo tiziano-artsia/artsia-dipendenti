@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from './useAuth';
 
 interface MyAbsence {
+    createdAt: any;
     id: number;
     data: string;
     tipo: string;
@@ -74,7 +75,7 @@ export function useMyAbsences() {
         fetchAssenze();
     }, [fetchAssenze]);
 
-    const submitRequest = async (form: FormData) => {
+    const submitRequest = async (form: { tipo: string; data: string; durata: number; motivo: string }) => {
         console.log('📤 Submit form:', form);
 
         if (!token) {
@@ -92,7 +93,7 @@ export function useMyAbsences() {
                 body: JSON.stringify({
                     type: form.tipo,
                     dataInizio: form.data,
-                    durata: parseInt(form.durata),
+                    durata: parseInt(String(form.durata)),
                     motivo: form.motivo
                 })
             });

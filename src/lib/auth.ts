@@ -1,6 +1,6 @@
 import jwt from 'jsonwebtoken';
 import bcrypt from 'bcryptjs';
-import { Employee } from '@/types';
+import type {Employee} from '@/types';
 import { EmployeeModel, connectDB } from './db';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';

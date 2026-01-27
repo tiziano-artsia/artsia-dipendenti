@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from './useAuth';
 
 interface PendingRequest {
+    ruolo: string;
     id: number | string;
     dipendente: string;
     team?: string;

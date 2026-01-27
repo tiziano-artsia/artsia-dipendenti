@@ -1,45 +1,25 @@
+// src/app/api/auth/login/route.ts
 import { NextRequest, NextResponse } from 'next/server';
 import jwt from 'jsonwebtoken';
+import { authenticateUser } from '@/lib/db';
 
-let authenticateUser;
-try {
-    authenticateUser = require('@/lib/db').authenticateUser;
-    console.log('✅ DB import OK');
-} catch (e) {
-    console.error('❌ DB import ERROR:', e);
-}
-
-const JWT_SECRET = process.env.JWT_SECRET || 'fallback-super-secret-2026-change-me';
+const JWT_SECRET = process.env.JWT_SECRET || '';
 
 export async function POST(request: NextRequest) {
     console.log('🚀 LOGIN API CHIAMATA');
 
     try {
         const body = await request.json();
-        console.log('📥 Body ricevuto:', body);
-
         const { email, password } = body;
 
         if (!email || !password) {
-            console.log('❌ Campi mancanti');
             return NextResponse.json(
                 { success: false, error: 'Email e password richiesti' },
                 { status: 400 }
             );
         }
 
-        // TEST DB
-        if (!authenticateUser) {
-            console.error('❌ authenticateUser NON ESISTE!');
-            return NextResponse.json(
-                { success: false, error: 'DB non configurato' },
-                { status: 500 }
-            );
-        }
-
-        console.log('🔍 Chiamata authenticateUser...');
-        const user = await authenticateUser(email, password);
-        console.log('👤 User result:', user ? `${user.name} (${user.role})` : 'NULL');
+        const user = await authenticateUser(email, password);  // ✅ Type-safe
 
         if (!user) {
             return NextResponse.json(
@@ -54,7 +34,7 @@ export async function POST(request: NextRequest) {
             { expiresIn: '7d' }
         );
 
-        console.log('✅ LOGIN SUCCESS!', user.email);
+        console.log('✅ LOGIN:', user.email, user.role);
 
         return NextResponse.json({
             success: true,
@@ -63,10 +43,9 @@ export async function POST(request: NextRequest) {
         });
 
     } catch (error: any) {
-        console.error('💥 ERRORE COMPLETO LOGIN:', error);
-        console.error('Stack:', error.stack);
+        console.error('💥 LOGIN ERROR:', error);
         return NextResponse.json(
-            { success: false, error: 'Errore interno: ' + error.message },
+            { success: false, error: 'Errore server' },
             { status: 500 }
         );
     }

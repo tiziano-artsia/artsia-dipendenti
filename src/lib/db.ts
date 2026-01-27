@@ -16,7 +16,6 @@ type MongooseCache = {
 };
 
 declare global {
-    // eslint-disable-next-line no-var
     var _mongooseCache: MongooseCache | undefined;
 }
 
@@ -28,7 +27,7 @@ export async function connectDB() {
 
     if (!cached.promise) {
         cached.promise = mongoose
-            .connect(MONGODB_URI, {
+            .connect(MONGODB_URI!, {
                 bufferCommands: false,
             })
             .then((m) => {
@@ -61,8 +60,10 @@ export type EmployeeDoc = {
 };
 
 export type AbsenceDoc = {
+    tipo: string;
+    data:string;
     id: number;
-    employeeId: number;
+    employeeId: any;
     type: AbsenceType;
     dataInizio: string; // YYYY-MM-DD
     durata: number; // giorni o ore
@@ -71,7 +72,10 @@ export type AbsenceDoc = {
     approvedBy?: number | null;
     createdAt: Date;
     updatedAt: Date;
-};
+    _id: any;
+    stato: string;
+}
+
 
 /**
  * Schemas
@@ -137,11 +141,6 @@ const demoEmployees = [
     { id: 100, name: "Admin", email: "admin@azienda.it", team: "Admin" as const, role: "admin" as const },
 ];
 
-const demoAbsences: Omit<AbsenceDoc, "createdAt" | "updatedAt">[] = [
-    { id: 1700000000001, employeeId: 2, type: "ferie", dataInizio: "2026-02-10", durata: 5, motivo: "Vacanza", status: "pending", approvedBy: null },
-    { id: 1700000000002, employeeId: 3, type: "permesso", dataInizio: "2026-01-15", durata: 4, motivo: "Visita medica", status: "approved", approvedBy: 1 },
-    { id: 1700000000003, employeeId: 10, type: "smartworking", dataInizio: "2026-01-22", durata: 1, motivo: "Smart", status: "pending", approvedBy: null },
-];
 
 export async function ensureSeeded() {
     await connectDB();
@@ -161,7 +160,7 @@ export async function ensureSeeded() {
         }))
     );
 
-    await AbsenceModel.insertMany(demoAbsences);
+    //await AbsenceModel.insertMany(demoAbsences);
 
     console.log("✅ Seed completato (dipendenti + assenze demo)");
 }
@@ -209,8 +208,10 @@ export async function createAbsence(data: Omit<AbsenceDoc, "id" | "createdAt" | 
 export async function updateAbsenceStatus(absenceId: number | string, status: AbsenceStatus, approvedBy: number) {
     await connectDB();
 
+
     const result = await AbsenceModel.updateOne(
-        { id: absenceId }, // ← Campo id NUMBER dal tuo schema
+        // @ts-ignore
+        { id: absenceId },
         {
             $set: {
                 status,

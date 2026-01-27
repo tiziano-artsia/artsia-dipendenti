@@ -4,6 +4,7 @@ import { useState, useMemo } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { useMyAbsences } from '@/hooks/useMyAbsences';
 import { FileText, Calendar, Clock, Sun, Home, Bed, CheckCircle, XCircle, Loader2, Send, RotateCcw, AlertCircle, Filter, X } from 'lucide-react';
+import type {AbsenceDoc} from "@/lib/db";
 
 export default function MieiDati() {
     const { user } = useAuth();
@@ -88,63 +89,23 @@ export default function MieiDati() {
         return count;
     };
 
-    // 🔥 ORDINAMENTO + FILTRAGGIO
     const assenzeFiltrate = useMemo(() => {
         console.log('📊 Assenze grezze:', assenze);
 
-        // 1. ORDINA per data creazione (più recenti prima)
-        let risultato = [...assenze].sort((a, b) => {
-            const timeA = a.createdAt
-                ? new Date(a.createdAt).getTime()
-                : a._id && typeof a._id === 'string'
-                    ? parseInt(a._id.substring(0, 8), 16) * 1000
-                    : 0;
+        const assenzeTyped = assenze as unknown as AbsenceDoc[];
 
-            const timeB = b.createdAt
-                ? new Date(b.createdAt).getTime()
-                : b._id && typeof b._id === 'string'
-                    ? parseInt(b._id.substring(0, 8), 16) * 1000
-                    : 0;
+        return assenzeTyped.sort((a, b) => {
+            const timeA = a.createdAt?.getTime() ||
+                (typeof a._id === 'string' ?
+                    parseInt(a._id.substring(0, 8), 16) * 1000 : 0);
 
-            return timeB - timeA; // PIÙ RECENTI PRIMA
+            const timeB = b.createdAt?.getTime() ||
+                (typeof b._id === 'string' ?
+                    parseInt(b._id.substring(0, 8), 16) * 1000 : 0);
+
+            return timeB - timeA; // RECENTI PRIMA
         });
-
-        // 2. FILTRA per tipo
-        if (filtri.tipo !== 'tutti') {
-            risultato = risultato.filter(a =>
-                a.tipo?.toLowerCase() === filtri.tipo.toLowerCase()
-            );
-        }
-
-        // 3. FILTRA per stato
-        if (filtri.stato !== 'tutti') {
-            risultato = risultato.filter(a => a.stato === filtri.stato);
-        }
-
-        // 4. FILTRA per periodo
-        if (filtri.periodo !== 'tutti') {
-            const oggi = new Date();
-            risultato = risultato.filter(a => {
-                const dataAssenza = new Date(a.dataInizio || a.data);
-                const diffMesi = (oggi.getTime() - dataAssenza.getTime()) / (1000 * 60 * 60 * 24 * 30);
-
-                switch (filtri.periodo) {
-                    case 'ultimo-mese':
-                        return diffMesi <= 1;
-                    case 'ultimi-3-mesi':
-                        return diffMesi <= 3;
-                    case 'anno-corrente':
-                        return dataAssenza.getFullYear() === oggi.getFullYear();
-                    default:
-                        return true;
-                }
-            });
-        }
-
-        console.log('✅ Assenze filtrate:', risultato.length);
-        return risultato;
-    }, [assenze, filtri]);
-
+    }, [assenze]);
     const nomeUtente = user?.name || `Utente ${user?.id || ''}`;
 
     if (loading) {

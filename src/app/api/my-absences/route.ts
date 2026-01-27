@@ -18,15 +18,16 @@ export async function GET(request: NextRequest) {
         }).sort({ dataInizio: -1 }).lean();
 
         // 🔥 FIX: mappatura corretta + MALATTIA
+
         const formatted = absences.map(abs => ({
             id: abs._id,
-            data: abs.dataInizio, // 🔥 Usa dataInizio grezza per consistenza
+            data: abs.dataInizio,
             tipo: abs.type === 'ferie' ? 'Ferie' :
-                abs.type === 'malattia' ? 'Malattia' :  // 🔥 AGGIUNGI MALATTIA
+                abs.type === 'malattia' ? 'Malattia' :
                     abs.type === 'smartworking' ? 'Smartworking' : 'Permesso',
             durata: abs.durata,
             stato: abs.status,
-            motivo: abs.reason || abs.motivo  // 🔥 MOTIVO
+            motivo:  abs.motivo
         }));
 
         return NextResponse.json({ success: true, data: formatted });
@@ -91,8 +92,9 @@ export async function POST(request: NextRequest) {
             data: nuovaAssenza
         });
 
-    } catch (error) {
+    } catch (error:any) {
         console.error('💥 POST error:', error);
+
         return NextResponse.json(
             { error: 'Errore server', details: error.message },
             { status: 500 }

@@ -1,42 +1,27 @@
-// src/app/api/approvazioni/[id]/route.ts
 import { NextRequest, NextResponse } from 'next/server';
-import { connectToDatabase } from '@/lib/mongodb';
-import { ObjectId } from 'mongodb';
+import { connectDB, updateAbsenceStatus } from '@/lib/db';
 
 export async function PATCH(
     request: NextRequest,
-    { params }: { params: Promise<{ id: string }> }  // ← Promise!
+    { params }: { params: Promise<{ id: string }> }
 ) {
-    const { id } = await params;  // ← await!
-
+    const { id } = await params;
     const { action } = await request.json();
 
-    console.log('🔍 API Approvazione:', { id, action });
-
     try {
-        const db = await connectToDatabase();
-        const collection = db.collection('richieste');
-
-        const result = await collection.updateOne(
-            { _id: new ObjectId(id) },
-            {
-                $set: {
-                    status: action === 'approve' ? 'approved' : 'rejected',
-                    approvedBy: 'manager',
-                    updatedAt: new Date()
-                }
-            }
+        const success = await updateAbsenceStatus(
+            id,
+            action === 'approve' ? 'approved' : 'rejected',
+            1  // manager ID
         );
 
-        if (result.matchedCount === 0) {
-            return NextResponse.json({ error: 'Richiesta non trovata' }, { status: 404 });
+        if (!success) {
+            return NextResponse.json({ error: 'Assenza non trovata' }, { status: 404 });
         }
 
-        console.log('✅ Update:', result);
-        return NextResponse.json({ success: true, modified: result.modifiedCount });
-
+        return NextResponse.json({ success: true });
     } catch (error) {
-        console.error('💥 MongoDB Error:', error);
-        return NextResponse.json({ error: 'Errore database' }, { status: 500 });
+        console.error('💥 Error:', error);
+        return NextResponse.json({ error: 'Errore server' }, { status: 500 });
     }
 }

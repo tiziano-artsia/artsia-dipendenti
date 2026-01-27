@@ -1,10 +1,10 @@
 'use client';
 
-import { createContext, useContext, useEffect, useState, useCallback } from 'react';
+import { createContext, useContext, useEffect, useState, useCallback, type SetStateAction} from 'react';
 
 const AuthContext = createContext(undefined);
 
-export function AuthProvider({ children }) {
+export function AuthProvider({children}: { children: any }) {
     const [user, setUser] = useState(null);
     const [loading, setLoading] = useState(true);
 
@@ -20,7 +20,7 @@ export function AuthProvider({ children }) {
         setLoading(false);
     }, []);
 
-    const login = useCallback((userData) => {
+    const login = useCallback((userData: SetStateAction<null>) => {
         localStorage.setItem('user', JSON.stringify(userData));
         setUser(userData);
     }, []);
@@ -37,6 +37,7 @@ export function AuthProvider({ children }) {
         loading,
     };
 
+    // @ts-ignore
     return React.createElement(AuthContext.Provider, { value }, children);
 }
 
