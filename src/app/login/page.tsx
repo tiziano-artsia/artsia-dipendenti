@@ -13,7 +13,6 @@ export default function LoginPage() {
     const { login } = useAuth();
 
     const handleSubmit = async (e: React.FormEvent) => {
-        /*
         e.preventDefault();
         setLoading(true);
         setError('');
@@ -40,8 +39,7 @@ export default function LoginPage() {
             setError('Errore connessione');
         } finally {
             setLoading(false);
-        }*/
-       return;
+        }
     };
 
     return (
@@ -115,7 +113,7 @@ export default function LoginPage() {
                         </button>
                     </form>
 
-                    {/* Demo ultra minimal */}
+                    {/* Demo ultra minimal
                     <div className="mt-12 pt-8 border-t border-white/10">
                         <p className="text-xs text-white/40 text-center font-mono tracking-widest uppercase mb-3">
                             Demo
@@ -125,6 +123,7 @@ export default function LoginPage() {
                             <div>marco.rossi@azienda.it <span className="text-white/70">/</span> pass123</div>
                         </div>
                     </div>
+                    */}
                 </div>
             </div>
         </div>
