@@ -7,6 +7,7 @@ import {type} from "node:os";
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
 
 interface JWTPayload {
+    name: string;
     email: string;
     id: number;
     role: string;
@@ -116,8 +117,10 @@ export async function POST(request: NextRequest) {
             approvedBy: null,
             data: dataInizio,
             stato: "",
+            requestedBy: user.name || user.email,
         });
 
+console.log('eccolo',newAbsence);
         // FORMATTA DATA ITALIANA nella risposta
         const response = {
             ...newAbsence,

@@ -74,6 +74,7 @@ export type AbsenceDoc = {
     updatedAt: Date;
     _id: any;
     stato: string;
+    requestedBy: string;
 }
 
 
@@ -101,6 +102,10 @@ const absenceSchema = new Schema<AbsenceDoc>(
         durata: { type: Number, required: true },
         motivo: { type: String, default: "" },
         status: { type: String, required: true, enum: ["pending", "approved", "rejected"], default: "pending" },
+        requestedBy: {
+            type: String,
+            default: ''
+        },
         approvedBy: { type: Number, default: null },
     },
     { timestamps: true }
@@ -199,7 +204,20 @@ export async function getAbsences(filter: Partial<Pick<AbsenceDoc, "employeeId" 
     return AbsenceModel.find(filter).sort({ createdAt: -1 }).lean();
 }
 
-export async function createAbsence(data: Omit<AbsenceDoc, "id" | "createdAt" | "updatedAt">) {
+export async function createAbsence(data: {
+    _id: undefined;
+    tipo: string;
+    employeeId: number;
+    type: any;
+    dataInizio: any;
+    durata: number;
+    motivo: any;
+    status: string;
+    approvedBy: null;
+    data: any;
+    stato: string;
+    requestedBy: string
+}) {
     await connectDB();
     const doc = await AbsenceModel.create({ ...data, id: Date.now() });
     return doc.toObject();

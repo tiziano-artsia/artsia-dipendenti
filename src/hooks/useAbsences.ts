@@ -66,26 +66,39 @@ export function useAbsences() {
         fetchAbsences();
     }, [fetchAbsences]);
 
-    const createAbsence = async (absence: Omit<Absence, 'id' | 'status' | 'approvedBy'>) => {
+    const createAbsence = async (absence: Omit<Absence, 'id' | 'status'>) => {
         const token = getToken();
         if (!token) throw new Error('Non autenticato');
 
-        const res = await fetch('/api/absences', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${token}`
-            },
-            body: JSON.stringify(absence)
-        });
+        // 🔑 DECODE token per ottenere nome utente richiedente
+        try {
+            const payload = JSON.parse(atob(token.split('.')[1]));
+            const nomeUtente = payload.name || payload.nome || 'Anonimo';
 
-        const data = await res.json();
-        if (data.success) {
-            await fetchAbsences();
-            return data.data;
+            const res = await fetch('/api/absences', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({
+                    ...absence,
+                    requestedBy: nomeUtente
+                })
+            });
+
+            const data = await res.json();
+            if (data.success) {
+                await fetchAbsences();
+                return data.data;
+            }
+            throw new Error(data.error || 'Errore creazione assenza');
+        } catch (decodeError) {
+            console.warn('Token decode failed:', decodeError);
+
         }
-        throw new Error(data.error || 'Errore creazione assenza');
     };
+
 
     const approveAbsence = async (id: number, status: 'approved' | 'rejected') => {
         const token = getToken();
