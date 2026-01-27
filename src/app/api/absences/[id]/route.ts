@@ -1,27 +1,28 @@
 // src/app/api/approvazioni/[id]/route.ts
 import { NextRequest, NextResponse } from 'next/server';
-import { connectToDatabase } from '@/lib/mongodb'; // Il tuo DB connect
+import { connectToDatabase } from '@/lib/mongodb';
 import { ObjectId } from 'mongodb';
 
 export async function PATCH(
     request: NextRequest,
-    { params }: { params: { id: string } }
+    { params }: { params: Promise<{ id: string }> }  // ← Promise!
 ) {
-    const { id } = params;
+    const { id } = await params;  // ← await!
+
     const { action } = await request.json();
 
     console.log('🔍 API Approvazione:', { id, action });
 
     try {
         const db = await connectToDatabase();
-        const collection = db.collection('richieste'); // Nome tua collection
+        const collection = db.collection('richieste');
 
         const result = await collection.updateOne(
-            { _id: new ObjectId(id) }, // ← ObjectId!
+            { _id: new ObjectId(id) },
             {
                 $set: {
                     status: action === 'approve' ? 'approved' : 'rejected',
-                    approvedBy: 'manager', // O user.id
+                    approvedBy: 'manager',
                     updatedAt: new Date()
                 }
             }
