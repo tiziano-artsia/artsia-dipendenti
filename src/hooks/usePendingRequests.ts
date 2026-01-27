@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from './useAuth';
 
 interface PendingRequest {
+    requestedBy: string;
     ruolo: string;
     id: number | string;
     dipendente: string;
@@ -58,7 +59,7 @@ export function usePendingRequests() {
                 .filter((r: any) => r.status === 'pending')
                 .map((r: any) => ({
                     id: r.id,                    // 1768312766718
-                    dipendente: `${r.employeeId}`,  // ← Mappa employeeId → nome (TEMP)
+                    dipendente: r.requestedBy || `ID ${r.employeeId}`,  // ← Mappa employeeId → nome (TEMP)
                     tipo: r.type.toUpperCase(),  // "PERMESSO"
                     data: r.dataInizio,          // "2026-01-13"
                     durata: `${r.durata} ore`,   // "2 ore"

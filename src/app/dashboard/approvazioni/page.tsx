@@ -93,7 +93,6 @@ export default function Approvazioni() {
                                                 </div>
                                                 <div>
                                                     <div className="text-2xl font-black text-zinc-900 mb-1 leading-tight">{getFullName(richiesta)}</div>
-                                                    <div className="text-sm text-zinc-500 font-mono tracking-wider uppercase">{richiesta.ruolo || 'Collaboratore'}</div>
                                                 </div>
                                             </div>
                                         </td>

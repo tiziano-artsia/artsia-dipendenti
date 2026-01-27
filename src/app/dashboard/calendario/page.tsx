@@ -230,6 +230,66 @@ export default function Calendario() {
         return day === 0 ? 6 : day - 1;
     };
 
+
+    const isWeekend = (date: Date): boolean => {
+        const day = date.getDay();
+        return day === 0 || day === 6; // domenica o sabato
+    };
+
+    const getFestiviFissi = (anno: number): Date[] => [
+        new Date(anno, 0, 1),  // Capodanno
+        new Date(anno, 0, 6),  // Epifania
+        new Date(anno, 3, 25), // Liberazione
+        new Date(anno, 4, 1),  // Festa del lavoro
+        new Date(anno, 5, 2),  // Repubblica
+        new Date(anno, 7, 15), // Ferragosto
+        new Date(anno, 10, 1), // Ognissanti
+        new Date(anno, 11, 8), // Immacolata
+        new Date(anno, 11, 25),// Natale
+        new Date(anno, 11, 26) // Santo Stefano
+    ];
+    const getPasqua = (anno: number): Date => {
+        const a = anno % 19;
+        const b = Math.floor(anno / 100);
+        const c = anno % 100;
+        const d = Math.floor(b / 4);
+        const e = b % 4;
+        const f = Math.floor((b + 8) / 25);
+        const g = Math.floor((b - f + 1) / 3);
+        const h = (19 * a + b - d - g + 15) % 30;
+        const i = Math.floor(c / 4);
+        const k = c % 4;
+        const l = (32 + 2 * e + 2 * i - h - k) % 7;
+        const m = Math.floor((a + 11 * h + 22 * l) / 451);
+        const month = Math.floor((h + l - 7 * m + 114) / 31) - 1;
+        const day = ((h + l - 7 * m + 114) % 31) + 1;
+
+        return new Date(anno, month, day);
+    };
+    const isFestivo = (date: Date): boolean => {
+        const anno = date.getFullYear();
+        const festivi = [
+            ...getFestiviFissi(anno),
+            getPasqua(anno),
+            new Date(getPasqua(anno).getTime() + 86400000) // Pasquetta
+        ];
+
+        return festivi.some(f =>
+            f.getDate() === date.getDate() &&
+            f.getMonth() === date.getMonth()
+        );
+    };
+
+    const getInfoGiorno = (giorno: number, mese: number, anno: number) => {
+        const date = new Date(anno, mese, giorno);
+
+        return {
+            isWeekend: isWeekend(date),
+            isFestivo: isFestivo(date),
+            isLavorativo: !isWeekend(date) && !isFestivo(date)
+        };
+    };
+
    const getAssenzePerData = (dataStr: string) => {
   const assenzeGiorno = assenze.filter(a => {
     const dataAssenza = a.dataInizio || '';
@@ -331,7 +391,6 @@ export default function Calendario() {
 
     return (
         <>
-            <DashboardHeader />
             <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-indigo-50/30 p-4 md:p-8 relative overflow-hidden">
                 <div className="absolute inset-0 bg-gradient-to-r from-emerald-500/2 via-blue-500/1 to-purple-500/1 backdrop-blur-xl pointer-events-none" />
                 <div className="max-w-7xl mx-auto relative z-10 space-y-8">
@@ -482,9 +541,9 @@ export default function Calendario() {
                                 const giorno = i + 1;
                                 const dataStr = `${anno}-${String(mese + 1).padStart(2, '0')}-${String(giorno).padStart(2, '0')}`;
                                 const assenzeGiorno = getAssenzePerData(dataStr);
-                                const isWeekend = (i + getPrimoGiornoSettimana(mese, anno)) % 7 >= 5;
+                                const info = getInfoGiorno(giorno, mese, anno);
+                                const {isFestivo , isWeekend, isLavorativo} = info;
                                 const today = new Date().toISOString().split('T')[0] === dataStr;
-
                                 return (
                                     <div
                                         key={giorno}
@@ -492,10 +551,14 @@ export default function Calendario() {
                                         className={`
                                             relative h-20 md:h-32 p-2 md:p-3 rounded-2xl border-2 shadow-lg transition-all duration-300 hover:shadow-xl hover:-translate-y-1 backdrop-blur-xl flex flex-col justify-between group cursor-pointer overflow-hidden
                                             ${assenzeGiorno.length > 0
+                                            
                                             ? 'bg-gradient-to-br from-emerald-50/80 to-blue-50/60 border-emerald-300/70 shadow-emerald-200/50 hover:border-emerald-400'
+                                            : isFestivo
+                                                ? 'bg-gradient-to-br from-purple-50/80 to-pink-50/80 border-red-500 shadow-purple-200/50 hover:border-purple-400'
                                             : isWeekend
-                                                ? 'bg-zinc-50/70 border-zinc-200/60'
+                                                ? 'bg-gray-200 border-zinc-200/60'
                                                 : 'bg-white/90 border-zinc-200/50 hover:border-emerald-300/70'
+                                            
                                         }
                                             ${today ? 'ring-4 ring-emerald-400/40 shadow-emerald-300' : ''}
                                         `}
@@ -586,6 +649,7 @@ export default function Calendario() {
             Smartworking (giorni)
         </span>
                         </div>
+
                         <div className="flex items-center gap-3 px-4 md:px-6 py-3 md:py-4 bg-white/70 backdrop-blur-xl rounded-2xl border border-zinc-200/50 shadow-lg">
                             <div className="w-5 h-5 bg-zinc-200 rounded-xl border-2 border-zinc-300"></div>
                             <span className="flex items-center gap-2">

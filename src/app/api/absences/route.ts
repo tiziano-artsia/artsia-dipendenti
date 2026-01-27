@@ -121,6 +121,8 @@ export async function POST(request: NextRequest) {
         });
 
 console.log('eccolo',newAbsence);
+
+
         // FORMATTA DATA ITALIANA nella risposta
         const response = {
             ...newAbsence,
