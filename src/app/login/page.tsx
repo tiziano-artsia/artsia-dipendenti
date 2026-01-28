@@ -53,7 +53,12 @@ export default function LoginPage() {
                 <div className="bg-white/5 backdrop-blur-3xl border border-white/10 rounded-3xl p-10 shadow-2xl hover:shadow-3xl transition-all duration-500 hover:-translate-y-2 group">
                     {/* Logo subtle */}
                     <div className="w-20 h-20 bg-gradient-to-r from-white/20 to-white/10 rounded-2xl mx-auto mb-8 flex items-center justify-center backdrop-blur-xl border border-white/20 shadow-xl group-hover:scale-110 transition-transform duration-500">
-                        <span className="text-3xl">📊</span>
+                        <img
+                            src="/icons/logo-artsia.svg"
+                            alt="Artsia Logo"
+                            className="w-full h-full object-contain"
+                            onError={(e) => console.error('Logo error:', e)}
+                        />
                     </div>
 
                     {/* Title minimal */}
