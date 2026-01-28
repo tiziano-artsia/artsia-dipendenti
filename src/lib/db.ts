@@ -122,6 +122,7 @@ export const AbsenceModel: Model<AbsenceDoc> =
  * - password admin: admin123
  * - password altri: pass123
  */
+
 const demoEmployees = [
     // Team Sviluppo (8)
     { id: 1, name: "Marco Rossi", email: "marco.rossi@azienda.it", team: "Sviluppo" as const, role: "manager" as const },

@@ -36,6 +36,17 @@ export default function Dashboard() {
     const isAdmin = user?.role === 'admin';
     const { payslips: userPayslips, loading: loadingUserPayslips } = useUserPayslips();
 
+
+    const [showAddEmployeeModal, setShowAddEmployeeModal] = useState(false);
+    const [newEmployee, setNewEmployee] = useState({
+        name: '',
+        surname: '',
+        team: '',
+        role: 'dipendente'
+    });
+    const [employeeError, setEmployeeError] = useState('');
+
+
     const handleLogout = () => {
         logout();
         window.location.href = '/login';
@@ -69,6 +80,41 @@ export default function Dashboard() {
             }
         } catch (error) {
             setPasswordError('Errore di rete');
+        }
+    };
+
+
+    const handleAddEmployee = async () => {
+        if (!token) {
+            console.error("Token JWT mancante");
+            return;
+        }
+
+        try {
+            const response = await fetch('/api/add-employee', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({
+                    name: newEmployee.name,
+                    surname: newEmployee.surname,
+                    team: newEmployee.team,
+                    role: newEmployee.role
+                })
+            });
+
+            if (response.ok) {
+                alert('Dipendente aggiunto con successo');
+                setShowAddEmployeeModal(false);
+                setNewEmployee({ name: '', surname: '', team: '', role: 'dipendente' });
+            } else {
+                const data = await response.json();
+                setEmployeeError(data.error || 'Errore durante l\'aggiunta del dipendente');
+            }
+        } catch (error) {
+            setEmployeeError('Errore di rete');
         }
     };
 
@@ -179,6 +225,74 @@ export default function Dashboard() {
                                         className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
                                     >
                                         Cambia
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+
+                {/* Modale Aggiungi Dipendente */}
+                {showAddEmployeeModal && (
+                    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+                        <div className="bg-white rounded-2xl p-8 max-w-md w-full mx-4 shadow-2xl border border-gray-200">
+                            <h3 className="text-2xl font-bold mb-6 text-gray-800">Aggiungi Dipendente</h3>
+                            <div className="space-y-4">
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">Nome</label>
+                                    <input
+                                        type="text"
+                                        value={newEmployee.name}
+                                        onChange={(e) => setNewEmployee({...newEmployee, name: e.target.value})}
+                                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">Cognome</label>
+                                    <input
+                                        type="text"
+                                        value={newEmployee.surname}
+                                        onChange={(e) => setNewEmployee({...newEmployee, surname: e.target.value})}
+                                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">Team</label>
+                                    <select
+                                        value={newEmployee.team}
+                                        onChange={(e) => setNewEmployee({...newEmployee, team: e.target.value})}
+                                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                    >
+                                        <option value="">Seleziona team</option>
+                                        <option value="Sviluppo">Sviluppo</option>
+                                        <option value="Digital">Digital</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">Ruolo</label>
+                                    <select
+                                        value={newEmployee.role}
+                                        onChange={(e) => setNewEmployee({...newEmployee, role: e.target.value})}
+                                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                    >
+                                        <option value="dipendente">Dipendente</option>
+                                        <option value="manager">Manager</option>
+                                    </select>
+                                </div>
+                                {employeeError && <p className="text-red-500 text-sm">{employeeError}</p>}
+                                <div className="flex gap-3 mt-6">
+                                    <button
+                                        onClick={() => setShowAddEmployeeModal(false)}
+                                        className="flex-1 px-4 py-2 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400"
+                                    >
+                                        Annulla
+                                    </button>
+                                    <button
+                                        onClick={handleAddEmployee}
+                                        className="flex-1 px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700"
+                                    >
+                                        Aggiungi
                                     </button>
                                 </div>
                             </div>
@@ -354,6 +468,7 @@ export default function Dashboard() {
                                 description: 'Carica per dipendente'
                             }] : []),
                         ].map(({ href, label, icon: Icon, color, description }) => (
+
                             <a
                                 key={label}
                                 href={href}
@@ -383,6 +498,34 @@ export default function Dashboard() {
                                 </div>
                             </a>
                         ))}
+                        {
+                            user?.role === 'manager' || user?.role === 'admin' ? (
+                                <div
+                                    onClick={() => setShowAddEmployeeModal(true)}
+                                    className="group relative p-8 bg-white/80 backdrop-blur-xl border border-zinc-200/50 rounded-3xl hover:shadow-2xl hover:border-white/90 hover:-translate-y-2 transition-all duration-500 overflow-hidden flex flex-col items-center text-center cursor-pointer"
+                                >
+                                    <div className="absolute inset-0 bg-gradient-to-br from-emerald-500 to-green-600 opacity-0 group-hover:opacity-5 transition-opacity duration-500" />
+                                    <div className="relative z-10 w-full">
+                                        <div className="w-20 h-20 bg-gradient-to-br from-emerald-500 to-green-600 rounded-2xl flex items-center justify-center mb-6 shadow-xl group-hover:shadow-2xl group-hover:scale-110 transition-all duration-500 mx-auto border border-white/50">
+                                            <Briefcase className="w-9 h-9 text-white drop-shadow-lg" />
+                                        </div>
+                                        <h3 className="text-xl font-black text-zinc-800 mb-3 group-hover:text-zinc-900 transition-colors">
+                                            Aggiungi Dipendente
+                                        </h3>
+                                        <p className="text-sm text-zinc-600 font-light mb-4">
+                                            Inserisci un nuovo dipendente
+                                        </p>
+                                        <div className="inline-flex items-center gap-2 text-xs font-mono tracking-wider uppercase opacity-75 group-hover:opacity-100 transition-opacity">
+                                            <span>Apri</span>
+                                            <svg className="w-4 h-4 group-hover:translate-x-1 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                                            </svg>
+                                        </div>
+                                    </div>
+                                </div>
+                            ) : null
+                        }
+
                     </div>
                 </div>
             </div>
