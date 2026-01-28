@@ -18,28 +18,58 @@ import {
     EyeOff,
     Euro,
     Download,
-    EuroIcon
+    EuroIcon,
+    Lock
 } from 'lucide-react';
 import { useState } from 'react';
 
 export default function Dashboard() {
     const { user, logout, token } = useAuth();
     const { stats, loading } = useStats();
-    const [showPayslips, setShowPayslips] = useState(false); // Toggle visibilità importi
+    const [showPayslips, setShowPayslips] = useState(false);
+    const [showPasswordModal, setShowPasswordModal] = useState(false);
+    const [currentPassword, setCurrentPassword] = useState('');
+    const [newPassword, setNewPassword] = useState('');
+    const [confirmPassword, setConfirmPassword] = useState('');
+    const [passwordError, setPasswordError] = useState('');
     const isAdmin = user?.role === 'admin';
+
     const handleLogout = () => {
         logout();
         window.location.href = '/login';
     };
 
-    // 🔥 Simula payslips recenti (sostituisci con usePayslips hook)
-    const payslipsRecent = [
-        { id: 1, meseAnno: 'Dicembre 2025', netto: '€2.450', nettoHidden: '****' },
-        { id: 2, meseAnno: 'Novembre 2025', netto: '€2.380', nettoHidden: '****' },
-        { id: 3, meseAnno: 'Ottobre 2025', netto: '€2.410', nettoHidden: '****' }
-    ];
+    const handlePasswordChange = async () => {
+        if (newPassword !== confirmPassword) {
+            setPasswordError('Le password non coincidono');
+            return;
+        }
+        try {
+            const response = await fetch('/api/change-password', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    currentPassword,
+                    newPassword,
+                    userId: user?.id
+                })
+            });
+            if (response.ok) {
+                alert('Password cambiata con successo');
+                setShowPasswordModal(false);
+                setCurrentPassword('');
+                setNewPassword('');
+                setConfirmPassword('');
+                setPasswordError('');
+            } else {
+                const data = await response.json();
+                setPasswordError(data.error || 'Errore durante il cambio password');
+            }
+        } catch (error) {
+            setPasswordError('Errore di rete');
+        }
+    };
 
-    // 🔥 LOADING STATE
     if (loading) {
         return (
             <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-indigo-50/30 flex items-center justify-center p-8">
@@ -82,17 +112,79 @@ export default function Dashboard() {
                                 </p>
                             </div>
                         </div>
-                        <button
-                            onClick={handleLogout}
-                            className="flex items-center gap-3 px-8 py-4 h-14 bg-gradient-to-r from-rose-500 to-red-600 text-white font-black text-lg rounded-2xl shadow-2xl hover:shadow-3xl hover:from-rose-600 hover:to-red-700 focus:outline-none focus:ring-4 focus:ring-rose-500/50 transition-all duration-300 hover:-translate-y-1 backdrop-blur-xl border border-rose-400/50 whitespace-nowrap"
-                        >
-                            <LogOut className="w-5 h-5" />
-                            Esci
-                        </button>
+                        <div className="flex gap-4">
+                            <button
+                                onClick={() => setShowPasswordModal(true)}
+                                className="flex items-center gap-3 px-8 py-4 h-14 bg-gradient-to-r from-blue-500 to-indigo-600 text-white font-black text-lg rounded-2xl shadow-2xl hover:shadow-3xl hover:from-blue-600 hover:to-indigo-700 focus:outline-none focus:ring-4 focus:ring-blue-500/50 transition-all duration-300 hover:-translate-y-1 backdrop-blur-xl border border-blue-400/50 whitespace-nowrap"
+                            >
+                                <Lock className="w-5 h-5" />
+                                Cambia Password
+                            </button>
+                            <button
+                                onClick={handleLogout}
+                                className="flex items-center gap-3 px-8 py-4 h-14 bg-gradient-to-r from-rose-500 to-red-600 text-white font-black text-lg rounded-2xl shadow-2xl hover:shadow-3xl hover:from-rose-600 hover:to-red-700 focus:outline-none focus:ring-4 focus:ring-rose-500/50 transition-all duration-300 hover:-translate-y-1 backdrop-blur-xl border border-rose-400/50 whitespace-nowrap"
+                            >
+                                <LogOut className="w-5 h-5" />
+                                Esci
+                            </button>
+                        </div>
                     </div>
                 </div>
 
-                {/* 🔥 Stats Grid (4 card, responsive) */}
+                {/* Modale Cambio Password */}
+                {showPasswordModal && (
+                    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+                        <div className="bg-white rounded-2xl p-8 max-w-md w-full mx-4 shadow-2xl border border-gray-200">
+                            <h3 className="text-2xl font-bold mb-6 text-gray-800">Cambia Password</h3>
+                            <div className="space-y-4">
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">Password Attuale</label>
+                                    <input
+                                        type="password"
+                                        value={currentPassword}
+                                        onChange={(e) => setCurrentPassword(e.target.value)}
+                                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">Nuova Password</label>
+                                    <input
+                                        type="password"
+                                        value={newPassword}
+                                        onChange={(e) => setNewPassword(e.target.value)}
+                                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">Conferma Nuova Password</label>
+                                    <input
+                                        type="password"
+                                        value={confirmPassword}
+                                        onChange={(e) => setConfirmPassword(e.target.value)}
+                                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                    />
+                                </div>
+                                {passwordError && <p className="text-red-500 text-sm">{passwordError}</p>}
+                                <div className="flex gap-3 mt-6">
+                                    <button
+                                        onClick={() => setShowPasswordModal(false)}
+                                        className="flex-1 px-4 py-2 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400"
+                                    >
+                                        Annulla
+                                    </button>
+                                    <button
+                                        onClick={handlePasswordChange}
+                                        className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                                    >
+                                        Cambia
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+                {/* Stats Grid */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
                     {[
                         {
@@ -157,8 +249,7 @@ export default function Dashboard() {
                     ))}
                 </div>
 
-
-                {/* SEZIONE Buste Paga - SOLO PER NON-ADMIN */}
+                {/* Buste Paga - Solo per non admin */}
                 {user?.role !== 'admin' && (
                     <div className="bg-white/60 backdrop-blur-3xl rounded-3xl shadow-2xl p-8 md:p-10 border border-white/70 hover:shadow-3xl transition-all duration-700">
                         <div className="flex items-center justify-between mb-10">
@@ -168,7 +259,6 @@ export default function Dashboard() {
                                     Ultime Buste Paga
                                 </h2>
                             </div>
-                            {/* Toggle Visibilità Importi */}
                             <button
                                 onClick={() => setShowPayslips(!showPayslips)}
                                 className="flex items-center gap-2 px-4 py-2 bg-white/80 backdrop-blur-xl rounded-2xl border border-zinc-200 hover:border-indigo-300 hover:shadow-md transition-all duration-300 text-sm font-mono uppercase tracking-wider"
@@ -179,7 +269,11 @@ export default function Dashboard() {
                             </button>
                         </div>
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                            {payslipsRecent.map(({ id, meseAnno, netto, nettoHidden }) => (
+                            {[
+                                { id: 1, meseAnno: 'Dicembre 2025', netto: '€2.450', nettoHidden: '****' },
+                                { id: 2, meseAnno: 'Novembre 2025', netto: '€2.380', nettoHidden: '****' },
+                                { id: 3, meseAnno: 'Ottobre 2025', netto: '€2.410', nettoHidden: '****' }
+                            ].map(({ id, meseAnno, netto, nettoHidden }) => (
                                 <a
                                     key={id}
                                     href={`/api/payslips/${id}/download?token=${token}`}
@@ -217,8 +311,7 @@ export default function Dashboard() {
                     </div>
                 )}
 
-
-                {/* Quick Actions (3 card) */}
+                {/* Quick Actions */}
                 <div className="bg-white/60 backdrop-blur-3xl rounded-3xl shadow-2xl p-8 md:p-10 border border-white/70 hover:shadow-3xl transition-all duration-700">
                     <h2 className="text-4xl font-black tracking-tight mb-10 bg-gradient-to-r from-zinc-800 to-slate-700 bg-clip-text text-transparent">
                         Azioni Rapide
@@ -253,7 +346,7 @@ export default function Dashboard() {
                                 color: 'from-orange-500 to-red-600',
                                 description: 'Carica per dipendente'
                             }] : []),
-                            ].map(({ href, label, icon: Icon, color, description }) => (
+                        ].map(({ href, label, icon: Icon, color, description }) => (
                             <a
                                 key={label}
                                 href={href}
