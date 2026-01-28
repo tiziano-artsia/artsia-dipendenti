@@ -300,7 +300,8 @@ export default function Dashboard() {
                     </div>
                 )}
 
-                {/* Stats Grid */}
+                {/* Stats Grid  Only not admin */}
+                {!isAdmin && (
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
                     {[
                         {
@@ -364,7 +365,7 @@ export default function Dashboard() {
                         </div>
                     ))}
                 </div>
-
+    )}
                 {/* Buste Paga - Solo per non admin */}
                 {user?.role !== 'admin' && (
                     <div className="bg-white/60 backdrop-blur-3xl rounded-3xl shadow-2xl p-8 md:p-10 border border-white/70 hover:shadow-3xl transition-all duration-700">
