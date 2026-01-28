@@ -22,6 +22,7 @@ import {
     Lock
 } from 'lucide-react';
 import { useState } from 'react';
+import { useUserPayslips } from '@/hooks/useUserPayslips';
 
 export default function Dashboard() {
     const { user, logout, token } = useAuth();
@@ -33,6 +34,7 @@ export default function Dashboard() {
     const [confirmPassword, setConfirmPassword] = useState('');
     const [passwordError, setPasswordError] = useState('');
     const isAdmin = user?.role === 'admin';
+    const { payslips: userPayslips, loading: loadingUserPayslips } = useUserPayslips();
 
     const handleLogout = () => {
         logout();
@@ -269,36 +271,42 @@ export default function Dashboard() {
                             </button>
                         </div>
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                            {[
-                                { id: 1, meseAnno: 'Dicembre 2025', netto: '€2.450', nettoHidden: '****' },
-                                { id: 2, meseAnno: 'Novembre 2025', netto: '€2.380', nettoHidden: '****' },
-                                { id: 3, meseAnno: 'Ottobre 2025', netto: '€2.410', nettoHidden: '****' }
-                            ].map(({ id, meseAnno, netto, nettoHidden }) => (
-                                <a
-                                    key={id}
-                                    href={`/api/payslips/${id}/download?token=${token}`}
-                                    download={`busta-paga-${meseAnno.toLowerCase().replace(' ', '-')}.pdf`}
-                                    className="group relative p-6 bg-white/90 backdrop-blur-xl border border-zinc-200/50 rounded-2xl hover:shadow-xl hover:border-indigo-300 hover:-translate-y-1 transition-all duration-400 overflow-hidden flex flex-col"
-                                >
-                                    <div className="absolute inset-0 bg-gradient-to-r from-indigo-500/5 to-purple-500/5 opacity-0 group-hover:opacity-100 transition-opacity" />
+                            {loadingUserPayslips ? (
+                                <div className="col-span-full flex items-center justify-center py-12">
+                                    <Loader2 className="w-8 h-8 animate-spin text-indigo-500 mr-2" />
+                                    <span>Caricamento buste paga...</span>
+                                </div>
+                            ) : userPayslips.length === 0 ? (
+                                <div className="col-span-full text-center py-12 text-zinc-500">
+                                    Nessuna busta paga disponibile
+                                </div>
+                            ) : (
+                                userPayslips.slice(0, 3).map((payslip) => (
+                                    <a
+                                        key={payslip.id}
+                                        href={`/api/payslips/${payslip.id}/download`}
+                                        className="group relative p-6 bg-white/90 backdrop-blur-xl border border-zinc-200/50 rounded-2xl hover:shadow-xl hover:border-indigo-300 hover:-translate-y-1 transition-all duration-400 overflow-hidden flex flex-col"
+                                    >
+                                        <div className="absolute inset-0 bg-gradient-to-r from-indigo-500/5 to-purple-500/5 opacity-0 group-hover:opacity-100 transition-opacity" />
 
-                                    <div className="relative z-10 flex items-start justify-between mb-3">
-                                        <h3 className="font-black text-xl text-zinc-800 group-hover:text-indigo-700">
-                                            {meseAnno}
-                                        </h3>
-                                        <Euro className="w-5 h-5 text-indigo-500 group-hover:scale-110 transition-transform" />
-                                    </div>
+                                        <div className="relative z-10 flex items-start justify-between mb-3">
+                                            <h3 className="font-black text-xl text-zinc-800 group-hover:text-indigo-700">
+                                                {payslip.mese.charAt(0).toUpperCase() + payslip.mese.slice(1)} {payslip.anno}
+                                            </h3>
+                                            <Euro className="w-5 h-5 text-indigo-500 group-hover:scale-110 transition-transform" />
+                                        </div>
 
-                                    <p className="text-2xl font-black text-indigo-600 mb-2">
-                                        {showPayslips ? netto : nettoHidden}
-                                    </p>
+                                        <p className="text-2xl font-black text-indigo-600 mb-2">
+                                            {showPayslips ? `€${payslip.netto}` : '****'}
+                                        </p>
 
-                                    <div className="flex items-center gap-2 text-xs font-mono text-zinc-500 uppercase tracking-wider">
-                                        <span>Scarica PDF</span>
-                                        <Download className="w-5 h-5 text-indigo-500 group-hover:scale-110 transition-transform" />
-                                    </div>
-                                </a>
-                            ))}
+                                        <div className="flex items-center gap-2 text-xs font-mono text-zinc-500 uppercase tracking-wider">
+                                            <span>Scarica PDF</span>
+                                            <Download className="w-5 h-5 text-indigo-500 group-hover:scale-110 transition-transform" />
+                                        </div>
+                                    </a>
+                                ))
+                            )}
                             <a
                                 href="/dashboard/buste-paga"
                                 className="group p-6 bg-gradient-to-br from-indigo-50 to-purple-50 border-2 border-dashed border-indigo-200 hover:border-indigo-400 rounded-2xl hover:shadow-lg hover:-translate-y-1 transition-all duration-400 flex flex-col items-center justify-center text-center"
@@ -307,8 +315,7 @@ export default function Dashboard() {
                                 <h3 className="font-black text-xl text-zinc-700 mb-2">Vedi Tutte</h3>
                                 <p className="text-sm text-zinc-500">Archivio completo buste paga</p>
                             </a>
-                        </div>
-                    </div>
+                        </div>                    </div>
                 )}
 
                 {/* Quick Actions */}
