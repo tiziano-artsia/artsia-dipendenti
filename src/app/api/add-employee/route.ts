@@ -1,8 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
-import jwt from 'jsonwebtoken';
+import jwt, {type JwtPayload} from 'jsonwebtoken';
 import bcrypt from 'bcryptjs';
 import { connectDB, EmployeeModel } from '@/lib/db';
-
+interface CustomJwtPayload extends JwtPayload {
+    email?: string;
+}
 export async function POST(req: NextRequest) {
     const { name, surname, team, role } = await req.json();
 
@@ -18,7 +20,7 @@ export async function POST(req: NextRequest) {
     const token = authHeader.substring(7);
 
     try {
-        const decoded = jwt.verify(token, process.env.JWT_SECRET!);
+        const decoded = jwt.verify(token, process.env.JWT_SECRET!) as CustomJwtPayload;
         const user = await EmployeeModel.findOne({ email: decoded.email }).lean();
         if (!user || (user.role !== 'manager' && user.role !== 'admin')) {
             return NextResponse.json({ error: 'Accesso negato' }, { status: 403 });
