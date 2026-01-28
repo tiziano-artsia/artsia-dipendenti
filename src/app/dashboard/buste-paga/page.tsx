@@ -9,7 +9,6 @@ import {
     Folder,
     FolderOpen,
     Search,
-    Filter,
     ChevronDown,
     ChevronUp,
     UploadCloud
@@ -41,38 +40,46 @@ export default function BustePaga() {
     const [searchTerm, setSearchTerm] = useState('');
     const [filterMonth, setFilterMonth] = useState('');
 
-    // Caricamento Buste Paga
-    useEffect(() => {
-        const fetchPayslips = async () => {
-            const token = localStorage.getItem('token');
-            if (!token) return;
+    // Funzione per ricaricare le buste paga (estratta per riutilizzo)
+    const refreshPayslips = async () => {
+        const token = localStorage.getItem('token');
+        if (!token) return;
 
-            try {
-                setLoadingPayslips(true);
-                const res = await fetch('/api/payslips', {
-                    headers: { 'Authorization': `Bearer ${token}` }
-                });
-                if (res.ok) {
-                    const data = await res.json();
-                    setPayslips(Array.isArray(data.data) ? data.data : []);
-                    // Seleziona automaticamente l'anno più recente se ci sono dati
-                    if (data.data?.length > 0) {
-                        const years = [...new Set(data.data.map((p: any) => p.anno))].sort().reverse();
-                        setSelectedYear(years[0] as string);
-                    }
-                }
-            } catch (err) {
-                console.error(err);
-            } finally {
-                setLoadingPayslips(false);
+        try {
+            const res = await fetch('/api/payslips', {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            if (res.ok) {
+                const data = await res.json();
+                const list = Array.isArray(data.data) ? data.data : [];
+                setPayslips(list);
+                return list;
             }
+        } catch (err) {
+            console.error("Errore refresh:", err);
+        }
+        return [];
+    };
+
+    // Caricamento Iniziale
+    useEffect(() => {
+        const init = async () => {
+            setLoadingPayslips(true);
+            const list = await refreshPayslips();
+            if (list.length > 0 && !selectedYear) {
+                // Seleziona l'anno più recente all'avvio
+                const years = [...new Set(list.map((p: any) => p.anno))].sort().reverse();
+                setSelectedYear(years[0] as string);
+            }
+            setLoadingPayslips(false);
         };
-        fetchPayslips();
+        init();
     }, []);
 
     // Gestione Upload
     const handleUpload = async () => {
         const { employeeId, mese, anno, netto, file } = uploadForm;
+
         if (!employeeId || !mese || !anno || !file || !netto) {
             alert('Completa tutti i campi');
             return;
@@ -83,6 +90,7 @@ export default function BustePaga() {
 
         const employeeName = employees.find(e => e.id === parseInt(employeeId))?.name || '';
         const reader = new FileReader();
+
         reader.readAsDataURL(file);
 
         reader.onload = async () => {
@@ -105,16 +113,24 @@ export default function BustePaga() {
                 });
 
                 if (res.ok) {
+                    // 1. Reset parziale del form (manteniamo dipendente e anno per comodità)
+                    setUploadForm(prev => ({ ...prev, netto: '', file: null, mese: '' }));
+
                     alert('Caricamento riuscito!');
-                    setUploadForm({ ...uploadForm, netto: '', file: null, mese: '' });
-                    // Ricarica dati
-                    const newRes = await fetch('/api/payslips', { headers: { 'Authorization': `Bearer ${token}` } });
-                    const newData = await newRes.json();
-                    setPayslips(newData.data || []);
+
+                    // 2. Ricarica immediata dei dati
+                    await refreshPayslips();
+
+                    // 3. CRUCIALE: Sposta la vista sull'anno dove abbiamo appena caricato il file
+                    // Così l'utente vede subito il nuovo file apparire
+                    setSelectedYear(anno);
+
                 } else {
-                    alert('Errore durante il caricamento');
+                    const errData = await res.json();
+                    alert(`Errore: ${errData.error || 'Errore durante il caricamento'}`);
                 }
             } catch (e) {
+                console.error(e);
                 alert('Errore di rete');
             } finally {
                 setLoadingUpload(false);
@@ -146,12 +162,15 @@ export default function BustePaga() {
             byYear[p.anno].push(p);
         });
 
+        // Ordina le buste paga all'interno dell'anno (opzionale, per mese o data creazione)
+        // Qui assumiamo che arrivino già ordinate dal DB o le lasciamo così
+
         return byYear;
     }, [payslips, searchTerm, filterMonth]);
 
     const years = Object.keys(groupedData).sort().reverse();
 
-    if (loadingEmployees) return <div className="p-8 text-center text-zinc-500">Caricamento sistema...</div>;
+    if (loadingEmployees) return <div className="min-h-screen flex items-center justify-center"><Loader2 className="animate-spin text-indigo-600 w-8 h-8"/></div>;
     if (error) return <div className="p-8 text-center text-red-500">Errore: {error}</div>;
 
     return (
@@ -161,7 +180,7 @@ export default function BustePaga() {
                 {/* Header */}
                 <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                     <div>
-                        <h1 className="text-3xl font-black text-zinc-800 tracking-tight">Archivio Documentale</h1>
+                        <h1 className="text-3xl font-black text-zinc-800 tracking-tight">Archivio</h1>
                         <p className="text-zinc-500 mt-1">Gestisci e visualizza le tue buste paga</p>
                     </div>
 
