@@ -140,7 +140,7 @@ export default function MieiDati() {
                         </div>
                         <div className="flex-1 min-w-0">
                             <h1 className="text-5xl font-black tracking-tight bg-gradient-to-r from-gray-900 via-zinc-800 to-slate-800 bg-clip-text text-transparent mb-4 leading-tight">
-                                I Miei Dati
+                                Le mie Richieste
                             </h1>
                             <p className="text-2xl text-zinc-600 font-light">
                                 Ciao <span className="font-semibold bg-gradient-to-r from-emerald-600 to-green-600 bg-clip-text text-transparent">{nomeUtente}</span>

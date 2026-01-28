@@ -442,7 +442,7 @@ export default function Dashboard() {
                         {[
                             {
                                 href: '/dashboard/miei-dati',
-                                label: 'I Miei Dati',
+                                label: 'Le mie Richieste',
                                 icon: FileText,
                                 color: 'from-blue-500 to-indigo-600',
                                 description: 'Gestisci le tue assenze'
