@@ -74,7 +74,7 @@ export default function Dashboard() {
 
     if (loading) {
         return (
-            <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-indigo-50/30 flex items-center justify-center p-8">
+            <div className="min-h-screen bg-gray-50 flex items-center justify-center p-8">
                 <div className="bg-white/40 backdrop-blur-3xl rounded-3xl p-16 shadow-2xl text-center max-w-lg mx-auto border border-white/50">
                     <div className="w-24 h-24 bg-gradient-to-r from-emerald-400 to-green-500 rounded-3xl mx-auto mb-8 flex items-center justify-center shadow-2xl border border-white/30">
                         <Loader2 className="w-12 h-12 text-white animate-spin" />
@@ -88,8 +88,8 @@ export default function Dashboard() {
     }
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-indigo-50/30 p-4 md:p-8 relative overflow-hidden">
-            <div className="absolute inset-0 bg-gradient-to-r from-emerald-500/2 via-blue-500/1 to-purple-500/1 backdrop-blur-xl pointer-events-none" />
+        <div className="min-h-screen bg-gray-50 p-4 md:p-8 relative overflow-hidden">
+            <div className="absolute inset-0 bg-gray-50 backdrop-blur-xl pointer-events-none" />
 
             <div className="max-w-7xl mx-auto relative z-10 space-y-8">
                 {/* Header */}
