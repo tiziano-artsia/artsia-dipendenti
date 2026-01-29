@@ -2,7 +2,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getAbsences, createAbsence, updateAbsenceStatus } from '@/lib/db';
 import jwt from 'jsonwebtoken';
-import {type} from "node:os";
 
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
 
@@ -32,45 +31,39 @@ export async function GET(request: NextRequest) {
             return NextResponse.json({ error: 'Non autenticato' }, { status: 401 });
         }
 
-        // 🔥 LEGGI QUERY PARAMS
-        const searchParams = request.nextUrl.searchParams;
+        const { searchParams } = request.nextUrl;
         const employeeIdParam = searchParams.get('employeeId');
 
-        console.log('📊 API Absences GET:', {
-            userRole: user.role,
+        console.log('📊 GET Absences:', {
+            role: user.role,
             userId: user.id,
-            employeeIdParam
+            filter: employeeIdParam || 'tutti'
         });
 
-        let filter: any = {};
-
-        // 🔥 LOGICA FILTRO
-        if (user.role === 'admin') {
-            // Admin: se c'è employeeId filtra per quello, altrimenti tutti
-            if (employeeIdParam) {
-                filter.employeeId = Number(employeeIdParam);
-            }
-            // Altrimenti: nessun filtro = tutti
-        } else {
-            // Non-admin: SOLO le proprie assenze
-            filter.employeeId = user.id;
+        // Costruisci filtro
+        const filter: any = {};
+        if (user.role !== 'admin') {
+            filter.employeeId = user.id; // Non-admin: solo proprie
+        } else if (employeeIdParam) {
+            filter.employeeId = Number(employeeIdParam); // Admin: specifica
         }
+        // Admin senza param = tutti (filter vuoto)
 
-        console.log('🔍 Filter applicato:', filter);
+        console.log('🔍 Filtro:', filter);
 
         const absences = await getAbsences(filter);
-
-        console.log(`✅ Trovate ${absences.length} assenze`);
+        console.log(`✅ ${absences.length} assenze trovate`);
 
         return NextResponse.json({
             success: true,
-            data: absences
+            data: absences,
+            count: absences.length
         });
 
-    } catch (error) {
-        console.error('❌ API Absences error:', error);
+    } catch (error: any) {
+        console.error(' GET error:', error.message || error);
         return NextResponse.json(
-            { error: 'Errore server' },
+            { error: 'Errore interno server', details: error.message },
             { status: 500 }
         );
     }
@@ -84,56 +77,66 @@ export async function POST(request: NextRequest) {
         }
 
         const body = await request.json();
-        console.log('📥 POST ricevuto:', body);
+        console.log('📥 POST body:', body);
 
-        const { type, dataInizio, durata, motivo } = body;
+        // 🔥 VALIDAZIONE ROBUSTA
+        const typeNorm = (body.type || '').trim().toLowerCase();
+        const tipiValidi = new Set(['ferie', 'permesso', 'smartworking', 'malattia']);
 
-        // 🔥 VALIDAZIONE TIPI COMPLETE
-        const tipiValidi = ['ferie', 'permesso', 'smartworking', 'malattia'];
-        if (!tipiValidi.includes(type)) {
-            console.log('❌ Tipo non valido:', type);
+        if (!tipiValidi.has(typeNorm)) {
+            console.log('❌ Tipo invalido:', body.type, '→', typeNorm);
             return NextResponse.json(
-                { error: `Tipo non valido. Usa: ${tipiValidi.join(', ')}` },
+                {
+                    error: `Tipo non valido. Usa: ${Array.from(tipiValidi).join(', ')}`,
+                    ricevuto: typeNorm
+                },
                 { status: 400 }
             );
         }
 
-        if (!dataInizio || !durata || Number(durata) <= 0) {
+        if (!body.dataInizio || !body.durata || Number(body.durata) <= 0) {
             return NextResponse.json(
-                { error: 'Data e durata (positiva) obbligatori' },
+                { error: 'dataInizio e durata (>0) obbligatori' },
                 { status: 400 }
             );
         }
 
+        // 🔥 CREAZIONE CONSISTENTE
         const newAbsence = await createAbsence({
-            _id: undefined,
-            tipo: "",
-            employeeId: user.id,
-            type,                    // malattia OK!
-            dataInizio,              // YYYY-MM-DD
-            durata: Number(durata),
-            motivo: motivo || '',
-            status: 'pending',
-            approvedBy: null,
-            data: dataInizio,
-            stato: "",
-            requestedBy: user.name || user.email,
+            employeeId: Number(body.employeeId || user.id),
+            type: typeNorm,           // ✅ Normalizzato
+            dataInizio: body.dataInizio,  // "30/01/2026"
+            durata: Number(body.durata),
+            motivo: (body.motivo || '').trim(),
+            status: body.status || 'pending',
+            requestedBy: body.requestedBy || user.name || user.email,
+            approvedBy: body.approvedBy || null,
+            createdAt: body.createdAt || new Date().toISOString(),
+            updatedAt: body.updatedAt || new Date().toISOString(),
+            // Campi legacy (se DB li richiede)
+            data: body.dataInizio,
+            stato: body.status || 'pending',
+            tipo: typeNorm
         });
 
-console.log('eccolo',newAbsence);
+        console.log('✅ Creata:', newAbsence);
 
-
-        // FORMATTA DATA ITALIANA nella risposta
-        const response = {
+        // Response con data italiana
+        const responseData = {
             ...newAbsence,
-            dataInizio: new Date(newAbsence.dataInizio).toLocaleDateString('it-IT')
+            dataInizio: newAbsence.dataInizio.includes('/')
+                ? newAbsence.dataInizio
+                : new Date(newAbsence.dataInizio).toLocaleDateString('it-IT')
         };
 
-        console.log('✅ Nuova assenza:', response);
-        return NextResponse.json({ success: true, data: response });
+        return NextResponse.json({ success: true, data: responseData });
+
     } catch (error: any) {
-        console.error('POST absence error:', error);
-        return NextResponse.json({ error: 'Errore server', details: error.message }, { status: 500 });
+        console.error('❌ POST error:', error);
+        return NextResponse.json(
+            { error: 'Errore creazione', details: error.message },
+            { status: 500 }
+        );
     }
 }
 
@@ -147,22 +150,27 @@ export async function PATCH(request: NextRequest) {
         const body = await request.json();
         const { id, action } = body;
 
-        console.log('🔍 PATCH absence:', { id, action, manager: user.email });
+        console.log('🔍 PATCH:', { id, action, user: user.email });
 
         if (!id || !['approve', 'reject'].includes(action)) {
-            return NextResponse.json({ error: 'ID e action validi richiesti' }, { status: 400 });
+            return NextResponse.json({ error: 'id e action (approve/reject) obbligatori' }, { status: 400 });
         }
 
-        const result = await updateAbsenceStatus(id, action === 'approve' ? 'approved' : 'rejected', user.id);
+        const result = await updateAbsenceStatus(
+            id,
+            action === 'approve' ? 'approved' : 'rejected',
+            user.id
+        );
 
         if (!result) {
-            return NextResponse.json({ error: 'Richiesta non trovata' }, { status: 404 });
+            return NextResponse.json({ error: 'Assenza non trovata' }, { status: 404 });
         }
 
-        console.log('✅ Status aggiornato:', { id, newStatus: action === 'approve' ? 'approved' : 'rejected' });
+        console.log('✅ Aggiornato:', { id, status: action });
         return NextResponse.json({ success: true });
+
     } catch (error) {
-        console.error('PATCH absence error:', error);
-        return NextResponse.json({ error: 'Errore server' }, { status: 500 });
+        console.error('❌ PATCH error:', error);
+        return NextResponse.json({ error: 'Errore aggiornamento' }, { status: 500 });
     }
 }
