@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import DashboardHeader from "@/components/DashboardHeader";
 import { usePendingRequests } from '@/hooks/usePendingRequests';
-import { CheckCircle, XCircle, Clock, Check, X } from 'lucide-react';
+import {CheckCircle, XCircle, Clock, Check, X, User} from 'lucide-react';
 import toast, { Toaster } from 'react-hot-toast'; // ← Import toast
 
 export default function Approvazioni() {
@@ -15,7 +15,7 @@ export default function Approvazioni() {
     const isManager = user?.role === 'manager';
     const userTeam = user?.team;
 
-    const getInitials = (name?: string) => name?.charAt(0).toUpperCase() || '👤';
+    const getInitials = (name?: string) => name?.charAt(0).toUpperCase() || '';
     const getFullName = (richiesta: any) => richiesta.dipendente || 'Nome non disponibile';
 
     const richiesteVisibili = isManager
@@ -88,7 +88,7 @@ export default function Approvazioni() {
                                 <table className="w-full">
                                     <thead>
                                     <tr className="bg-gradient-to-r from-white/80 to-zinc-50/80 backdrop-blur-xl">
-                                        <th className="text-left py-8 px-10 font-black text-zinc-800 text-xl tracking-tight border-b-2 border-white/50">👤 Dipendente</th>
+                                         <th className="text-left py-8 px-10 font-black text-zinc-800 text-xl tracking-tight border-b-2 border-white/50"> Dipendente </th>
                                         <th className="text-left py-8 px-10 font-black text-zinc-800 text-xl tracking-tight border-b-2 border-white/50">Tipo</th>
                                         <th className="text-left py-8 px-10 font-black text-zinc-800 text-xl tracking-tight border-b-2 border-white/50">Date</th>
                                         <th className="text-left py-8 px-10 font-black text-zinc-800 text-xl tracking-tight border-b-2 border-white/50">Durata</th>
@@ -219,7 +219,7 @@ export default function Approvazioni() {
                                 </h3>
                                 <p className="text-2xl text-zinc-500 mb-10 max-w-2xl mx-auto leading-relaxed font-light">
                                     Non ci sono nuove richieste
-                                    {isManager ? " di smartworking" : " di ferie, permessi o smartworking"}
+                                    {isManager ? " di smartworking" : " di ferie , malattia , permessi o smartworking"}
                                     {" "}in attesa della tua approvazione.
                                 </p>
                                 <div className="inline-flex items-center gap-3 px-10 py-6 bg-gradient-to-r from-emerald-500/90 to-green-600/90 text-white rounded-3xl shadow-2xl backdrop-blur-xl font-black text-xl border border-emerald-400/50 hover:shadow-3xl hover:scale-105 hover:from-emerald-600 hover:to-green-700 transition-all duration-500">
