@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 import DashboardHeader from '@/components/DashboardHeader';
 import {string} from "zod";
+import toast, {Toaster} from "react-hot-toast";
 
 interface AbsenceBackend {
     _id: string;
@@ -167,10 +168,14 @@ export default function Calendario() {
                 // @ts-ignore
                 setDurata('');
                 setMotivo('');
-                fetchAssenze();  // Ricarica calendario
+                fetchAssenze();
+                toast.success('Richiesta inviata con successo')
             } else {
                 const error = await res.json();
+                toast.error('Errore');
+
                 console.error('❌ Backend:', error);
+
             }
         } catch (error) {
             console.error('❌ Fetch error:', error);
@@ -473,11 +478,14 @@ export default function Calendario() {
         );
     }
 
-    // @ts-ignore
-    // @ts-ignore
+
     return (
         <>
             <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-indigo-50/30 p-4 md:p-8 relative overflow-hidden">
+                <Toaster
+                    position="top-center"
+                    reverseOrder={false}
+                />
                 <div className="absolute inset-0 bg-gradient-to-r from-emerald-500/2 via-blue-500/1 to-purple-500/1 backdrop-blur-xl pointer-events-none" />
                 <div className="max-w-7xl mx-auto relative z-10 space-y-8">
 
@@ -883,7 +891,7 @@ export default function Calendario() {
             )}
 
 
-            {popupNuovaRichiesta && (
+            {popupNuovaRichiesta && !isAdmin && (
                 <div className="fixed inset-0 bg-black/60 backdrop-blur-md z-50 flex items-center justify-center p-4 animate-in fade-in duration-300">
                     <div className="bg-white/95 backdrop-blur-3xl rounded-3xl shadow-2xl border border-white/70 max-w-md w-full animate-in zoom-in duration-300">
                         {/* Header */}
@@ -900,7 +908,7 @@ export default function Calendario() {
                                     value={tipoRichiesta}
                                     // @ts-ignore
                                     onChange={(e) => setTipoRichiesta(e.target.value)}
-                                className="w-full p-4 border-2 border-zinc-200 rounded-2xl focus:ring-4 focus:ring-emerald-500/20 focus:border-emerald-500 shadow-lg"
+                                    className="w-full p-4 border-2 border-zinc-200 rounded-2xl focus:ring-4 focus:ring-emerald-500/20 focus:border-emerald-500 shadow-lg"
                                 >
                                     <option value="">Seleziona tipo</option>
                                     <option value="ferie">🌴 Ferie</option>

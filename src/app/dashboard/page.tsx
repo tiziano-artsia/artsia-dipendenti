@@ -440,13 +440,13 @@ export default function Dashboard() {
                     </h2>
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                         {[
-                            {
+                            ...(!isAdmin ? [{
                                 href: '/dashboard/miei-dati',
                                 label: 'Le mie Richieste',
                                 icon: FileText,
                                 color: 'from-blue-500 to-indigo-600',
                                 description: 'Gestisci le tue assenze'
-                            },
+                            }] : []),
                             {
                                 href: '/dashboard/calendario',
                                 label: 'Calendario',

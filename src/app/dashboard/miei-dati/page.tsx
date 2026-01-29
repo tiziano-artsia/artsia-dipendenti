@@ -5,6 +5,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useMyAbsences } from '@/hooks/useMyAbsences';
 import { FileText, Calendar, Clock, Sun, Home, Bed, CheckCircle, XCircle, Loader2, Send, RotateCcw, AlertCircle, Filter, X } from 'lucide-react';
 import type {AbsenceDoc} from "@/lib/db";
+import toast, {Toaster} from "react-hot-toast";
 
 export default function MieiDati() {
     const { user } = useAuth();
@@ -37,10 +38,10 @@ export default function MieiDati() {
 
         const success = await submitRequest(payload);
         if (success) {
-            alert('✅ Richiesta inviata! In attesa di approvazione.');
+            toast.success(' Richiesta inviata! In attesa di approvazione.');
             setForm({ tipo: '', dataInizio: '', durata: '', motivo: '' });
         } else {
-            alert('❌ Errore invio. Riprova.');
+            toast.error('❌ Errore invio. Riprova.');
         }
     };
 
@@ -110,6 +111,7 @@ export default function MieiDati() {
 
     if (loading) {
         return (
+
             <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/50 to-indigo-50/30 flex items-center justify-center p-8 relative overflow-hidden">
                 <div className="absolute inset-0 bg-gradient-to-r from-white/20 to-blue-100/10 backdrop-blur-xl" />
                 <div className="bg-white/40 backdrop-blur-3xl rounded-3xl p-16 shadow-2xl text-center max-w-lg mx-auto border border-white/50 relative z-10">
@@ -129,6 +131,10 @@ export default function MieiDati() {
 
     return (
         <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-indigo-50/30 p-8 relative overflow-hidden">
+            <Toaster
+                position="top-center"
+                reverseOrder={false}
+            />
             <div className="absolute inset-0 bg-gradient-to-r from-emerald-500/2 via-blue-500/1 to-purple-500/2 backdrop-blur-xl pointer-events-none" />
             <div className="max-w-6xl mx-auto relative z-10 space-y-12">
 
