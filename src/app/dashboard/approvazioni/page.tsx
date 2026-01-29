@@ -4,14 +4,26 @@ import { useState } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import DashboardHeader from "@/components/DashboardHeader";
 import { usePendingRequests } from '@/hooks/usePendingRequests';
+import { CheckCircle, XCircle, Clock, Check, X } from 'lucide-react';
 
 export default function Approvazioni() {
     const { user } = useAuth();
     const { richieste, loading, approva, rifiuta } = usePendingRequests();
 
+    const isAdmin = user?.role === 'admin';
+    const isManager = user?.role === 'manager';
+    const userTeam = user?.team;
+
     const getInitials = (name?: string) => name?.charAt(0).toUpperCase() || '👤';
     const getFullName = (richiesta: any) => richiesta.dipendente || 'Nome non disponibile';
-    const pendingRequests = richieste.filter(r => r.stato === 'pending');
+
+
+    const richiesteVisibili = isManager
+        ? richieste.filter(r => r.team === userTeam)
+        : richieste;
+
+
+    const pendingRequests = richiesteVisibili.filter(r => r.stato === 'pending');
 
     if (loading) {
         return (
@@ -50,8 +62,8 @@ export default function Approvazioni() {
                             </h1>
                             <div className="flex items-center gap-6 text-xl text-zinc-600 font-light">
                                 <span>
-                                    {user?.role === 'manager'
-                                        ? `Team ${user.team || 'Sviluppo'}`
+                                    {isManager
+                                        ? `Team ${userTeam || 'Sviluppo'}`
                                         : 'Tutte le richieste'}
                                 </span>
                                 <div className="w-2 h-2 bg-emerald-400 rounded-full animate-pulse" />
@@ -74,82 +86,104 @@ export default function Approvazioni() {
                                     <th className="text-left py-8 px-10 font-black text-zinc-800 text-xl tracking-tight border-b-2 border-white/50">Tipo</th>
                                     <th className="text-left py-8 px-10 font-black text-zinc-800 text-xl tracking-tight border-b-2 border-white/50">Date</th>
                                     <th className="text-left py-8 px-10 font-black text-zinc-800 text-xl tracking-tight border-b-2 border-white/50">Durata</th>
-                                    <th className="text-left py-8 px-10 font-black text-zinc-800 text-xl tracking-tight border-b-2 border-white/50">Azioni</th>
+                                    <th className="text-left py-8 px-10 font-black text-zinc-800 text-xl tracking-tight border-b-2 border-white/50">Azioni / Stato</th>
                                 </tr>
                                 </thead>
                                 <tbody className="divide-y divide-zinc-100/50">
-                                {pendingRequests.map((richiesta, index) => (
-                                    <tr
-                                        key={richiesta.id || index}
-                                        className="hover:bg-gradient-to-r hover:from-emerald-50/80 hover:to-blue-50/80 backdrop-blur-xl transition-all duration-300 group"
-                                    >
-                                        <td className="py-8 px-10">
-                                            <div className="flex items-center gap-5">
-                                                <div className="relative">
-                                                    <div className="w-16 h-16 bg-gradient-to-br from-zinc-200 to-zinc-300 rounded-3xl flex items-center justify-center text-2xl font-black shadow-2xl border-4 border-white/50 backdrop-blur-xl group-hover:shadow-emerald-200 group-hover:border-emerald-300/50 transition-all duration-500 hover:scale-110 hover:rotate-3">
-                                                        {getInitials(richiesta.dipendente)}
-                                                    </div>
-                                                    <div className="absolute -top-1 -right-1 w-6 h-6 bg-emerald-400 border-2 border-white rounded-full flex items-center justify-center text-xs font-bold shadow-lg animate-pulse">!</div>
-                                                </div>
-                                                <div>
-                                                    <div className="text-2xl font-black text-zinc-900 mb-1 leading-tight">{getFullName(richiesta)}</div>
-                                                </div>
-                                            </div>
-                                        </td>
+                                {pendingRequests.map((richiesta, index) => {
+                                    const tipoLower = (richiesta.tipo || '').toLowerCase();
+                                    const isSmartWorking = tipoLower === 'smartworking';
 
-                                        <td className="py-8 px-10">
+                                    // Determina se l'utente corrente può approvare questa specifica richiesta
+                                    const canApprove = isAdmin || (isManager && isSmartWorking);
+
+                                    return (
+                                        <tr
+                                            key={richiesta.id || index}
+                                            className="hover:bg-gradient-to-r hover:from-emerald-50/80 hover:to-blue-50/80 backdrop-blur-xl transition-all duration-300 group"
+                                        >
+                                            <td className="py-8 px-10">
+                                                <div className="flex items-center gap-5">
+                                                    <div className="relative">
+                                                        <div className="w-16 h-16 bg-gradient-to-br from-zinc-200 to-zinc-300 rounded-3xl flex items-center justify-center text-2xl font-black shadow-2xl border-4 border-white/50 backdrop-blur-xl group-hover:shadow-emerald-200 group-hover:border-emerald-300/50 transition-all duration-500 hover:scale-110 hover:rotate-3">
+                                                            {getInitials(richiesta.dipendente)}
+                                                        </div>
+                                                        <div className="absolute -top-1 -right-1 w-6 h-6 bg-emerald-400 border-2 border-white rounded-full flex items-center justify-center text-xs font-bold shadow-lg animate-pulse">!</div>
+                                                    </div>
+                                                    <div>
+                                                        <div className="text-2xl font-black text-zinc-900 mb-1 leading-tight">{getFullName(richiesta)}</div>
+                                                        {/* Opzionale: mostra team */}
+                                                        {richiesta.team && <div className="text-sm text-zinc-500 font-medium">{richiesta.team}</div>}
+                                                    </div>
+                                                </div>
+                                            </td>
+
+                                            <td className="py-8 px-10">
                                                 <span className={`px-6 py-3 rounded-2xl text-sm font-black shadow-xl backdrop-blur-xl border border-white/50 inline-block ${
-                                                    richiesta.tipo === 'Smartworking'
+                                                    tipoLower === 'smartworking'
                                                         ? 'bg-gradient-to-r from-blue-400/90 to-blue-500/90 text-white shadow-blue-500/25'
-                                                        : richiesta.tipo === 'Ferie'
+                                                        : tipoLower === 'ferie'
                                                             ? 'bg-gradient-to-r from-orange-400/90 to-orange-500/90 text-white shadow-orange-500/25'
-                                                            : 'bg-gradient-to-r from-emerald-400/90 to-teal-500/90 text-white shadow-emerald-500/25'
+                                                            : tipoLower === 'permesso'
+                                                                ? 'bg-gradient-to-r from-yellow-400/90 to-amber-500/90 text-white shadow-yellow-500/25'
+                                                                : 'bg-gradient-to-r from-emerald-400/90 to-teal-500/90 text-white shadow-emerald-500/25'
                                                 } hover:shadow-2xl hover:scale-105 transition-all duration-300`}>
                                                     {richiesta.tipo}
                                                 </span>
-                                        </td>
+                                            </td>
 
-                                        <td className="py-8 px-10">
-                                            <div className="text-xl font-semibold text-zinc-800">{richiesta.data}</div>
-                                        </td>
+                                            <td className="py-8 px-10">
+                                                <div className="text-xl font-semibold text-zinc-800">{richiesta.data}</div>
+                                            </td>
 
-                                        <td className="py-8 px-10">
-                                            <div className="text-4xl font-black bg-gradient-to-r from-emerald-500 to-teal-600 bg-clip-text text-transparent drop-shadow-lg">
-                                                {richiesta.durata}
-                                            </div>
-                                            <div className="text-sm text-zinc-500 font-mono uppercase tracking-wider mt-1">
-                                                ore/giorni
-                                            </div>
-                                        </td>
+                                            <td className="py-8 px-10">
+                                                <div className="text-4xl font-black bg-gradient-to-r from-emerald-500 to-teal-600 bg-clip-text text-transparent drop-shadow-lg">
+                                                    {richiesta.durata}
+                                                </div>
+                                                <div className="text-sm text-zinc-500 font-mono uppercase tracking-wider mt-1">
+                                                    ore/giorni
+                                                </div>
+                                            </td>
 
-                                        <td className="py-8 px-10">
-                                            <div className="flex gap-4">
-                                                <button
-                                                    onClick={async () => {
-                                                        const success = await approva(richiesta.id);
-                                                        if (success) {
-                                                            alert(`✅ Approvata richiesta di ${getFullName(richiesta)}!`);
-                                                        }
-                                                    }}
-                                                    className="px-8 py-4 h-16 bg-gradient-to-r from-emerald-500 to-green-600 text-white font-black text-lg rounded-2xl shadow-2xl hover:shadow-3xl hover:from-emerald-600 hover:to-green-700 focus:outline-none focus:ring-4 focus:ring-emerald-500/50 transition-all duration-300 hover:scale-105 hover:-translate-y-1 flex items-center justify-center backdrop-blur-xl border border-emerald-400/50 group/button"
-                                                >
-                                                    Approva
-                                                </button>
-                                                <button
-                                                    onClick={async () => {
-                                                        const success = await rifiuta(richiesta.id);
-                                                        if (success) {
-                                                            alert(`❌ Rifiutata richiesta di ${getFullName(richiesta)}`);
-                                                        }
-                                                    }}
-                                                    className="px-8 py-4 h-16 bg-gradient-to-r from-rose-500 to-red-600 text-white font-black text-lg rounded-2xl shadow-2xl hover:shadow-3xl hover:from-rose-600 hover:to-red-700 focus:outline-none focus:ring-4 focus:ring-rose-500/50 transition-all duration-300 hover:scale-105 hover:-translate-y-1 flex items-center justify-center backdrop-blur-xl border border-rose-400/50"
-                                                >
-                                                    Rifiuta
-                                                </button>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                ))}
+                                            <td className="py-8 px-10">
+                                                {canApprove ? (
+                                                    <div className="flex gap-4">
+                                                        <button
+                                                            onClick={async () => {
+                                                                const success = await approva(richiesta.id);
+                                                                if (success) {
+                                                                    alert(`✅ Approvata richiesta di ${getFullName(richiesta)}!`);
+                                                                }
+                                                            }}
+                                                            className="px-8 py-4 h-16 bg-gradient-to-r from-emerald-500 to-green-600 text-white font-black text-lg rounded-2xl shadow-2xl hover:shadow-3xl hover:from-emerald-600 hover:to-green-700 focus:outline-none focus:ring-4 focus:ring-emerald-500/50 transition-all duration-300 hover:scale-105 hover:-translate-y-1 flex items-center justify-center backdrop-blur-xl border border-emerald-400/50 group/button"
+                                                        >
+                                                            Approva
+                                                        </button>
+                                                        <button
+                                                            onClick={async () => {
+                                                                const success = await rifiuta(richiesta.id);
+                                                                if (success) {
+                                                                    alert(`❌ Rifiutata richiesta di ${getFullName(richiesta)}`);
+                                                                }
+                                                            }}
+                                                            className="px-8 py-4 h-16 bg-gradient-to-r from-rose-500 to-red-600 text-white font-black text-lg rounded-2xl shadow-2xl hover:shadow-3xl hover:from-rose-600 hover:to-red-700 focus:outline-none focus:ring-4 focus:ring-rose-500/50 transition-all duration-300 hover:scale-105 hover:-translate-y-1 flex items-center justify-center backdrop-blur-xl border border-rose-400/50"
+                                                        >
+                                                            Rifiuta
+                                                        </button>
+                                                    </div>
+                                                ) : (
+                                                    <div className="inline-flex items-center gap-3 px-6 py-4 rounded-2xl bg-zinc-50 border-2 border-zinc-200/50 shadow-inner">
+                                                        <Clock className="w-6 h-6 text-amber-500 animate-pulse" />
+                                                        <div>
+                                                            <div className="text-sm font-bold text-zinc-500 uppercase tracking-wide">Stato</div>
+                                                            <div className="text-lg font-black text-zinc-700">In Attesa di Approvazione</div>
+                                                        </div>
+                                                    </div>
+                                                )}
+                                            </td>
+                                        </tr>
+                                    );
+                                })}
                                 </tbody>
                             </table>
                         </div>
@@ -165,8 +199,9 @@ export default function Approvazioni() {
                                 Nessuna richiesta
                             </h3>
                             <p className="text-2xl text-zinc-500 mb-10 max-w-2xl mx-auto leading-relaxed font-light">
-                                Non ci sono nuove richieste di ferie, permessi o smartworking
-                                in attesa della tua approvazione.
+                                Non ci sono nuove richieste
+                                {isManager ? " di smartworking" : " di ferie, permessi o smartworking"}
+                                {" "}in attesa della tua approvazione.
                             </p>
                             <div className="inline-flex items-center gap-3 px-10 py-6 bg-gradient-to-r from-emerald-500/90 to-green-600/90 text-white rounded-3xl shadow-2xl backdrop-blur-xl font-black text-xl border border-emerald-400/50 hover:shadow-3xl hover:scale-105 hover:from-emerald-600 hover:to-green-700 transition-all duration-500">
                                 <div className="w-6 h-6 bg-white/30 rounded-full flex items-center justify-center text-sm font-bold animate-pulse">✨</div>

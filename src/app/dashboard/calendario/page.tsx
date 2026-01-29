@@ -1,7 +1,7 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { useAuth } from '@/hooks/useAuth';
+import { useState, useEffect, type SetStateAction} from 'react';
+import {useAuth} from '@/hooks/useAuth';
 import {
     Download,
     ChevronLeft,
@@ -13,7 +13,7 @@ import {
     CheckCircle,
     XCircle,
     AlertCircle,
-    Plane, Stethoscope, Home
+    Plane, Stethoscope, Home, User
 } from 'lucide-react';
 import DashboardHeader from '@/components/DashboardHeader';
 import {string} from "zod";
@@ -51,7 +51,7 @@ const nomiMesi = [
 ];
 
 export default function Calendario() {
-    const { user, token } = useAuth();
+    const {user, token} = useAuth();
     const isAdmin = user?.role === 'admin';
     const isManager = user?.role === 'manager';
     const userTeam = user?.team;
@@ -69,8 +69,6 @@ export default function Calendario() {
     const [tipoRichiesta, setTipoRichiesta] = useState();
     const [durata, setDurata] = useState();
     const [motivo, setMotivo] = useState('');
-
-
 
 
     const [modalAperto, setModalAperto] = useState(false);
@@ -94,7 +92,7 @@ export default function Calendario() {
         if (!token) return;
         try {
             const res = await fetch('/api/employees', {
-                headers: { Authorization: `Bearer ${token}` }
+                headers: {Authorization: `Bearer ${token}`}
             });
 
             if (res.ok) {
@@ -124,9 +122,11 @@ export default function Calendario() {
         }
     };
 
-    const apriPopupNuova = (dataStr) => {
+    const apriPopupNuova = (dataStr: SetStateAction<string>) => {
         setGiornoSelezionato(dataStr);
+        // @ts-ignore
         setTipoRichiesta('');
+        // @ts-ignore
         setDurata(1);
         setMotivo('');
         setPopupNuovaRichiesta(true);
@@ -162,7 +162,9 @@ export default function Calendario() {
 
             if (res.ok) {
                 setPopupNuovaRichiesta(false);
+                // @ts-ignore
                 setTipoRichiesta('');
+                // @ts-ignore
                 setDurata('');
                 setMotivo('');
                 fetchAssenze();  // Ricarica calendario
@@ -471,6 +473,8 @@ export default function Calendario() {
         );
     }
 
+    // @ts-ignore
+    // @ts-ignore
     return (
         <>
             <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-indigo-50/30 p-4 md:p-8 relative overflow-hidden">
@@ -497,12 +501,12 @@ export default function Calendario() {
                                                 </>
                                             ) : (
                                                 <>
-                                                    👤 <span className="font-bold">{dipendenteSelezionato?.name}</span> - {dipendenteSelezionato?.team}
+                                                    <User /> <span className="font-bold">{dipendenteSelezionato?.name}</span> - {dipendenteSelezionato?.team}
                                                 </>
                                             )
                                         ) : (
                                             <>
-                                                👤 <span className="font-bold">{user?.name}</span> - {user?.team}
+                                                <User />   <span className="font-bold">{user?.name}</span> - {user?.team}
                                             </>
                                         )}
                                         <span className="px-3 py-1 bg-emerald-100/80 text-emerald-700 text-sm font-mono rounded-full border border-emerald-200">
@@ -894,6 +898,7 @@ export default function Calendario() {
                                 <label className="block text-sm font-bold text-zinc-700 mb-2">Tipo</label>
                                 <select
                                     value={tipoRichiesta}
+                                    // @ts-ignore
                                     onChange={(e) => setTipoRichiesta(e.target.value)}
                                 className="w-full p-4 border-2 border-zinc-200 rounded-2xl focus:ring-4 focus:ring-emerald-500/20 focus:border-emerald-500 shadow-lg"
                                 >
@@ -911,6 +916,7 @@ export default function Calendario() {
                                 <input
                                     type="text"
                                     value={durata}
+                                    // @ts-ignore
                                     onChange={(e) => setDurata(e.target.value)}
                                     placeholder="es. 1"
                                     className="w-full p-4 border-2 border-zinc-200 rounded-2xl focus:ring-4 focus:ring-emerald-500/20 focus:border-emerald-500 shadow-lg text-lg tracking-wide font-mono text-left bg-gradient-to-r from-slate-50 to-zinc-50 hover:from-emerald-50"

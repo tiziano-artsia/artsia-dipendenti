@@ -206,18 +206,19 @@ export async function getAbsences(filter: Partial<Pick<AbsenceDoc, "employeeId" 
 }
 
 export async function createAbsence(data: {
-    _id: undefined;
-    tipo: string;
     employeeId: number;
-    type: any;
+    type: string;
     dataInizio: any;
     durata: number;
-    motivo: any;
+    motivo: string;
     status: string;
+    requestedBy: string;
     approvedBy: null;
+    createdAt: string;
+    updatedAt: string;
     data: any;
     stato: string;
-    requestedBy: string
+    tipo: string
 }) {
     await connectDB();
     const doc = await AbsenceModel.create({ ...data, id: Date.now() });
