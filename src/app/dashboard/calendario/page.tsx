@@ -123,9 +123,10 @@ export default function Calendario() {
             console.error('❌ Employees fetch:', error);
         }
     };
+
     const apriPopupNuova = (dataStr) => {
         setGiornoSelezionato(dataStr);
-        setTipoRichiesta('ferie');
+        setTipoRichiesta('');
         setDurata(1);
         setMotivo('');
         setPopupNuovaRichiesta(true);
@@ -148,7 +149,7 @@ export default function Calendario() {
                 updatedAt: new Date().toISOString()
             };
 
-            console.log('🚀 INVIO:', JSON.stringify(payload, null, 2));
+            console.log(' INVIO:', JSON.stringify(payload, null, 2));
 
             const res = await fetch('/api/absences', {
                 method: 'POST',
@@ -783,7 +784,6 @@ export default function Calendario() {
                                     const nomeCompleto = employee?.name || `Dipendente ${assenza.employeeId}`;
                                     const team = employee?.team || 'N/D';
 
-                                    // 🔥 CALCOLA RANGE "DAL - AL"
                                     let rangeData = '';
                                     if (assenza.stato === 'approved' && assenza.tipo === 'ferie' && Number(assenza.durata) > 1) {
                                         try {
