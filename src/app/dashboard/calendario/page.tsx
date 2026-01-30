@@ -373,7 +373,6 @@ export default function Calendario() {
                 const dataItalianaISO = `${anno}-${mese.padStart(2, '0')}-${giorno.padStart(2, '0')}`;
                 if (dataItalianaISO === dataStr) return true;
             }
-
             // RANGE FERIE: se tipo 'ferie', calcola tutti i giorni coperti dalla durata
             if (a.tipo === 'ferie' && a.durata > 1) {
                 try {
@@ -437,13 +436,30 @@ export default function Calendario() {
         const [anno, mese, giorno] = dataISO.split('-');
         return `${giorno}/${mese}/${anno}`;
     };
-
+//TODO CORREGGER GIORNI MALATTIA NELL'EXPORT
     const exportExcelMensile = () => {
-        // Calcola totali per dipendente
-        const totaliPerDipendente = {};
+        const totaliPerDipendente: Record<string, { ferie: number; permesso: number; malattia: number }> = {};
 
         assenze
             .filter(a => a.stato !== 'rejected')
+            .filter(a => {
+                // tieni solo assenze del mese/anno selezionato
+                const raw = a.dataInizio || '';
+                let date: Date | null = null;
+
+                if (raw.includes('/')) {
+                    // formato gg/mm/aaaa
+                    const [g, m, y] = raw.split('/');
+                    date = new Date(Number(y), Number(m) - 1, Number(g));
+                } else if (raw.includes('-')) {
+                    // formato yyyy-mm-dd
+                    const [y, m, g] = raw.split('-');
+                    date = new Date(Number(y), Number(m) - 1, Number(g));
+                }
+
+                if (!date || isNaN(date.getTime())) return false;
+                return date.getMonth() === mese && date.getFullYear() === anno;
+            })
             .forEach(a => {
                 const empName = getEmployeeById(a.employeeId)?.name || 'N/D';
 
@@ -464,20 +480,13 @@ export default function Calendario() {
                 }
             });
 
-        // Ordina dipendenti alfabeticamente
         const dipendentiOrdinati = Object.keys(totaliPerDipendente).sort();
 
-        // Costruisci dati per Excel
-        const datiSheet = [];
-
-        // Titolo
+        const datiSheet: (string | number)[][] = [];
         datiSheet.push([`TOTALE MENSILE DI: ${nomiMesi[mese]} ${anno}`]);
         datiSheet.push([]);
-
-        // Intestazione tabella
         datiSheet.push(['#', 'Dipendente', 'Ferie (giorni)', 'Permesso (ore)', 'Malattia (giorni)']);
 
-        // Righe dipendenti
         dipendentiOrdinati.forEach((nome, index) => {
             const totali = totaliPerDipendente[nome];
             datiSheet.push([
@@ -489,30 +498,23 @@ export default function Calendario() {
             ]);
         });
 
-        // Crea workbook
         const workbook = XLSX.utils.book_new();
         const worksheet = XLSX.utils.aoa_to_sheet(datiSheet);
 
-        // Formattazione colonne
         worksheet['!cols'] = [
-            { wch: 5 },   // #
-            { wch: 25 },  // Dipendente
-            { wch: 18 },  // Ferie
-            { wch: 18 },  // Permesso
-            { wch: 18 }   // Malattia
+            { wch: 5 },
+            { wch: 25 },
+            { wch: 18 },
+            { wch: 18 },
+            { wch: 18 }
         ];
 
         XLSX.utils.book_append_sheet(workbook, worksheet, 'Totali Mensili');
 
-        // Genera buffer Excel
         const excelBuffer = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' });
 
-        // Prepara nome file (stessa logica del CSV originale)
-        const nome = visualizzaTutti ? 'tutti_dipendenti' :
-            dipendenteSelezionato?.name || user?.name || 'export';
 
-        // Download con funzione riutilizzabile
-        downloadFile(excelBuffer, `totali_mensili_${nome}_${nomiMesi[mese]}_${anno}.xlsx`);
+        downloadFile(excelBuffer, `totali_assenze_${nomiMesi[mese]}_${anno}.xlsx`);
     };
 
     const downloadFile = (content: any, filename: string) => {
@@ -738,44 +740,51 @@ export default function Calendario() {
         </span>
 
                                         <div className="flex flex-col gap-1 mt-auto z-10 w-full">
-                                            {assenzeGiorno.slice(0, 3).map((assenza, idx) => {
-                                                const employee = getEmployeeById(assenza.employeeId);
-                                                const nomeCompleto = employee?.name || `Dip.${assenza.employeeId}`;
-                                                const nomeCorto = nomeCompleto.length > 12
-                                                    ? `${nomeCompleto.substring(0, 12)}...`
-                                                    : nomeCompleto;
+                                            {assenzeGiorno
+                                                .filter(a => {
+                                                    const info = getInfoGiorno(giorno, mese, anno);
+                                                    // Mostra assenze SOLO in giorni lavorativi (esclude weekend e festivi)
+                                                    return info.isLavorativo;
+                                                })
+                                                .slice(0, 3)
+                                                .map((assenza, idx) => {
+                                                    const employee = getEmployeeById(assenza.employeeId);
+                                                    const nomeCompleto = employee?.name || `Dip.${assenza.employeeId}`;
+                                                    const nomeCorto = nomeCompleto.length > 12
+                                                        ? `${nomeCompleto.substring(0, 12)}...`
+                                                        : nomeCompleto;
 
-                                                return (
-                                                    <div
-                                                        key={`${assenza.id}-${idx}`}
-                                                        className={`px-1.5 py-1 rounded-lg shadow-md backdrop-blur-xl border 
-                        text-xs font-bold uppercase tracking-wide group-hover:scale-105 transition-all 
-                        flex flex-col gap-0.5 ${
-                                                            assenza.tipo === 'ferie'
-                                                                ? 'bg-gradient-to-r from-orange-500/95 to-orange-600/95 text-white border-orange-400/60 shadow-orange-400/40'
-                                                                : assenza.tipo === 'malattia'
-                                                                    ? 'bg-gradient-to-r from-rose-500/95 to-red-600/95 text-white border-red-400/60 shadow-red-400/40'
-                                                                    : assenza.tipo === 'permesso'
-                                                                        ? 'bg-gradient-to-r from-yellow-500/95 to-amber-600/95 text-white border-yellow-400/60 shadow-yellow-400/40'
-                                                                        : 'bg-gradient-to-r from-blue-500/95 to-blue-600/95 text-white border-blue-400/60 shadow-blue-400/40'
-                                                        }`}
-                                                    >
-                        <span className="truncate text-[10px] md:text-[11px] font-bold">
-                            {nomeCorto}
+                                                    return (
+                                                        <div
+                                                            key={`${assenza.id}-${idx}`}
+                                                            className={`px-1.5 py-1 rounded-lg shadow-md backdrop-blur-xl border 
+text-xs font-bold uppercase tracking-wide group-hover:scale-105 transition-all 
+flex flex-col gap-0.5 ${
+                                                                assenza.tipo === 'ferie'
+                                                                    ? 'bg-gradient-to-r from-orange-500/95 to-orange-600/95 text-white border-orange-400/60 shadow-orange-400/40'
+                                                                    : assenza.tipo === 'malattia'
+                                                                        ? 'bg-gradient-to-r from-rose-500/95 to-red-600/95 text-white border-red-400/60 shadow-red-400/40'
+                                                                        : assenza.tipo === 'permesso'
+                                                                            ? 'bg-gradient-to-r from-yellow-500/95 to-amber-600/95 text-white border-yellow-400/60 shadow-yellow-400/40'
+                                                                            : 'bg-gradient-to-r from-blue-500/95 to-blue-600/95 text-white border-blue-400/60 shadow-blue-400/40'
+                                                            }`}
+                                                        >
+                    <span className="truncate text-[10px] md:text-[11px] font-bold">
+                        {nomeCorto}
+                    </span>
+                                                            <div className="flex items-center justify-between gap-1">
+                        <span className="text-[9px] md:text-[10px] opacity-90">
+                            {assenza.tipo === 'ferie' ? '🌴' :
+                                assenza.tipo === 'malattia' ? '🤒' :
+                                    assenza.tipo === 'permesso' ? '⏰' : '🏠'}
                         </span>
-                                                        <div className="flex items-center justify-between gap-1">
-                            <span className="text-[9px] md:text-[10px] opacity-90">
-                                {assenza.tipo === 'ferie' ? '🌴' :
-                                    assenza.tipo === 'malattia' ? '🤒' :
-                                        assenza.tipo === 'permesso' ? '⏰' : '🏠'}
-                            </span>
-                                                            <span className="text-[9px] md:text-[10px] font-bold bg-white/30 px-1.5 py-0.5 rounded-sm">
-                                {assenza.tipo === 'permesso' ? `${assenza.durata}h` : `${assenza.durata}g`}
-                            </span>
+                                                                <span className="text-[9px] md:text-[10px] font-bold bg-white/30 px-1.5 py-0.5 rounded-sm">
+                            {assenza.tipo === 'permesso' ? `${assenza.durata}h` : `${assenza.durata}g`}
+                        </span>
+                                                            </div>
                                                         </div>
-                                                    </div>
-                                                );
-                                            })}
+                                                    );
+                                                })}
                                         </div>
 
                                         {assenzeGiorno.length > 3 && (
@@ -864,7 +873,7 @@ export default function Calendario() {
                                     const team = employee?.team || 'N/D';
 
                                     let rangeData = '';
-                                    if (assenza.stato === 'approved' && assenza.tipo === 'ferie' && Number(assenza.durata) > 1) {
+                                    if (assenza.stato === 'approved' && ['ferie', 'malattia'].includes(assenza.tipo) && Number(assenza.durata) > 1) {
                                         try {
                                             const [giornoI, meseI, annoI] = assenza.dataInizio.split(/[-/]/);
                                             const dataInizio = new Date(Number(annoI), Number(meseI) - 1, Number(giornoI));
