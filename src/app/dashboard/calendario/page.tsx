@@ -1,4 +1,5 @@
 'use client';
+import * as XLSX from 'xlsx';
 
 import { useState, useEffect, type SetStateAction} from 'react';
 import {useAuth} from '@/hooks/useAuth';
@@ -437,23 +438,89 @@ export default function Calendario() {
         return `${giorno}/${mese}/${anno}`;
     };
 
-    const exportCSV = () => {
+    const exportExcelMensile = () => {
+        // Calcola totali per dipendente
+        const totaliPerDipendente = {};
+
+        assenze
+            .filter(a => a.stato !== 'rejected')
+            .forEach(a => {
+                const empName = getEmployeeById(a.employeeId)?.name || 'N/D';
+
+                if (!totaliPerDipendente[empName]) {
+                    totaliPerDipendente[empName] = {
+                        ferie: 0,
+                        permesso: 0,
+                        malattia: 0
+                    };
+                }
+
+                if (a.tipo === 'ferie') {
+                    totaliPerDipendente[empName].ferie += a.durata;
+                } else if (a.tipo === 'permesso') {
+                    totaliPerDipendente[empName].permesso += a.durata;
+                } else if (a.tipo === 'malattia') {
+                    totaliPerDipendente[empName].malattia += a.durata;
+                }
+            });
+
+        // Ordina dipendenti alfabeticamente
+        const dipendentiOrdinati = Object.keys(totaliPerDipendente).sort();
+
+        // Costruisci dati per Excel
+        const datiSheet = [];
+
+        // Titolo
+        datiSheet.push([`TOTALE MENSILE DI: ${nomiMesi[mese]} ${anno}`]);
+        datiSheet.push([]);
+
+        // Intestazione tabella
+        datiSheet.push(['#', 'Dipendente', 'Ferie (giorni)', 'Permesso (ore)', 'Malattia (giorni)']);
+
+        // Righe dipendenti
+        dipendentiOrdinati.forEach((nome, index) => {
+            const totali = totaliPerDipendente[nome];
+            datiSheet.push([
+                index + 1,
+                nome,
+                totali.ferie,
+                totali.permesso,
+                totali.malattia
+            ]);
+        });
+
+        // Crea workbook
+        const workbook = XLSX.utils.book_new();
+        const worksheet = XLSX.utils.aoa_to_sheet(datiSheet);
+
+        // Formattazione colonne
+        worksheet['!cols'] = [
+            { wch: 5 },   // #
+            { wch: 25 },  // Dipendente
+            { wch: 18 },  // Ferie
+            { wch: 18 },  // Permesso
+            { wch: 18 }   // Malattia
+        ];
+
+        XLSX.utils.book_append_sheet(workbook, worksheet, 'Totali Mensili');
+
+        // Genera buffer Excel
+        const excelBuffer = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' });
+
+        // Prepara nome file (stessa logica del CSV originale)
         const nome = visualizzaTutti ? 'tutti_dipendenti' :
             dipendenteSelezionato?.name || user?.name || 'export';
-        const csv = `Data,Dipendente,Tipo,Durata,Stato,Motivo\n` +
-            assenze
-                .filter(a => a.stato !== 'rejected')
-                .map(a => {
-                    const empName = getEmployeeById(a.employeeId)?.name || 'N/D';
-                    const durata = a.tipo === 'permesso' ? `${a.durata} ore` : `${a.durata} giorni`;
-                    return `"${a.dataInizio}","${empName}","${a.tipo}","${durata}","${a.stato}","${a.motivo || '-'}"`;
-                })
-                .join('\n');
-        downloadFile(csv, `calendario_${nome}_${nomiMesi[mese]}_${anno}.csv`);
+
+        // Download con funzione riutilizzabile
+        downloadFile(excelBuffer, `totali_mensili_${nome}_${nomiMesi[mese]}_${anno}.xlsx`);
     };
 
-    const downloadFile = (content: string, filename: string) => {
-        const blob = new Blob([content], { type: 'text/csv;charset=utf-8;' });
+    const downloadFile = (content: any, filename: string) => {
+        const blob = new Blob([content], {
+            type: content instanceof ArrayBuffer
+                ? 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+                : 'text/csv;charset=utf-8;'
+        });
         const link = document.createElement('a');
         link.href = URL.createObjectURL(blob);
         link.download = filename;
@@ -544,7 +611,7 @@ export default function Calendario() {
                                             }`}
                                         >
                                             <Users className={`w-5 h-5 ${visualizzaTutti ? 'text-white' : 'text-emerald-500'}`} />
-                                            {visualizzaTutti ? '👥 Tutti' : '👤 Singolo'}
+                                            {visualizzaTutti ? ' Tutti' : ' Singolo'}
                                         </button>
 
                                         {!visualizzaTutti && employees.length > 0 && (
@@ -562,7 +629,7 @@ export default function Calendario() {
                                             >
                                                 {employees.map(emp => (
                                                     <option key={emp.id} value={emp.id}>
-                                                        👤 {emp.name} ({emp.team})
+                                                         {emp.name} ({emp.team})
                                                     </option>
                                                 ))}
                                             </select>
@@ -571,11 +638,11 @@ export default function Calendario() {
                                 )}
 
                                 <button
-                                    onClick={exportCSV}
+                                    onClick={exportExcelMensile}
                                     className="flex items-center gap-3 px-8 py-4 h-16 bg-gradient-to-r from-blue-500 to-indigo-600 text-white font-black text-lg rounded-2xl shadow-2xl hover:shadow-3xl hover:from-blue-600 hover:to-indigo-700 focus:outline-none focus:ring-4 focus:ring-blue-500/50 transition-all duration-300 hover:-translate-y-1 backdrop-blur-xl border border-blue-400/50"
                                 >
                                     <Download className="w-5 h-5" />
-                                    Export CSV
+                                    Export Excel
                                 </button>
                             </div>
                         </div>
