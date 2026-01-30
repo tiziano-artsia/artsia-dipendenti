@@ -436,7 +436,6 @@ export default function Calendario() {
         const [anno, mese, giorno] = dataISO.split('-');
         return `${giorno}/${mese}/${anno}`;
     };
-//TODO CORREGGER GIORNI MALATTIA NELL'EXPORT
     const exportExcelMensile = () => {
         const totaliPerDipendente: Record<string, { ferie: number; permesso: number; malattia: number }> = {};
 
