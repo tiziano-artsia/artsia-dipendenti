@@ -15,7 +15,6 @@ export async function GET(request: NextRequest) {
         const token = authHeader.substring(7);
         const user = jwt.verify(token, JWT_SECRET) as { id: number; role: string };
 
-        // 🔥 TUTTI possono vedere l'elenco dipendenti (per mostrare i nomi)
         const employees = await getEmployees();
 
         console.log(`✅ API Employees: restituiti ${employees.length} dipendenti`);

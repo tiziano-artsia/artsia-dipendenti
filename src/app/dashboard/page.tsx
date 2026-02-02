@@ -367,7 +367,7 @@ export default function Dashboard() {
                 </div>
     )}
                 {/* Buste Paga - Solo per non admin */}
-                {user?.role !== 'admin' && (
+                {user?.role !== 'admin' && showPayslips === true && (
                     <div className="bg-white/60 backdrop-blur-3xl rounded-3xl shadow-2xl p-8 md:p-10 border border-white/70 hover:shadow-3xl transition-all duration-700">
                         <div className="flex items-center justify-between mb-10">
                             <div className="flex items-center gap-4">

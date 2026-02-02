@@ -14,7 +14,11 @@ import {
     CheckCircle,
     XCircle,
     AlertCircle,
-    Plane, Stethoscope, Home, User
+    Plane,
+    Stethoscope,
+    Home,
+    User,
+    Filter
 } from 'lucide-react';
 import DashboardHeader from '@/components/DashboardHeader';
 import {string} from "zod";
@@ -52,12 +56,15 @@ const nomiMesi = [
     'Luglio', 'Agosto', 'Settembre', 'Ottobre', 'Novembre', 'Dicembre'
 ];
 
+const nomiGiorni = ['Domenica', 'Lunedì', 'Martedì', 'Mercoledì', 'Giovedì', 'Venerdì', 'Sabato'];
+
+type VistaCalendario = 'mensile' | 'settimanale' | 'giornaliera';
+
 export default function Calendario() {
     const {user, token} = useAuth();
     const isAdmin = user?.role === 'admin';
     const isManager = user?.role === 'manager';
     const userTeam = user?.team;
-
 
     const [dipendenteSelezionato, setDipendenteSelezionato] = useState<Employee | null>(null);
     const [visualizzaTutti, setVisualizzaTutti] = useState(true);
@@ -72,10 +79,15 @@ export default function Calendario() {
     const [durata, setDurata] = useState();
     const [motivo, setMotivo] = useState('');
 
-
     const [modalAperto, setModalAperto] = useState(false);
     const [giornoSelezionato, setGiornoSelezionato] = useState<string>('');
     const [assenzeModale, setAssenzeModale] = useState<Absence[]>([]);
+
+    // 🔥 NUOVI STATE PER FILTRI E VISTA
+    const [filtriAttivi, setFiltriAttivi] = useState<string[]>([]);
+    const [vistaCalendario, setVistaCalendario] = useState<VistaCalendario>('mensile');
+    const [giornoCorrente, setGiornoCorrente] = useState(new Date());
+    const [settimanaCorrente, setSettimanaCorrente] = useState(new Date());
 
     const mapBackendToFrontend = (backendData: any[]): Absence[] => {
         return backendData.map(item => ({
@@ -101,7 +113,7 @@ export default function Calendario() {
                 const data = await res.json();
                 let emps = data.data || [];
 
-                console.log('👥 Employees caricati:', emps.length, emps);
+                console.log(' Employees caricati:', emps.length, emps);
 
                 if (user && !emps.find((e: Employee) => Number(e.id) === Number(user.id))) {
                     emps.push({
@@ -151,7 +163,7 @@ export default function Calendario() {
                 updatedAt: new Date().toISOString()
             };
 
-            console.log(' INVIO:', JSON.stringify(payload, null, 2));
+            console.log('📤 INVIO:', JSON.stringify(payload, null, 2));
 
             const res = await fetch('/api/absences', {
                 method: 'POST',
@@ -183,9 +195,6 @@ export default function Calendario() {
         }
     };
 
-
-
-
     const fetchAssenze = async (specificEmployeeId?: number) => {
         if (!token || !user) return;
         setLoading(true);
@@ -193,15 +202,11 @@ export default function Calendario() {
         try {
             let url = '/api/absences';
 
-            // COSTRUISCI URL CORRETTA
             if (isAdmin) {
-                // Admin: se specificEmployeeId è fornito, filtra per quello
                 if (specificEmployeeId) {
                     url = `/api/absences?employeeId=${specificEmployeeId}`;
                 }
-                // Altrimenti: fetch tutti (nessun parametro)
             } else {
-                // Non-admin: SEMPRE filtra per user.id
                 url = `/api/absences?employeeId=${user.id}`;
             }
 
@@ -229,10 +234,9 @@ export default function Calendario() {
 
             const backendData = data.data || [];
 
-            console.log('📦 Dati ricevuti:', {
-                count: backendData.length,
-                sample: backendData.slice(0, 2)
-            });
+            // 🔥 DEBUG: vedi tutte le assenze ricevute
+            console.log('📦 Assenze ricevute dal backend:', backendData);
+            console.log('📦 Smartworking ricevuti:', backendData.filter(a => a.type === 'smartworking'));
 
             const mapped = mapBackendToFrontend(backendData);
 
@@ -240,7 +244,8 @@ export default function Calendario() {
                 total: mapped.length,
                 approved: mapped.filter(a => a.stato === 'approved').length,
                 pending: mapped.filter(a => a.stato === 'pending').length,
-                rejected: mapped.filter(a => a.stato === 'rejected').length
+                rejected: mapped.filter(a => a.stato === 'rejected').length,
+                smartworking: mapped.filter(a => a.tipo === 'smartworking').length
             });
 
             setAssenze(mapped);
@@ -254,13 +259,6 @@ export default function Calendario() {
     };
 
     // 🔥 CARICA EMPLOYEES per tutti
-    useEffect(() => {
-        if (token) {
-            fetchEmployees();
-        }
-    }, [token]);
-
-// CARICA EMPLOYEES per tutti (anche non-admin)
     useEffect(() => {
         if (token) {
             fetchEmployees();
@@ -292,14 +290,11 @@ export default function Calendario() {
 
     }, [token, user?.id, isAdmin, visualizzaTutti, dipendenteSelezionato?.id, employees.length]);
 
-
-
     const getGiorniMese = (m: number, a: number) => new Date(a, m + 1, 0).getDate();
     const getPrimoGiornoSettimana = (m: number, a: number) => {
         const day = new Date(a, m, 1).getDay();
         return day === 0 ? 6 : day - 1;
     };
-
 
     const isWeekend = (date: Date): boolean => {
         const day = date.getDay();
@@ -318,6 +313,7 @@ export default function Calendario() {
         new Date(anno, 11, 25),// Natale
         new Date(anno, 11, 26) // Santo Stefano
     ];
+
     const getPasqua = (anno: number): Date => {
         const a = anno % 19;
         const b = Math.floor(anno / 100);
@@ -336,6 +332,7 @@ export default function Calendario() {
 
         return new Date(anno, month, day);
     };
+
     const isFestivo = (date: Date): boolean => {
         const anno = date.getFullYear();
         const festivi = [
@@ -373,17 +370,14 @@ export default function Calendario() {
                 const dataItalianaISO = `${anno}-${mese.padStart(2, '0')}-${giorno.padStart(2, '0')}`;
                 if (dataItalianaISO === dataStr) return true;
             }
-            // RANGE FERIE: se tipo 'ferie', calcola tutti i giorni coperti dalla durata
+
             if (a.tipo === 'ferie' && a.durata > 1) {
                 try {
                     const [annoI, meseI, giornoI] = dataAssenza.split(/[-/]/).map(Number);
                     const dataInizio = new Date(annoI, meseI - 1, giornoI);
-
-                    // Calcola data fine: dataInizio + (durata - 1) giorni
                     const dataFine = new Date(dataInizio.getTime() + (a.durata - 1) * 86400000);
                     const dataCheck = new Date(dataStr);
 
-                    // Se dataCheck è tra inizio e fine (incluso), match
                     if (dataCheck >= dataInizio && dataCheck <= dataFine) {
                         return true;
                     }
@@ -395,28 +389,36 @@ export default function Calendario() {
             return false;
         });
 
-        // Filtro visibilità + stato (approved/pending)
-        return assenzeGiorno.filter(a => {
-            // Solo approved e pending
+        const assenzeFiltrate = assenzeGiorno.filter(a => {
+            if (filtriAttivi.length > 0 && !filtriAttivi.includes(a.tipo)) {
+                return false;
+            }
+
             if (a.stato !== 'approved' && a.stato !== 'pending') return false;
 
             const employee = getEmployeeById(a.employeeId);
-            const isOwnAbsence = a.employeeId === user?.id; // Propria assenza visibile sempre
-            const isTeamMember = employee?.team === userTeam; // Stesso team per manager
+            const isOwnAbsence = a.employeeId === user?.id;
+            const isTeamMember = employee?.team === userTeam;
 
-            if (isAdmin) return true; // Admin vede tutto
+            if (isAdmin) return true;
 
-            if (a.tipo === 'smartworking') return true; // Smart working visibile a tutti
+            if (a.tipo === 'smartworking') return true;
 
-            // Ferie e malattia: solo proprie o del team se manager
             if (['ferie', 'malattia'].includes(a.tipo)) {
                 return isOwnAbsence || (isManager && isTeamMember);
             }
 
-            return true; // Altri tipi (permesso, etc.) visibili
-        });
-    };
+            // 🔥 PERMESSO: propri + team se manager
+            if (a.tipo === 'permesso') {
+                return isOwnAbsence || (isManager && isTeamMember);
+            }
 
+            // Default: mostra
+            return true;
+        });
+
+        return assenzeFiltrate;
+    };
 
     const getEmployeeById = (employeeId: number): Employee | null => {
         const empId = Number(employeeId);
@@ -436,6 +438,7 @@ export default function Calendario() {
         const [anno, mese, giorno] = dataISO.split('-');
         return `${giorno}/${mese}/${anno}`;
     };
+
     const exportExcelMensile = () => {
         const totaliPerDipendente: Record<string, { ferie: number; permesso: number; malattia: number }> = {};
 
@@ -447,11 +450,9 @@ export default function Calendario() {
                 let date: Date | null = null;
 
                 if (raw.includes('/')) {
-                    // formato gg/mm/aaaa
                     const [g, m, y] = raw.split('/');
                     date = new Date(Number(y), Number(m) - 1, Number(g));
                 } else if (raw.includes('-')) {
-                    // formato yyyy-mm-dd
                     const [y, m, g] = raw.split('-');
                     date = new Date(Number(y), Number(m) - 1, Number(g));
                 }
@@ -512,7 +513,6 @@ export default function Calendario() {
 
         const excelBuffer = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' });
 
-
         downloadFile(excelBuffer, `totali_assenze_${nomiMesi[mese]}_${anno}.xlsx`);
     };
 
@@ -528,6 +528,165 @@ export default function Calendario() {
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
+    };
+
+    // 🔥 FUNZIONI PER VISTA SETTIMANALE
+    const getInizioSettimana = (date: Date) => {
+        const d = new Date(date);
+        const day = d.getDay();
+        const diff = d.getDate() - day + (day === 0 ? -6 : 1);
+        return new Date(d.setDate(diff));
+    };
+
+    const getGiorniSettimana = (startDate: Date) => {
+        const giorni = [];
+        for (let i = 0; i < 7; i++) {
+            const giorno = new Date(startDate);
+            giorno.setDate(startDate.getDate() + i);
+            giorni.push(giorno);
+        }
+        return giorni;
+    };
+
+    // 🔥 RENDER VISTA GIORNALIERA
+    const renderVistaGiornaliera = () => {
+        const dataStr = `${giornoCorrente.getFullYear()}-${String(giornoCorrente.getMonth() + 1).padStart(2, '0')}-${String(giornoCorrente.getDate()).padStart(2, '0')}`;
+        const assenzeGiorno = getAssenzePerData(dataStr);
+        const info = getInfoGiorno(giornoCorrente.getDate(), giornoCorrente.getMonth(), giornoCorrente.getFullYear());
+
+        return (
+            <div className="bg-white/50 backdrop-blur-3xl rounded-3xl shadow-2xl p-6 md:p-10 border border-white/60">
+                <div className="text-center mb-8">
+                    <h2 className="text-3xl font-black text-zinc-800">
+                        {nomiGiorni[giornoCorrente.getDay()]} {giornoCorrente.getDate()} {nomiMesi[giornoCorrente.getMonth()]} {giornoCorrente.getFullYear()}
+                    </h2>
+                    {info.isFestivo && <p className="text-red-600 font-bold mt-2">🎉 Giorno Festivo</p>}
+                    {info.isWeekend && !info.isFestivo && <p className="text-zinc-600 font-bold mt-2">Weekend</p>}
+                </div>
+
+                {assenzeGiorno.length === 0 ? (
+                    <div className="text-center py-20 text-zinc-500">
+                        <Calendar className="w-20 h-20 mx-auto mb-4 opacity-30" />
+                        <p className="text-2xl font-bold">Nessuna assenza per questo giorno</p>
+                    </div>
+                ) : (
+                    <div className="space-y-4">
+                        {assenzeGiorno.map((assenza, idx) => {
+                            const employee = getEmployeeById(assenza.employeeId);
+                            const nomeCompleto = employee?.name || `Dip.${assenza.employeeId}`;
+
+                            return (
+                                <div key={`giornaliera-${assenza.id}-${idx}`}
+                                     className="bg-white/80 backdrop-blur-xl rounded-2xl p-6 border-2 border-zinc-200/50 shadow-lg hover:shadow-xl transition-all">
+                                    <div className="flex items-center justify-between gap-4">
+                                        <div className="flex items-center gap-4">
+                                            <div className="w-12 h-12 bg-gradient-to-br from-emerald-500 to-green-600 rounded-xl flex items-center justify-center">
+                                                <Users className="w-6 h-6 text-white" />
+                                            </div>
+                                            <div>
+                                                <h3 className="text-xl font-black text-zinc-800">{nomeCompleto}</h3>
+                                                <p className="text-zinc-600">{employee?.team || 'N/D'}</p>
+                                            </div>
+                                        </div>
+                                        <div className={`px-6 py-3 rounded-2xl font-black text-lg shadow-lg border-2 ${
+                                            assenza.tipo === 'ferie' ? 'bg-gradient-to-r from-orange-500 to-orange-600 text-white border-orange-400/50' :
+                                                assenza.tipo === 'malattia' ? 'bg-gradient-to-r from-rose-500 to-red-600 text-white border-red-400/50' :
+                                                    assenza.tipo === 'permesso' ? 'bg-gradient-to-r from-yellow-500 to-amber-600 text-white border-yellow-400/50' :
+                                                        'bg-gradient-to-r from-blue-500 to-blue-600 text-white border-blue-400/50'
+                                        }`}>
+                                            {assenza.tipo === 'ferie' ? '🌴' : assenza.tipo === 'malattia' ? '🤒' : assenza.tipo === 'permesso' ? '⏰' : '🏠'}
+                                            {' '}{assenza.tipo.toUpperCase()}
+                                        </div>
+                                    </div>
+                                    {assenza.motivo && (
+                                        <div className="mt-4 p-4 bg-zinc-100 rounded-xl">
+                                            <p className="text-sm font-bold text-zinc-600">Motivo:</p>
+                                            <p className="text-zinc-800">{assenza.motivo}</p>
+                                        </div>
+                                    )}
+                                </div>
+                            );
+                        })}
+                    </div>
+                )}
+            </div>
+        );
+    };
+
+    const renderVistaSettimanale = () => {
+        const inizioSettimana = getInizioSettimana(settimanaCorrente);
+        const giorniSettimana = getGiorniSettimana(inizioSettimana);
+        const fineSettimana = new Date(giorniSettimana[6]);
+
+        return (
+            <div className="bg-white/50 backdrop-blur-3xl rounded-3xl shadow-2xl p-6 md:p-10 border border-white/60">
+                <div className="text-center mb-6">
+                    <h2 className="text-2xl font-black text-zinc-800">
+                        Settimana dal {inizioSettimana.getDate()} {nomiMesi[inizioSettimana.getMonth()]}
+                        {' al '} {fineSettimana.getDate()} {nomiMesi[fineSettimana.getMonth()]} {fineSettimana.getFullYear()}
+                    </h2>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-7 gap-4">
+                    {giorniSettimana.map((giorno, idx) => {
+                        const dataStr = `${giorno.getFullYear()}-${String(giorno.getMonth() + 1).padStart(2, '0')}-${String(giorno.getDate()).padStart(2, '0')}`;
+                        const assenzeGiorno = getAssenzePerData(dataStr);
+                        const info = getInfoGiorno(giorno.getDate(), giorno.getMonth(), giorno.getFullYear());
+                        const today = new Date().toISOString().split('T')[0] === dataStr;
+
+                        return (
+                            <div key={idx}
+                                 onClick={() => {
+                                     apriModale(dataStr);
+                                     const mieAssenze = getAssenzePerData(dataStr).filter(a => a.employeeId === user?.id);
+                                     if (mieAssenze.length === 0) {
+                                         apriPopupNuova(dataStr);
+                                     }
+                                 }}
+                                 className={`relative p-4 rounded-2xl border-2 shadow-lg cursor-pointer transition-all hover:shadow-xl min-h-[200px] ${
+                                     assenzeGiorno.length > 0
+                                         ? 'bg-gradient-to-br from-emerald-50/80 to-blue-50/60 border-emerald-300/70'
+                                         : info.isFestivo
+                                             ? 'bg-gradient-to-br from-purple-50/80 to-pink-50/80 border-red-400'
+                                             : info.isWeekend
+                                                 ? 'bg-gray-200 border-zinc-200/60'
+                                                 : 'bg-white/90 border-zinc-200/50'
+                                 } ${today ? 'ring-4 ring-emerald-400/40' : ''}`}>
+                                <div className="text-center mb-4">
+                                    <p className="text-sm font-bold text-zinc-600">{nomiGiorni[giorno.getDay()].substring(0, 3).toUpperCase()}</p>
+                                    <p className={`text-3xl font-black ${today ? 'text-emerald-700' : 'text-zinc-800'}`}>{giorno.getDate()}</p>
+                                </div>
+
+                                <div className="space-y-2">
+                                    {assenzeGiorno.slice(0, 3).map((assenza, idx) => {
+                                        const employee = getEmployeeById(assenza.employeeId);
+                                        const nomeCorto = (employee?.name || `Dip.${assenza.employeeId}`).substring(0, 10);
+
+                                        return (
+                                            <div key={`week-${assenza.id}-${idx}`}
+                                                 className={`px-2 py-1 rounded-lg text-xs font-bold text-white ${
+                                                     assenza.tipo === 'ferie' ? 'bg-orange-500' :
+                                                         assenza.tipo === 'malattia' ? 'bg-rose-500' :
+                                                             assenza.tipo === 'permesso' ? 'bg-yellow-500' :
+                                                                 'bg-blue-500'
+                                                 }`}>
+                                                <p className="truncate">{nomeCorto}</p>
+                                                <p className="text-[10px]">{assenza.tipo}</p>
+                                            </div>
+                                        );
+                                    })}
+                                    {assenzeGiorno.length > 3 && (
+                                        <div className="text-xs text-center font-bold text-zinc-600">
+                                            +{assenzeGiorno.length - 3} altre
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        );
+                    })}
+                </div>
+            </div>
+        );
     };
 
     if (loading) {
@@ -546,14 +705,10 @@ export default function Calendario() {
         );
     }
 
-
     return (
         <>
             <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-indigo-50/30 p-4 md:p-8 relative overflow-hidden">
-                <Toaster
-                    position="top-center"
-                    reverseOrder={false}
-                />
+                <Toaster position="top-center" reverseOrder={false} />
                 <div className="absolute inset-0 bg-gradient-to-r from-emerald-500/2 via-blue-500/1 to-purple-500/1 backdrop-blur-xl pointer-events-none" />
                 <div className="max-w-7xl mx-auto relative z-10 space-y-8">
 
@@ -612,7 +767,7 @@ export default function Calendario() {
                                             }`}
                                         >
                                             <Users className={`w-5 h-5 ${visualizzaTutti ? 'text-white' : 'text-emerald-500'}`} />
-                                            {visualizzaTutti ? ' Tutti' : ' Singolo'}
+                                            {visualizzaTutti ? 'Tutti' : 'Singolo'}
                                         </button>
 
                                         {!visualizzaTutti && employees.length > 0 && (
@@ -630,7 +785,7 @@ export default function Calendario() {
                                             >
                                                 {employees.map(emp => (
                                                     <option key={emp.id} value={emp.id}>
-                                                         {emp.name} ({emp.team})
+                                                        {emp.name} ({emp.team})
                                                     </option>
                                                 ))}
                                             </select>
@@ -649,197 +804,303 @@ export default function Calendario() {
                         </div>
                     </div>
 
-                    {/* Navigazione mese */}
-                    <div className="bg-white/60 backdrop-blur-3xl rounded-3xl shadow-xl p-6 border border-white/70 flex justify-between items-center">
-                        <button
-                            onClick={() => {
-                                if (mese === 0) {
-                                    setMese(11); setAnno(anno - 1);
-                                } else {
-                                    setMese(mese - 1);
-                                }
-                            }}
-                            className="p-4 hover:bg-white/50 rounded-2xl backdrop-blur-xl border border-zinc-200/50 hover:border-zinc-300 transition-all hover:scale-105 shadow-lg hover:shadow-xl"
-                        >
-                            <ChevronLeft className="w-7 h-7 text-zinc-700" />
-                        </button>
-                        <div className="text-center min-w-[250px]">
-                            <div className="text-4xl font-black bg-gradient-to-r from-zinc-800 to-slate-700 bg-clip-text text-transparent tracking-tight">
-                                {nomiMesi[mese]} {anno}
+                    <div className="bg-white/60 backdrop-blur-3xl rounded-3xl shadow-xl p-6 border border-white/70">
+                        <div className="flex flex-col md:flex-row items-center justify-between gap-4">
+                            <div className="flex items-center gap-3">
+                                <Filter className="w-6 h-6 text-emerald-600" />
+                                <h3 className="text-xl font-bold text-zinc-800">Filtra per tipo:</h3>
+                            </div>
+                            <div className="flex flex-wrap gap-3">
+                                {['smartworking', 'ferie', 'malattia', 'permesso'].map(tipo => (
+                                    <button
+                                        key={tipo}
+                                        onClick={() => {
+                                            setFiltriAttivi(prev =>
+                                                prev.includes(tipo)
+                                                    ? prev.filter(t => t !== tipo)
+                                                    : [...prev, tipo]
+                                            );
+                                        }}
+                                        className={`px-6 py-3 rounded-2xl font-bold shadow-lg transition-all border-2 ${
+                                            filtriAttivi.includes(tipo)
+                                                ? tipo === 'ferie'
+                                                    ? 'bg-gradient-to-r from-orange-500 to-orange-600 text-white border-orange-400'
+                                                    : tipo === 'malattia'
+                                                        ? 'bg-gradient-to-r from-rose-500 to-red-600 text-white border-red-400'
+                                                        : tipo === 'permesso'
+                                                            ? 'bg-gradient-to-r from-yellow-500 to-amber-600 text-white border-yellow-400'
+                                                            : 'bg-gradient-to-r from-blue-500 to-blue-600 text-white border-blue-400'
+                                                : 'bg-white/80 text-zinc-700 border-zinc-200 hover:border-emerald-400'
+                                        }`}
+                                    >
+                                        {tipo === 'ferie' ? '' : tipo === 'malattia' ? '' : tipo === 'permesso' ? '' : ''}
+                                        {' '}{tipo.charAt(0).toUpperCase() + tipo.slice(1)}
+                                    </button>
+                                ))}
+                                {filtriAttivi.length > 0 && (
+                                    <button
+                                        onClick={() => setFiltriAttivi([])}
+                                        className="px-6 py-3 rounded-2xl font-bold shadow-lg transition-all border-2 bg-red-500 text-white border-red-400 hover:bg-red-600"
+                                    >
+                                        <X className="w-5 h-5 inline mr-2" />
+                                        Rimuovi filtri
+                                    </button>
+                                )}
                             </div>
                         </div>
-                        <button
-                            onClick={() => {
-                                if (mese === 11) {
-                                    setMese(0); setAnno(anno + 1);
-                                } else {
-                                    setMese(mese + 1);
-                                }
-                            }}
-                            className="p-4 hover:bg-white/50 rounded-2xl backdrop-blur-xl border border-zinc-200/50 hover:border-zinc-300 transition-all hover:scale-105 shadow-lg hover:shadow-xl"
-                        >
-                            <ChevronRight className="w-7 h-7 text-zinc-700" />
-                        </button>
                     </div>
 
-                    {/* Calendario */}
-                    <div className="bg-white/50 backdrop-blur-3xl rounded-3xl shadow-2xl p-6 md:p-10 border border-white/60">
-                        <div className="grid grid-cols-7 gap-2 md:gap-4 mb-6">
-                            {['LUN', 'MAR', 'MER', 'GIO', 'VEN', 'SAB', 'DOM'].map(day => (
-                                <div key={day} className="text-center py-3">
-                                    <div className="text-sm md:text-base font-black text-zinc-700 uppercase tracking-widest bg-zinc-100/50 px-2 py-2 rounded-xl backdrop-blur-xl border border-zinc-200/50 shadow-sm">
-                                        {day}
-                                    </div>
-                                </div>
-                            ))}
+                    <div className="bg-white/60 backdrop-blur-3xl rounded-3xl shadow-xl p-6 border border-white/70 flex flex-col md:flex-row justify-between items-center gap-4">
+                        <div className="flex gap-3">
+                            <button
+                                onClick={() => setVistaCalendario('giornaliera')}
+                                className={`px-6 py-3 rounded-2xl font-bold shadow-lg transition-all border-2 ${
+                                    vistaCalendario === 'giornaliera'
+                                        ? 'bg-gradient-to-r from-emerald-500 to-green-600 text-white border-emerald-400'
+                                        : 'bg-white/80 text-zinc-700 border-zinc-200 hover:border-emerald-400'
+                                }`}
+                            >
+                                Giornaliera
+                            </button>
+                            <button
+                                onClick={() => setVistaCalendario('settimanale')}
+                                className={`px-6 py-3 rounded-2xl font-bold shadow-lg transition-all border-2 ${
+                                    vistaCalendario === 'settimanale'
+                                        ? 'bg-gradient-to-r from-emerald-500 to-green-600 text-white border-emerald-400'
+                                        : 'bg-white/80 text-zinc-700 border-zinc-200 hover:border-emerald-400'
+                                }`}
+                            >
+                                Settimanale
+                            </button>
+                            <button
+                                onClick={() => setVistaCalendario('mensile')}
+                                className={`px-6 py-3 rounded-2xl font-bold shadow-lg transition-all border-2 ${
+                                    vistaCalendario === 'mensile'
+                                        ? 'bg-gradient-to-r from-emerald-500 to-green-600 text-white border-emerald-400'
+                                        : 'bg-white/80 text-zinc-700 border-zinc-200 hover:border-emerald-400'
+                                }`}
+                            >
+                                Mensile
+                            </button>
                         </div>
 
-                        <div className="grid grid-cols-7 gap-2 md:gap-4">
-                            {Array.from({ length: getPrimoGiornoSettimana(mese, anno) }).map((_, i) => (
-                                <div key={`empty-${i}`} className="h-20 md:h-32 bg-zinc-50/50 rounded-2xl border-2 border-dashed border-zinc-200/40 backdrop-blur-xl" />
-                            ))}
-
-                            {Array.from({ length: getGiorniMese(mese, anno) }).map((_, i) => {
-                                const giorno = i + 1;
-                                const dataStr = `${anno}-${String(mese + 1).padStart(2, '0')}-${String(giorno).padStart(2, '0')}`;
-                                const assenzeGiorno = getAssenzePerData(dataStr);
-                                const info = getInfoGiorno(giorno, mese, anno);
-                                const {isFestivo , isWeekend, isLavorativo} = info;
-                                const today = new Date().toISOString().split('T')[0] === dataStr;
-                                return (
-                                    <div
-                                        key={giorno}
-                                        onClick={() => {
-                                            apriModale(dataStr); // Modale esistente dettagli
-                                            // Apri popup nuova solo se NON hai già assenza propria quel giorno
-                                            const mieAssenze = getAssenzePerData(dataStr).filter(a => a.employeeId === user?.id);
-                                            if (mieAssenze.length === 0) {
-                                                apriPopupNuova(dataStr);
-                                            }
-                                        }}
-                                        className={`
-            relative h-20 md:h-32 p-2 md:p-3 rounded-2xl border-2 shadow-lg 
-            transition-all duration-300 hover:shadow-xl hover:-translate-y-1 
-            backdrop-blur-xl flex flex-col justify-between group cursor-pointer overflow-hidden
-            ${assenzeGiorno.length > 0
-                                            ? 'bg-gradient-to-br from-emerald-50/80 to-blue-50/60 border-emerald-300/70 shadow-emerald-200/50 hover:border-emerald-400'
-                                            : isFestivo
-                                                ? 'bg-gradient-to-br from-purple-50/80 to-pink-50/80 border-red-400 shadow-purple-200/50 hover:border-red-500'
-                                                : isWeekend
-                                                    ? 'bg-gray-200 border-zinc-200/60'
-                                                    : 'bg-white/90 border-zinc-200/50 hover:border-emerald-300/70'
+                        {/* Navigazione basata sulla vista */}
+                        <div className="flex items-center gap-4">
+                            <button
+                                onClick={() => {
+                                    if (vistaCalendario === 'giornaliera') {
+                                        const nuovaData = new Date(giornoCorrente);
+                                        nuovaData.setDate(giornoCorrente.getDate() - 1);
+                                        setGiornoCorrente(nuovaData);
+                                    } else if (vistaCalendario === 'settimanale') {
+                                        const nuovaData = new Date(settimanaCorrente);
+                                        nuovaData.setDate(settimanaCorrente.getDate() - 7);
+                                        setSettimanaCorrente(nuovaData);
+                                    } else {
+                                        if (mese === 0) {
+                                            setMese(11); setAnno(anno - 1);
+                                        } else {
+                                            setMese(mese - 1);
                                         }
-            ${today ? 'ring-4 ring-emerald-400/40 shadow-emerald-300' : ''}
-        `}
-                                    >
-        <span className={`font-black text-lg md:text-2xl z-10 ${
-            today ? 'text-emerald-700 drop-shadow-lg' : 'text-zinc-800'
-        }`}>
-            {giorno}
-        </span>
+                                    }
+                                }}
+                                className="p-4 hover:bg-white/50 rounded-2xl backdrop-blur-xl border border-zinc-200/50 hover:border-zinc-300 transition-all hover:scale-105 shadow-lg hover:shadow-xl"
+                            >
+                                <ChevronLeft className="w-7 h-7 text-zinc-700" />
+                            </button>
 
-                                        <div className="flex flex-col gap-1 mt-auto z-10 w-full">
-                                            {assenzeGiorno
-                                                .filter(a => {
-                                                    const info = getInfoGiorno(giorno, mese, anno);
-                                                    // Mostra assenze SOLO in giorni lavorativi (esclude weekend e festivi)
-                                                    return info.isLavorativo;
-                                                })
-                                                .slice(0, 3)
-                                                .map((assenza, idx) => {
-                                                    const employee = getEmployeeById(assenza.employeeId);
-                                                    const nomeCompleto = employee?.name || `Dip.${assenza.employeeId}`;
-                                                    const nomeCorto = nomeCompleto.length > 12
-                                                        ? `${nomeCompleto.substring(0, 12)}...`
-                                                        : nomeCompleto;
+                            <div className="text-center min-w-[250px]">
+                                <div className="text-2xl md:text-4xl font-black bg-gradient-to-r from-zinc-800 to-slate-700 bg-clip-text text-transparent tracking-tight">
+                                    {vistaCalendario === 'giornaliera' && `${giornoCorrente.getDate()} ${nomiMesi[giornoCorrente.getMonth()]} ${giornoCorrente.getFullYear()}`}
+                                    {vistaCalendario === 'settimanale' && `Settimana ${getInizioSettimana(settimanaCorrente).getDate()} ${nomiMesi[getInizioSettimana(settimanaCorrente).getMonth()]}`}
+                                    {vistaCalendario === 'mensile' && `${nomiMesi[mese]} ${anno}`}
+                                </div>
+                            </div>
 
-                                                    return (
-                                                        <div
-                                                            key={`${assenza.id}-${idx}`}
-                                                            className={`px-1.5 py-1 rounded-lg shadow-md backdrop-blur-xl border 
-text-xs font-bold uppercase tracking-wide group-hover:scale-105 transition-all 
-flex flex-col gap-0.5 ${
-                                                                assenza.tipo === 'ferie'
-                                                                    ? 'bg-gradient-to-r from-orange-500/95 to-orange-600/95 text-white border-orange-400/60 shadow-orange-400/40'
-                                                                    : assenza.tipo === 'malattia'
-                                                                        ? 'bg-gradient-to-r from-rose-500/95 to-red-600/95 text-white border-red-400/60 shadow-red-400/40'
-                                                                        : assenza.tipo === 'permesso'
-                                                                            ? 'bg-gradient-to-r from-yellow-500/95 to-amber-600/95 text-white border-yellow-400/60 shadow-yellow-400/40'
-                                                                            : 'bg-gradient-to-r from-blue-500/95 to-blue-600/95 text-white border-blue-400/60 shadow-blue-400/40'
-                                                            }`}
-                                                        >
-                    <span className="truncate text-[10px] md:text-[11px] font-bold">
-                        {nomeCorto}
-                    </span>
-                                                            <div className="flex items-center justify-between gap-1">
-                        <span className="text-[9px] md:text-[10px] opacity-90">
-                            {assenza.tipo === 'ferie' ? '🌴' :
-                                assenza.tipo === 'malattia' ? '🤒' :
-                                    assenza.tipo === 'permesso' ? '⏰' : '🏠'}
-                        </span>
-                                                                <span className="text-[9px] md:text-[10px] font-bold bg-white/30 px-1.5 py-0.5 rounded-sm">
-                            {assenza.tipo === 'permesso' ? `${assenza.durata}h` : `${assenza.durata}g`}
-                        </span>
-                                                            </div>
-                                                        </div>
-                                                    );
-                                                })}
-                                        </div>
-
-                                        {assenzeGiorno.length > 3 && (
-                                            <div className="absolute top-1 right-1 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center font-bold shadow-lg z-20 border-2 border-white">
-                                                +{assenzeGiorno.length - 3}
-                                            </div>
-                                        )}
-                                    </div>
-                                );
-                            })}
+                            <button
+                                onClick={() => {
+                                    if (vistaCalendario === 'giornaliera') {
+                                        const nuovaData = new Date(giornoCorrente);
+                                        nuovaData.setDate(giornoCorrente.getDate() + 1);
+                                        setGiornoCorrente(nuovaData);
+                                    } else if (vistaCalendario === 'settimanale') {
+                                        const nuovaData = new Date(settimanaCorrente);
+                                        nuovaData.setDate(settimanaCorrente.getDate() + 7);
+                                        setSettimanaCorrente(nuovaData);
+                                    } else {
+                                        if (mese === 11) {
+                                            setMese(0); setAnno(anno + 1);
+                                        } else {
+                                            setMese(mese + 1);
+                                        }
+                                    }
+                                }}
+                                className="p-4 hover:bg-white/50 rounded-2xl backdrop-blur-xl border border-zinc-200/50 hover:border-zinc-300 transition-all hover:scale-105 shadow-lg hover:shadow-xl"
+                            >
+                                <ChevronRight className="w-7 h-7 text-zinc-700" />
+                            </button>
                         </div>
                     </div>
+
+                    {vistaCalendario === 'giornaliera' && renderVistaGiornaliera()}
+                    {vistaCalendario === 'settimanale' && renderVistaSettimanale()}
+                    {vistaCalendario === 'mensile' && (
+                        <div className="bg-white/50 backdrop-blur-3xl rounded-3xl shadow-2xl p-6 md:p-10 border border-white/60">
+                            <div className="grid grid-cols-7 gap-2 md:gap-4 mb-6">
+                                {['LUN', 'MAR', 'MER', 'GIO', 'VEN', 'SAB', 'DOM'].map(day => (
+                                    <div key={day} className="text-center py-3">
+                                        <div className="text-sm md:text-base font-black text-zinc-700 uppercase tracking-widest bg-zinc-100/50 px-2 py-2 rounded-xl backdrop-blur-xl border border-zinc-200/50 shadow-sm">
+                                            {day}
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+
+                            <div className="grid grid-cols-7 gap-2 md:gap-4">
+                                {Array.from({ length: getPrimoGiornoSettimana(mese, anno) }).map((_, i) => (
+                                    <div key={`empty-${i}`} className="h-20 md:h-32 bg-zinc-50/50 rounded-2xl border-2 border-dashed border-zinc-200/40 backdrop-blur-xl" />
+                                ))}
+
+                                {Array.from({ length: getGiorniMese(mese, anno) }).map((_, i) => {
+                                    const giorno = i + 1;
+                                    const dataStr = `${anno}-${String(mese + 1).padStart(2, '0')}-${String(giorno).padStart(2, '0')}`;
+                                    const assenzeGiorno = getAssenzePerData(dataStr);
+                                    const info = getInfoGiorno(giorno, mese, anno);
+                                    const {isFestivo , isWeekend, isLavorativo} = info;
+                                    const today = new Date().toISOString().split('T')[0] === dataStr;
+
+                                    return (
+                                        <div
+                                            key={giorno}
+                                            onClick={() => {
+                                                apriModale(dataStr);
+                                                const mieAssenze = getAssenzePerData(dataStr).filter(a => a.employeeId === user?.id);
+                                                if (mieAssenze.length === 0) {
+                                                    apriPopupNuova(dataStr);
+                                                }
+                                            }}
+                                            className={`
+                                                relative h-20 md:h-32 p-2 md:p-3 rounded-2xl border-2 shadow-lg 
+                                                transition-all duration-300 hover:shadow-xl hover:-translate-y-1 
+                                                backdrop-blur-xl flex flex-col justify-between group cursor-pointer overflow-hidden
+                                                ${assenzeGiorno.length > 0
+                                                ? 'bg-gradient-to-br from-emerald-50/80 to-blue-50/60 border-emerald-300/70 shadow-emerald-200/50 hover:border-emerald-400'
+                                                : isFestivo
+                                                    ? 'bg-gradient-to-br from-purple-50/80 to-pink-50/80 border-red-400 shadow-purple-200/50 hover:border-red-500'
+                                                    : isWeekend
+                                                        ? 'bg-gray-200 border-zinc-200/60'
+                                                        : 'bg-white/90 border-zinc-200/50 hover:border-emerald-300/70'
+                                            }
+                                                ${today ? 'ring-4 ring-emerald-400/40 shadow-emerald-300' : ''}
+                                            `}
+                                        >
+                                            <span className={`font-black text-lg md:text-2xl z-10 ${
+                                                today ? 'text-emerald-700 drop-shadow-lg' : 'text-zinc-800'
+                                            }`}>
+                                                {giorno}
+                                            </span>
+
+                                            <div className="flex flex-col gap-1 mt-auto z-10 w-full">
+                                                {assenzeGiorno
+                                                    .filter(a => {
+                                                        const info = getInfoGiorno(giorno, mese, anno);
+                                                        return info.isLavorativo;
+                                                    })
+                                                    .slice(0, 3)
+                                                    .map((assenza, idx) => {
+                                                        const employee = getEmployeeById(assenza.employeeId);
+                                                        const nomeCompleto = employee?.name || `Dip.${assenza.employeeId}`;
+                                                        const nomeCorto = nomeCompleto.length > 12
+                                                            ? `${nomeCompleto.substring(0, 12)}...`
+                                                            : nomeCompleto;
+
+                                                        return (
+                                                            <div
+                                                                key={`${assenza.id}-${idx}`}
+                                                                className={`px-1.5 py-1 rounded-lg shadow-md backdrop-blur-xl border 
+                                                                    text-xs font-bold uppercase tracking-wide group-hover:scale-105 transition-all 
+                                                                    flex flex-col gap-0.5 ${
+                                                                    assenza.tipo === 'ferie'
+                                                                        ? 'bg-gradient-to-r from-orange-500/95 to-orange-600/95 text-white border-orange-400/60 shadow-orange-400/40'
+                                                                        : assenza.tipo === 'malattia'
+                                                                            ? 'bg-gradient-to-r from-rose-500/95 to-red-600/95 text-white border-red-400/60 shadow-red-400/40'
+                                                                            : assenza.tipo === 'permesso'
+                                                                                ? 'bg-gradient-to-r from-yellow-500/95 to-amber-600/95 text-white border-yellow-400/60 shadow-yellow-400/40'
+                                                                                : 'bg-gradient-to-r from-blue-500/95 to-blue-600/95 text-white border-blue-400/60 shadow-blue-400/40'
+                                                                }`}
+                                                            >
+                                                                <span className="truncate text-[10px] md:text-[11px] font-bold">
+                                                                    {nomeCorto}
+                                                                </span>
+                                                                <div className="flex items-center justify-between gap-1">
+                                                                    <span className="text-[9px] md:text-[10px] opacity-90">
+                                                                        {assenza.tipo === 'ferie' ? '🌴' :
+                                                                            assenza.tipo === 'malattia' ? '🤒' :
+                                                                                assenza.tipo === 'permesso' ? '⏰' : '🏠'}
+                                                                    </span>
+                                                                    <span className="text-[9px] md:text-[10px] font-bold bg-white/30 px-1.5 py-0.5 rounded-sm">
+                                                                        {assenza.tipo === 'permesso' ? `${assenza.durata}h` : `${assenza.durata}g`}
+                                                                    </span>
+                                                                </div>
+                                                            </div>
+                                                        );
+                                                    })}
+                                            </div>
+
+                                            {assenzeGiorno.length > 3 && (
+                                                <div className="absolute top-1 right-1 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center font-bold shadow-lg z-20 border-2 border-white">
+                                                    +{assenzeGiorno.length - 3}
+                                                </div>
+                                            )}
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        </div>
+                    )}
 
                     {/* Legenda */}
                     <div className="flex flex-wrap justify-center gap-4 md:gap-8 text-sm md:text-base font-bold text-zinc-600 pb-8 md:pb-16">
                         <div className="flex items-center gap-3 px-4 md:px-6 py-3 md:py-4 bg-white/70 backdrop-blur-xl rounded-2xl border border-zinc-200/50 shadow-lg">
                             <div className="w-6 h-2.5 bg-gradient-to-r from-orange-500 to-orange-600 rounded shadow-md"></div>
                             <span className="flex items-center gap-2">
-            <Plane className="w-4 h-4 text-orange-500" />
-            Ferie (giorni)
-        </span>
+                                <Plane className="w-4 h-4 text-orange-500" />
+                                Ferie (giorni)
+                            </span>
                         </div>
                         <div className="flex items-center gap-3 px-4 md:px-6 py-3 md:py-4 bg-white/70 backdrop-blur-xl rounded-2xl border border-zinc-200/50 shadow-lg">
                             <div className="w-6 h-2.5 bg-gradient-to-r from-rose-500 to-red-600 rounded shadow-md"></div>
                             <span className="flex items-center gap-2">
-            <Stethoscope className="w-4 h-4 text-rose-600" />
-            Malattia (giorni)
-        </span>
+                                <Stethoscope className="w-4 h-4 text-rose-600" />
+                                Malattia (giorni)
+                            </span>
                         </div>
                         <div className="flex items-center gap-3 px-4 md:px-6 py-3 md:py-4 bg-white/70 backdrop-blur-xl rounded-2xl border border-zinc-200/50 shadow-lg">
                             <div className="w-6 h-2.5 bg-gradient-to-r from-yellow-500 to-amber-600 rounded shadow-md"></div>
                             <span className="flex items-center gap-2">
-            <Clock className="w-4 h-4 text-amber-600" />
-            Permesso (ore)
-        </span>
+                                <Clock className="w-4 h-4 text-amber-600" />
+                                Permesso (ore)
+                            </span>
                         </div>
                         <div className="flex items-center gap-3 px-4 md:px-6 py-3 md:py-4 bg-white/70 backdrop-blur-xl rounded-2xl border border-zinc-200/50 shadow-lg">
                             <div className="w-6 h-2.5 bg-gradient-to-r from-blue-500 to-blue-600 rounded shadow-md"></div>
                             <span className="flex items-center gap-2">
-            <Home className="w-4 h-4 text-blue-600" />
-            Smartworking (giorni)
-        </span>
+                                <Home className="w-4 h-4 text-blue-600" />
+                                Smartworking (giorni)
+                            </span>
                         </div>
-
                         <div className="flex items-center gap-3 px-4 md:px-6 py-3 md:py-4 bg-white/70 backdrop-blur-xl rounded-2xl border border-zinc-200/50 shadow-lg">
                             <div className="w-5 h-5 bg-gray-200 rounded-xl border-2 border-zinc-300"></div>
                             <span className="flex items-center gap-2">
-            <Calendar className="w-4 h-4 text-zinc-600" />
-            Weekend
-        </span>
+                                <Calendar className="w-4 h-4 text-zinc-600" />
+                                Weekend
+                            </span>
                         </div>
                     </div>
                 </div>
             </div>
 
-            {/* 🔥 MODALE DETTAGLIO GIORNO - CON RANGE "DAL AL" */}
+            {/* Modale dettaglio giorno */}
             {modalAperto && (
                 <div className="fixed inset-0 bg-black/60 backdrop-blur-md z-50 flex items-center justify-center p-4 animate-in fade-in duration-300 h-full"
                      onClick={() => setModalAperto(false)}>
@@ -903,21 +1164,19 @@ flex flex-col gap-0.5 ${
                                                     </div>
 
                                                     {/* Tipo */}
-
                                                     <div className={`px-6 mr-2 py-3 rounded-2xl font-black text-lg shadow-lg border-2 inline-flex items-center gap-3 ${
                                                         assenza.tipo === 'ferie' ? 'bg-gradient-to-r from-orange-500 to-orange-600 text-white border-orange-400/50' :
                                                             assenza.tipo === 'malattia' ? 'bg-gradient-to-r from-rose-500 to-red-600 text-white border-red-400/50' :
                                                                 assenza.tipo === 'permesso' ? 'bg-gradient-to-r from-yellow-500 to-amber-600 text-white border-yellow-400/50' :
                                                                     'bg-gradient-to-r from-blue-500 to-blue-600 text-white border-blue-400/50'
                                                     }`}>
-
-                                            <span className="text-2xl">
-                                                {assenza.tipo === 'ferie' ? '🌴' : assenza.tipo === 'malattia' ? '🤒' : assenza.tipo === 'permesso' ? '⏰' : '🏠'}
-                                            </span>
+                                                        <span className="text-2xl">
+                                                            {assenza.tipo === 'ferie' ? '🌴' : assenza.tipo === 'malattia' ? '🤒' : assenza.tipo === 'permesso' ? '⏰' : '🏠'}
+                                                        </span>
                                                         {assenza.tipo.toUpperCase()}
                                                     </div>
 
-                                                    {/* 🔥 RANGE DAL-AL o Durata */}
+                                                    {/* Range dal-al o Durata */}
                                                     <div className="px-3 py-3 bg-gradient-to-r from-emerald-100 to-green-100 border-2 border-emerald-300 rounded-2xl font-black text-emerald-800 text-lg shadow-lg inline-flex items-center gap-3">
                                                         <Clock className="w-5 h-5" />
                                                         <span>{rangeData}</span>
@@ -949,8 +1208,8 @@ flex flex-col gap-0.5 ${
                                                                 <><XCircle className="w-5 h-5" />RIFIUTATA</>}
                                                     </div>
                                                     <span className="text-xs text-zinc-500 font-mono px-3 py-1 bg-zinc-100 rounded-lg border border-zinc-200">
-                                            ID: {assenza.id}
-                                        </span>
+                                                        ID: {assenza.id}
+                                                    </span>
                                                 </div>
                                             </div>
                                         </div>
@@ -965,7 +1224,7 @@ flex flex-col gap-0.5 ${
                 </div>
             )}
 
-
+            {/* Popup nuova richiesta */}
             {popupNuovaRichiesta && !isAdmin && (
                 <div className="fixed inset-0 bg-black/60 backdrop-blur-md z-50 flex items-center justify-center p-4 animate-in fade-in duration-300">
                     <div className="bg-white/95 backdrop-blur-3xl rounded-3xl shadow-2xl border border-white/70 max-w-md w-full animate-in zoom-in duration-300">
@@ -975,6 +1234,7 @@ flex flex-col gap-0.5 ${
                                 Nuova Richiesta - {formattaDataItaliana(giornoSelezionato)}
                             </h2>
                         </div>
+
                         {/* Form */}
                         <div className="p-8 space-y-6">
                             <div>
@@ -1033,7 +1293,6 @@ flex flex-col gap-0.5 ${
                     </div>
                 </div>
             )}
-
         </>
     );
 }

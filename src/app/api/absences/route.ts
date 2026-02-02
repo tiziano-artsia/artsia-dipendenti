@@ -43,10 +43,15 @@ export async function GET(request: NextRequest) {
         // Costruisci filtro
         const filter: any = {};
         if (user.role !== 'admin') {
-            filter.employeeId = user.id; // Non-admin: solo proprie
+            filter.$or = [
+                { employeeId: user.id },
+                { status: 'approved' }
+            ];
         } else if (employeeIdParam) {
-            filter.employeeId = Number(employeeIdParam); // Admin: specifica
+            // Admin con filtro specifico
+            filter.employeeId = Number(employeeIdParam);
         }
+
         // Admin senza param = tutti (filter vuoto)
 
         console.log('🔍 Filtro:', filter);
@@ -79,7 +84,6 @@ export async function POST(request: NextRequest) {
         const body = await request.json();
         console.log('📥 POST body:', body);
 
-        // 🔥 VALIDAZIONE ROBUSTA
         const typeNorm = (body.type || '').trim().toLowerCase();
         const tipiValidi = new Set(['ferie', 'permesso', 'smartworking', 'malattia']);
 
@@ -101,21 +105,29 @@ export async function POST(request: NextRequest) {
             );
         }
 
-        // 🔥 CREAZIONE CONSISTENTE
+        // 🔥 AUTO-APPROVA SMARTWORKING
+        let status = body.status || 'pending';
+        let approvedBy = body.approvedBy || null;
+
+        if (typeNorm === 'smartworking') {
+            status = 'approved';
+            approvedBy = user.id;
+        }
+
         const newAbsence = await createAbsence({
             employeeId: Number(body.employeeId || user.id),
-            type: typeNorm,           // ✅ Normalizzato
-            dataInizio: body.dataInizio,  // "30/01/2026"
+            type: typeNorm,
+            dataInizio: body.dataInizio,
             durata: Number(body.durata),
             motivo: (body.motivo || '').trim(),
-            status: body.status || 'pending',
+            status: status, // ✅ Auto-approved per smartworking
             requestedBy: body.requestedBy || user.name || user.email,
-            approvedBy: body.approvedBy || null,
+            approvedBy: approvedBy, // ✅ Auto-approved
             createdAt: body.createdAt || new Date().toISOString(),
             updatedAt: body.updatedAt || new Date().toISOString(),
             // Campi legacy (se DB li richiede)
             data: body.dataInizio,
-            stato: body.status || 'pending',
+            stato: status,
             tipo: typeNorm
         });
 
