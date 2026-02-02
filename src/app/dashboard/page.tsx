@@ -454,13 +454,15 @@ export default function Dashboard() {
                                 color: 'from-purple-500 to-violet-600',
                                 description: 'Visualizza le date'
                             },
-                            {
-                                href: '/dashboard/approvazioni',
-                                label: 'Approvazioni',
-                                icon: CheckCircle,
-                                color: 'from-emerald-500 to-green-600',
-                                description: 'Approva richieste'
-                            },
+                            ...(!isAdmin ? [
+                                {
+                                    href: '/dashboard/approvazioni',
+                                    label: 'Approvazioni',
+                                    icon: CheckCircle,
+                                    color: 'from-emerald-500 to-green-600',
+                                    description: 'Approva richieste'
+                                }
+                            ]: []),
                             ...(isAdmin? [{
                                 href: '/dashboard/buste-paga',
                                 label: 'Buste Paga',
