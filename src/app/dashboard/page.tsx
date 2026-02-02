@@ -454,7 +454,7 @@ export default function Dashboard() {
                                 color: 'from-purple-500 to-violet-600',
                                 description: 'Visualizza le date'
                             },
-                            ...(!isAdmin ? [
+                            ...(isAdmin ? [
                                 {
                                     href: '/dashboard/approvazioni',
                                     label: 'Approvazioni',
