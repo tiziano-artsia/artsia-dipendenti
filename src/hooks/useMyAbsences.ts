@@ -26,11 +26,7 @@ export function useMyAbsences() {
     const [loading, setLoading] = useState(false);  // ← START FALSE
     const [error, setError] = useState<string | null>(null);
 
-    // 🔍 DEBUG
-    console.log('🔍 useMyAbsences render - token:', !!token);
-
     const fetchAssenze = useCallback(async () => {
-        console.log('🚀 fetchAssenze chiamata');
 
         if (!token) {
             console.log('⏹️ No token - skip');
@@ -42,27 +38,22 @@ export function useMyAbsences() {
             setLoading(true);
             setError(null);
 
-            console.log('📡 Fetch /api/my-absences...');
             const res = await fetch('/api/my-absences', {
                 headers: { Authorization: `Bearer ${token}` }
             });
 
-            console.log('📄 Status:', res.status);
 
             if (!res.ok) {
                 const errText = await res.text();
-                console.error('❌ API Error:', res.status, errText);
                 setError(`API ${res.status}: ${errText}`);
                 setAssenze([]);
                 return;
             }
 
             const data = await res.json();
-            console.log('✅ Data:', data.data?.length || 0);
             setAssenze(data.data || []);
 
         } catch (err: any) {
-            console.error('💥 Network error:', err.message);
             setError('Connessione fallita');
             setAssenze([]);
         } finally {
@@ -79,7 +70,6 @@ export function useMyAbsences() {
         console.log('📤 Submit form:', form);
 
         if (!token) {
-            console.error('❌ No token per submit');
             return false;
         }
 
@@ -98,29 +88,54 @@ export function useMyAbsences() {
                 })
             });
 
-            console.log('📤 Submit status:', res.status);
 
             if (res.ok) {
-                console.log('✅ Submit OK - refresh');
                 await fetchAssenze();
                 return true;
             } else {
                 const err = await res.text();
-                console.error('❌ Submit error:', err);
                 return false;
             }
         } catch (err: any) {
-            console.error('💥 Submit catch:', err);
             return false;
         }
     };
 
     console.log('📊 Return:', { assenze: assenze.length, loading, error, token: !!token });
 
+    const cancelRequest = async (absenceId: string) => {
+
+        if (!token) {
+            return false;
+        }
+
+        try {
+            const res = await fetch(`/api/absences/${absenceId}`, {
+                method: 'DELETE',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                }
+            });
+
+
+            if (!res.ok) {
+                const error = await res.json();
+                return false;
+            }
+
+            await fetchAssenze();
+            return true;
+        } catch (error) {
+            return false;
+        }
+    };
+
     return {
         assenze,
         loading,
         error,
+        cancelRequest,
         submitRequest,
         refetch: fetchAssenze
     };

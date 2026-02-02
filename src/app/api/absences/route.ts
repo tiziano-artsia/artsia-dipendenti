@@ -12,7 +12,7 @@ interface JWTPayload {
     role: string;
 }
 
-function getUserFromToken(request: NextRequest): JWTPayload | null {
+export function getUserFromToken(request: NextRequest): JWTPayload | null {
     try {
         const authHeader = request.headers.get('authorization');
         if (!authHeader?.startsWith('Bearer ')) return null;
@@ -186,3 +186,5 @@ export async function PATCH(request: NextRequest) {
         return NextResponse.json({ error: 'Errore aggiornamento' }, { status: 500 });
     }
 }
+
+

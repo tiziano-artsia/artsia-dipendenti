@@ -3,13 +3,74 @@
 import { useState, useMemo } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { useMyAbsences } from '@/hooks/useMyAbsences';
-import { FileText, Calendar, Clock, Sun, Home, Bed, CheckCircle, XCircle, Loader2, Send, RotateCcw, AlertCircle, Filter, X } from 'lucide-react';
+import { FileText, Calendar, Clock, Sun, Home, Bed, CheckCircle, XCircle, Loader2, Send, RotateCcw, AlertCircle, Filter, X, Trash2 } from 'lucide-react';
 import type {AbsenceDoc} from "@/lib/db";
 import toast, {Toaster} from "react-hot-toast";
 
+// Componente Modal di Conferma
+function ConfirmModal({
+                          isOpen,
+                          onClose,
+                          onConfirm,
+                          title,
+                          message,
+                          isLoading
+                      }: {
+    isOpen: boolean;
+    onClose: () => void;
+    onConfirm: () => void;
+    title: string;
+    message: string;
+    isLoading: boolean;
+}) {
+    if (!isOpen) return null;
+
+    return (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-fadeIn">
+            <div className="bg-white/90 backdrop-blur-3xl rounded-3xl shadow-2xl p-8 max-w-md w-full border border-white/70 animate-scaleIn">
+                <div className="flex items-center gap-4 mb-6">
+                    <div className="w-14 h-14 bg-gradient-to-r from-red-500 to-rose-600 rounded-2xl flex items-center justify-center shadow-xl">
+                        <AlertCircle className="w-7 h-7 text-white" />
+                    </div>
+                    <h3 className="text-2xl font-black text-zinc-800">{title}</h3>
+                </div>
+
+                <p className="text-lg text-zinc-600 mb-8 leading-relaxed">{message}</p>
+
+                <div className="flex gap-4">
+                    <button
+                        onClick={onClose}
+                        disabled={isLoading}
+                        className="flex-1 h-14 bg-zinc-200 hover:bg-zinc-300 disabled:bg-zinc-100 text-zinc-800 font-bold rounded-xl transition-all shadow-md hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                        Annulla
+                    </button>
+                    <button
+                        onClick={onConfirm}
+                        disabled={isLoading}
+                        className="flex-1 h-14 bg-gradient-to-r from-red-500 to-rose-600 hover:from-red-600 hover:to-rose-700 text-white font-bold rounded-xl transition-all shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                    >
+                        {isLoading ? (
+                            <>
+                                <Loader2 className="w-5 h-5 animate-spin" />
+                                Eliminazione...
+                            </>
+                        ) : (
+                            <>
+                                <Trash2 className="w-5 h-5" />
+                                Conferma
+                            </>
+                        )}
+                    </button>
+                </div>
+            </div>
+        </div>
+    );
+}
+
 export default function MieiDati() {
     const { user } = useAuth();
-    const { assenze, loading, submitRequest } = useMyAbsences();
+    const { assenze, loading, submitRequest, cancelRequest } = useMyAbsences();
 
     const [form, setForm] = useState({
         tipo: '',
@@ -18,11 +79,20 @@ export default function MieiDati() {
         motivo: ''
     });
 
-    // 🔥 STATI FILTRI
+    // Stati filtri
     const [filtri, setFiltri] = useState({
-        tipo: 'tutti',      // tutti, ferie, malattia, permesso, smartworking
-        stato: 'tutti',     // tutti, pending, approved, rejected
-        periodo: 'tutti'    // tutti, ultimo-mese, ultimi-3-mesi, anno-corrente
+        tipo: 'tutti',
+        stato: 'tutti',
+        periodo: 'tutti'
+    });
+
+    // Stati per la modale di cancellazione
+    const [modalState, setModalState] = useState({
+        isOpen: false,
+        absenceId: '',
+        absenceType: '',
+        absenceDate: '',
+        isDeleting: false
     });
 
     const handleSubmit = async (e: React.FormEvent) => {
@@ -38,10 +108,42 @@ export default function MieiDati() {
 
         const success = await submitRequest(payload);
         if (success) {
-            toast.success(' Richiesta inviata! In attesa di approvazione.');
+            toast.success('Richiesta inviata! In attesa di approvazione.');
             setForm({ tipo: '', dataInizio: '', durata: '', motivo: '' });
         } else {
-            toast.error('❌ Errore invio. Riprova.');
+            toast.error('Errore invio. Riprova.');
+        }
+    };
+
+    // Handler per aprire la modale di cancellazione
+    const handleCancelClick = (assenza: AbsenceDoc) => {
+        setModalState({
+            isOpen: true,
+            absenceId: assenza.id || assenza._id?.toString() || '',
+            absenceType: getTipoLabel(assenza.tipo),
+            absenceDate: formattaData(assenza.dataInizio || assenza.data || ''),
+            isDeleting: false
+        });
+    };
+
+    const handleConfirmCancel = async () => {
+        setModalState(prev => ({ ...prev, isDeleting: true }));
+
+        const success = await cancelRequest(modalState.absenceId);
+
+        if (success) {
+            toast.success(' Richiesta annullata con successo');
+            setModalState({ isOpen: false, absenceId: '', absenceType: '', absenceDate: '', isDeleting: false });
+        } else {
+            toast.error(' Errore durante l\'annullamento');
+            setModalState(prev => ({ ...prev, isDeleting: false }));
+        }
+    };
+
+    // Handler per chiudere la modale
+    const handleCloseModal = () => {
+        if (!modalState.isDeleting) {
+            setModalState({ isOpen: false, absenceId: '', absenceType: '', absenceDate: '', isDeleting: false });
         }
     };
 
@@ -62,7 +164,6 @@ export default function MieiDati() {
     const formattaData = (dataIso: string): string => {
         if (!dataIso) return 'N/D';
         try {
-            // Se già formato italiano, ritorna così
             if (dataIso.includes('/')) return dataIso;
             return new Date(dataIso).toLocaleDateString('it-IT');
         } catch {
@@ -77,7 +178,6 @@ export default function MieiDati() {
                 tipoLower === 'smartworking' ? 'Smartworking' : 'Permesso';
     };
 
-    // 🔥 RESET FILTRI
     const resetFiltri = () => {
         setFiltri({ tipo: 'tutti', stato: 'tutti', periodo: 'tutti' });
     };
@@ -93,9 +193,37 @@ export default function MieiDati() {
     const assenzeFiltrate = useMemo(() => {
         console.log('📊 Assenze grezze:', assenze);
 
-        const assenzeTyped = assenze as unknown as AbsenceDoc[];
+        let risultato = assenze as unknown as AbsenceDoc[];
 
-        return assenzeTyped.sort((a, b) => {
+        // Applica filtro tipo
+        if (filtri.tipo !== 'tutti') {
+            risultato = risultato.filter(a => a.tipo?.toLowerCase() === filtri.tipo.toLowerCase());
+        }
+
+        // Applica filtro stato
+        if (filtri.stato !== 'tutti') {
+            risultato = risultato.filter(a => a.stato === filtri.stato);
+        }
+
+        // Applica filtro periodo
+        if (filtri.periodo !== 'tutti') {
+            const oggi = new Date();
+            risultato = risultato.filter(a => {
+                const dataAssenza = new Date(a.dataInizio || a.data || '');
+                const diffMs = oggi.getTime() - dataAssenza.getTime();
+                const diffGiorni = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+
+                if (filtri.periodo === 'ultimo-mese') return diffGiorni <= 30;
+                if (filtri.periodo === 'ultimi-3-mesi') return diffGiorni <= 90;
+                if (filtri.periodo === 'anno-corrente') {
+                    return dataAssenza.getFullYear() === oggi.getFullYear();
+                }
+                return true;
+            });
+        }
+
+        // Ordina per data (più recenti prima)
+        return risultato.sort((a, b) => {
             const timeA = a.createdAt?.getTime() ||
                 (typeof a._id === 'string' ?
                     parseInt(a._id.substring(0, 8), 16) * 1000 : 0);
@@ -104,14 +232,14 @@ export default function MieiDati() {
                 (typeof b._id === 'string' ?
                     parseInt(b._id.substring(0, 8), 16) * 1000 : 0);
 
-            return timeB - timeA; // RECENTI PRIMA
+            return timeB - timeA;
         });
-    }, [assenze]);
+    }, [assenze, filtri]);
+
     const nomeUtente = user?.name || `Utente ${user?.id || ''}`;
 
     if (loading) {
         return (
-
             <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/50 to-indigo-50/30 flex items-center justify-center p-8 relative overflow-hidden">
                 <div className="absolute inset-0 bg-gradient-to-r from-white/20 to-blue-100/10 backdrop-blur-xl" />
                 <div className="bg-white/40 backdrop-blur-3xl rounded-3xl p-16 shadow-2xl text-center max-w-lg mx-auto border border-white/50 relative z-10">
@@ -131,10 +259,18 @@ export default function MieiDati() {
 
     return (
         <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-indigo-50/30 p-8 relative overflow-hidden">
-            <Toaster
-                position="top-center"
-                reverseOrder={false}
+            <Toaster position="top-center" reverseOrder={false} />
+
+            {/* Modale di conferma cancellazione */}
+            <ConfirmModal
+                isOpen={modalState.isOpen}
+                onClose={handleCloseModal}
+                onConfirm={handleConfirmCancel}
+                title="Annulla Richiesta"
+                message={`Sei sicuro di voler annullare la richiesta di ${modalState.absenceType} del ${modalState.absenceDate}? Questa azione non può essere annullata.`}
+                isLoading={modalState.isDeleting}
             />
+
             <div className="absolute inset-0 bg-gradient-to-r from-emerald-500/2 via-blue-500/1 to-purple-500/2 backdrop-blur-xl pointer-events-none" />
             <div className="max-w-6xl mx-auto relative z-10 space-y-12">
 
@@ -157,7 +293,7 @@ export default function MieiDati() {
                     </div>
                 </div>
 
-                {/* 🔥 PANNELLO FILTRI */}
+                {/* Pannello Filtri */}
                 <div className="bg-white/60 backdrop-blur-3xl rounded-3xl shadow-xl p-8 border border-white/70">
                     <div className="flex items-center justify-between mb-6">
                         <div className="flex items-center gap-3">
@@ -189,11 +325,11 @@ export default function MieiDati() {
                                 onChange={(e) => setFiltri({ ...filtri, tipo: e.target.value })}
                                 className="w-full px-4 py-3 bg-white/80 border-2 border-zinc-200 rounded-xl font-semibold text-zinc-800 focus:ring-4 focus:ring-emerald-500/20 focus:border-emerald-500 shadow-md hover:shadow-lg transition-all"
                             >
-                                <option value="tutti"> Tutti i tipi</option>
-                                <option value="ferie">Ferie</option>
-                                <option value="malattia"> Malattia</option>
-                                <option value="permesso"> Permesso</option>
-                                <option value="smartworking"> Smartworking</option>
+                                <option value="tutti">📋 Tutti i tipi</option>
+                                <option value="ferie">🌴 Ferie</option>
+                                <option value="malattia">🤒 Malattia</option>
+                                <option value="permesso">⏰ Permesso</option>
+                                <option value="smartworking">🏠 Smartworking</option>
                             </select>
                         </div>
 
@@ -205,10 +341,10 @@ export default function MieiDati() {
                                 onChange={(e) => setFiltri({ ...filtri, stato: e.target.value })}
                                 className="w-full px-4 py-3 bg-white/80 border-2 border-zinc-200 rounded-xl font-semibold text-zinc-800 focus:ring-4 focus:ring-emerald-500/20 focus:border-emerald-500 shadow-md hover:shadow-lg transition-all"
                             >
-                                <option value="tutti"> Tutti gli stati</option>
-                                <option value="pending"> In attesa</option>
-                                <option value="approved"> Approvate</option>
-                                <option value="rejected"> Rifiutate</option>
+                                <option value="tutti">🔍 Tutti gli stati</option>
+                                <option value="pending">⏳ In attesa</option>
+                                <option value="approved">✅ Approvate</option>
+                                <option value="rejected">❌ Rifiutate</option>
                             </select>
                         </div>
 
@@ -220,10 +356,10 @@ export default function MieiDati() {
                                 onChange={(e) => setFiltri({ ...filtri, periodo: e.target.value })}
                                 className="w-full px-4 py-3 bg-white/80 border-2 border-zinc-200 rounded-xl font-semibold text-zinc-800 focus:ring-4 focus:ring-emerald-500/20 focus:border-emerald-500 shadow-md hover:shadow-lg transition-all"
                             >
-                                <option value="tutti">Tutti i periodi</option>
-                                <option value="ultimo-mese"> Ultimo mese</option>
-                                <option value="ultimi-3-mesi"> Ultimi 3 mesi</option>
-                                <option value="anno-corrente"> Anno corrente</option>
+                                <option value="tutti">📅 Tutti i periodi</option>
+                                <option value="ultimo-mese">📆 Ultimo mese</option>
+                                <option value="ultimi-3-mesi">📊 Ultimi 3 mesi</option>
+                                <option value="anno-corrente">🗓️ Anno corrente</option>
                             </select>
                         </div>
                     </div>
@@ -244,7 +380,7 @@ export default function MieiDati() {
                         </div>
                     </div>
 
-                    <div className="overflow-x-auto">
+                    <div className="overflow-x-hidden">
                         <table className="w-full">
                             <thead>
                             <tr className="bg-gradient-to-r from-white/80 to-zinc-50/80 backdrop-blur-xl">
@@ -253,12 +389,13 @@ export default function MieiDati() {
                                 <th className="text-left py-8 px-10 font-black text-zinc-800 text-xl tracking-tight border-b-2 border-white/50">Durata</th>
                                 <th className="text-left py-8 px-10 font-black text-zinc-800 text-xl tracking-tight border-b-2 border-white/50">Stato</th>
                                 <th className="text-left py-8 px-10 font-black text-zinc-800 text-xl tracking-tight border-b-2 border-white/50">Motivo</th>
+                                <th className="text-left py-8 px-10 font-black text-zinc-800 text-xl tracking-tight border-b-2 border-white/50">Azioni</th>
                             </tr>
                             </thead>
                             <tbody className="divide-y divide-zinc-100/50">
                             {assenzeFiltrate.length === 0 ? (
                                 <tr>
-                                    <td colSpan={5} className="py-32 text-center">
+                                    <td colSpan={6} className="py-32 text-center">
                                         <div className="w-32 h-32 mx-auto mb-8 bg-gradient-to-br from-zinc-100/70 to-slate-100/50 rounded-3xl flex items-center justify-center shadow-2xl border-4 border-dashed border-zinc-200/50 backdrop-blur-xl">
                                             <AlertCircle className="w-16 h-16 text-zinc-300" />
                                         </div>
@@ -278,6 +415,7 @@ export default function MieiDati() {
                                     const tipoLower = (assenza.tipo || '').toLowerCase();
                                     const isPermesso = tipoLower === 'permesso';
                                     const TipoIcon = getTipoIcon(assenza.tipo);
+                                    const canCancel = assenza.stato === 'pending';
 
                                     return (
                                         <tr key={assenza.id || assenza._id || index} className="hover:bg-gradient-to-r hover:from-blue-50/80 hover:to-indigo-50/80 backdrop-blur-xl transition-all duration-300 group">
@@ -289,18 +427,18 @@ export default function MieiDati() {
                                             </td>
 
                                             <td className="py-8 px-10">
-                                                    <span className={`px-6 py-3 rounded-2xl text-sm font-black shadow-xl backdrop-blur-xl border border-white/50 inline-flex items-center gap-2 hover:shadow-2xl hover:scale-105 transition-all duration-300 ${
-                                                        tipoLower === 'ferie'
-                                                            ? 'bg-gradient-to-r from-orange-400/90 to-orange-500/90 text-white shadow-orange-500/25'
-                                                            : tipoLower === 'malattia'
-                                                                ? 'bg-gradient-to-r from-rose-400/90 to-red-500/90 text-white shadow-rose-500/25'
-                                                                : tipoLower === 'smartworking'
-                                                                    ? 'bg-gradient-to-r from-blue-400/90 to-blue-500/90 text-white shadow-blue-500/25'
-                                                                    : 'bg-gradient-to-r from-yellow-400/90 to-amber-500/90 text-white shadow-yellow-500/25'
-                                                    }`}>
-                                                        <TipoIcon className="w-4 h-4" />
-                                                        {getTipoLabel(assenza.tipo)}
-                                                    </span>
+                                                <span className={`px-6 py-3 rounded-2xl text-sm font-black shadow-xl backdrop-blur-xl border border-white/50 inline-flex items-center gap-2 hover:shadow-2xl hover:scale-105 transition-all duration-300 ${
+                                                    tipoLower === 'ferie'
+                                                        ? 'bg-gradient-to-r from-orange-400/90 to-orange-500/90 text-white shadow-orange-500/25'
+                                                        : tipoLower === 'malattia'
+                                                            ? 'bg-gradient-to-r from-rose-400/90 to-red-500/90 text-white shadow-rose-500/25'
+                                                            : tipoLower === 'smartworking'
+                                                                ? 'bg-gradient-to-r from-blue-400/90 to-blue-500/90 text-white shadow-blue-500/25'
+                                                                : 'bg-gradient-to-r from-yellow-400/90 to-amber-500/90 text-white shadow-yellow-500/25'
+                                                }`}>
+                                                    <TipoIcon className="w-4 h-4" />
+                                                    {getTipoLabel(assenza.tipo)}
+                                                </span>
                                             </td>
 
                                             <td className="py-8 px-10">
@@ -317,30 +455,30 @@ export default function MieiDati() {
                                             </td>
 
                                             <td className="py-8 px-10">
-                                                    <span className={`px-6 py-3 rounded-2xl text-sm font-black shadow-xl backdrop-blur-xl border border-white/50 inline-flex items-center gap-2 hover:shadow-2xl hover:scale-105 transition-all duration-300 ${
-                                                        assenza.stato === 'approved'
-                                                            ? 'bg-gradient-to-r from-emerald-400/90 to-green-500/90 text-white shadow-emerald-500/25'
-                                                            : assenza.stato === 'pending'
-                                                                ? 'bg-gradient-to-r from-amber-400/90 to-yellow-500/90 text-white shadow-amber-500/25'
-                                                                : 'bg-gradient-to-r from-rose-400/90 to-red-500/90 text-white shadow-rose-500/25'
-                                                    }`}>
-                                                        {assenza.stato === 'pending' ? (
-                                                            <>
-                                                                <Clock className="w-4 h-4" />
-                                                                In attesa
-                                                            </>
-                                                        ) : assenza.stato === 'approved' ? (
-                                                            <>
-                                                                <CheckCircle className="w-4 h-4" />
-                                                                Approvata
-                                                            </>
-                                                        ) : (
-                                                            <>
-                                                                <XCircle className="w-4 h-4" />
-                                                                Rifiutata
-                                                            </>
-                                                        )}
-                                                    </span>
+                                                <span className={`px-6 py-3 rounded-2xl text-sm font-black shadow-xl backdrop-blur-xl border border-white/50 inline-flex items-center gap-2 hover:shadow-2xl hover:scale-105 transition-all duration-300 ${
+                                                    assenza.stato === 'approved'
+                                                        ? 'bg-gradient-to-r from-emerald-400/90 to-green-500/90 text-white shadow-emerald-500/25'
+                                                        : assenza.stato === 'pending'
+                                                            ? 'bg-gradient-to-r from-amber-400/90 to-yellow-500/90 text-white shadow-amber-500/25'
+                                                            : 'bg-gradient-to-r from-rose-400/90 to-red-500/90 text-white shadow-rose-500/25'
+                                                }`}>
+                                                    {assenza.stato === 'pending' ? (
+                                                        <>
+                                                            <Clock className="w-4 h-4" />
+                                                            In attesa
+                                                        </>
+                                                    ) : assenza.stato === 'approved' ? (
+                                                        <>
+                                                            <CheckCircle className="w-4 h-4" />
+                                                            Approvata
+                                                        </>
+                                                    ) : (
+                                                        <>
+                                                            <XCircle className="w-4 h-4" />
+                                                            Rifiutata
+                                                        </>
+                                                    )}
+                                                </span>
                                             </td>
 
                                             <td className="py-8 px-10 text-lg max-w-xs" title={assenza.motivo || 'Nessun motivo indicato'}>
@@ -348,9 +486,27 @@ export default function MieiDati() {
                                                     <span className="font-medium text-zinc-800 line-clamp-2">{assenza.motivo}</span>
                                                 ) : (
                                                     <span className="text-zinc-400 italic font-light flex items-center gap-2">
-                                                            <AlertCircle className="w-4 h-4" />
-                                                            Nessun motivo
-                                                        </span>
+                                                        <AlertCircle className="w-4 h-4" />
+                                                        Nessun motivo
+                                                    </span>
+                                                )}
+                                            </td>
+
+                                            <td className="py-8 px-10">
+                                                {canCancel ? (
+                                                    <button
+                                                        onClick={() => handleCancelClick(assenza)}
+                                                        className="px-5 py-2.5 bg-gradient-to-r from-red-500 to-rose-600 hover:from-red-600 hover:to-rose-700 text-white font-bold rounded-xl shadow-lg hover:shadow-xl transition-all flex items-center gap-2 hover:scale-105"
+                                                        title="Annulla richiesta"
+                                                    >
+
+                                                        <Trash2 className="w-4 h-4" />
+                                                    </button>
+                                                ) : (
+                                                    <span className="text-zinc-400 italic text-sm flex items-center gap-2">
+                                                        <XCircle className="w-4 h-4" />
+                                                        Non annullabile
+                                                    </span>
                                                 )}
                                             </td>
                                         </tr>

@@ -1,4 +1,3 @@
-// src/lib/db.ts
 import mongoose, { Schema, Model } from "mongoose";
 import bcrypt from "bcryptjs";
 
@@ -299,4 +298,45 @@ export async function createPayslip(data: {
 export async function getPayslipById(id: number) {
     await connectDB();
     return PayslipModel.findOne({ id }).lean();
+}
+
+
+
+
+export async function deleteAbsence(absenceId: string, userId: number): Promise<boolean> {
+    try {
+        await connectDB();
+
+        let assenza;
+
+        const numericId = parseInt(absenceId);
+
+        if (!isNaN(numericId)) {
+            assenza = await AbsenceModel.findOne({ id: numericId }).lean();
+        }
+
+        if (!assenza && absenceId.length === 24) {
+            assenza = await AbsenceModel.findById(absenceId).lean();
+        }
+
+        if (!assenza) {
+            return false;
+        }
+
+
+        if (assenza.employeeId !== userId) {
+            console.log('❌ Step 6 - NON PROPRIETARIO');
+            return false;
+        }
+
+        if (assenza.status !== 'pending') {
+            return false;
+        }
+
+        const result = await AbsenceModel.deleteOne({ _id: assenza._id });
+
+        return result.deletedCount > 0;
+    } catch (error) {
+        return false;
+    }
 }
