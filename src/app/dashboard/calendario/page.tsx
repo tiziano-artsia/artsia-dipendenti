@@ -234,9 +234,6 @@ export default function Calendario() {
 
             const backendData = data.data || [];
 
-            // 🔥 DEBUG: vedi tutte le assenze ricevute
-            console.log('📦 Assenze ricevute dal backend:', backendData);
-            console.log('📦 Smartworking ricevuti:', backendData.filter(a => a.type === 'smartworking'));
 
             const mapped = mapBackendToFrontend(backendData);
 
