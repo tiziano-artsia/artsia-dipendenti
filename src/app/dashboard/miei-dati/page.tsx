@@ -275,6 +275,7 @@ export default function MieiDati() {
             <div className="max-w-7xl mx-auto relative z-10 space-y-12">
 
                 {/* Header */}
+
                 <div className="bg-white/70 backdrop-blur-3xl rounded-3xl shadow-2xl p-10 border border-white/60 hover:shadow-3xl transition-all duration-700 hover:-translate-y-1 group">
                     <div className="flex items-start gap-6">
                         <div className="w-20 h-20 bg-gradient-to-br from-emerald-500 to-green-600 rounded-3xl flex items-center justify-center shadow-2xl border border-white/40 backdrop-blur-xl shrink-0 group-hover:scale-110 transition-transform duration-500">
@@ -366,6 +367,7 @@ export default function MieiDati() {
                 </div>
 
                 {/* Tabella Assenze */}
+                {assenze?.length > 0 && (
                 <div className="bg-white/60 backdrop-blur-3xl rounded-3xl shadow-2xl p-10 border border-white/70 hover:shadow-3xl transition-all duration-700">
                     <div className="flex items-center justify-between mb-10">
                         <h2 className="text-4xl font-black tracking-tight bg-gradient-to-r from-zinc-800 to-slate-700 bg-clip-text text-transparent flex items-center gap-4">
@@ -379,6 +381,7 @@ export default function MieiDati() {
                             </span>
                         </div>
                     </div>
+
 
                     <div className="overflow-x-hidden">
                         <table className="w-full">
@@ -515,6 +518,7 @@ export default function MieiDati() {
                         </table>
                     </div>
                 </div>
+                )}
 
                 {/* Form Nuova Richiesta */}
                 <div className="bg-white/60 backdrop-blur-3xl rounded-3xl shadow-2xl p-10 border border-white/70 hover:shadow-3xl transition-all duration-700">
