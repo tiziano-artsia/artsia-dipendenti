@@ -256,7 +256,9 @@ export default function BustePaga() {
                                     value={uploadForm.anno}
                                     onChange={(e) => setUploadForm({...uploadForm, anno: e.target.value})}
                                 >
-                                    {[2024, 2025, 2026, 2027].map(y => <option key={y} value={y}>{y}</option>)}
+                                    {Array.from({ length: 2 }, (_, i) => new Date().getFullYear() - 1 + i).map(y => (
+                                        <option key={y} value={y}>{y}</option>
+                                    ))}
                                 </select>
 
                                 <input
