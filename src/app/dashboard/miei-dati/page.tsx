@@ -415,7 +415,7 @@ export default function MieiDati() {
                                     const tipoLower = (assenza.tipo || '').toLowerCase();
                                     const isPermesso = tipoLower === 'permesso';
                                     const TipoIcon = getTipoIcon(assenza.tipo);
-                                    const canCancel = assenza.stato === 'pending';
+                                    const canCancel = true;//assenza.stato === 'pending';
 
                                     return (
                                         <tr key={assenza.id || assenza._id || index} className="hover:bg-gradient-to-r hover:from-blue-50/80 hover:to-indigo-50/80 backdrop-blur-xl transition-all duration-300 group">

@@ -325,14 +325,14 @@ export async function deleteAbsence(absenceId: string, userId: number): Promise<
 
 
         if (assenza.employeeId !== userId) {
-            console.log('❌ Step 6 - NON PROPRIETARIO');
             return false;
         }
 
+/*
         if (assenza.status !== 'pending') {
             return false;
         }
-
+*/
         const result = await AbsenceModel.deleteOne({ _id: assenza._id });
 
         return result.deletedCount > 0;
