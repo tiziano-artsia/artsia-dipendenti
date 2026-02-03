@@ -550,7 +550,7 @@ export default function Calendario() {
         document.body.removeChild(link);
     };
 
-    // 🔥 FUNZIONI PER VISTA SETTIMANALE
+    //  FUNZIONI PER VISTA SETTIMANALE
     const getInizioSettimana = (date: Date) => {
         const d = new Date(date);
         const day = d.getDay();
@@ -679,7 +679,7 @@ export default function Calendario() {
                                 <div className="space-y-2">
                                     {assenzeGiorno.slice(0, 3).map((assenza, idx) => {
                                         const employee = getEmployeeById(assenza.employeeId);
-                                        const nomeCorto = (employee?.name || `Dip.${assenza.employeeId}`).substring(0, 10);
+                                        const nomeCorto = (employee?.name || `Dip.${assenza.employeeId}`).substring(0, 15);
 
                                         return (
                                             <div key={`week-${assenza.id}-${idx}`}
@@ -1040,8 +1040,8 @@ export default function Calendario() {
 
                                                          */
                                                         const nomeCompleto = employee?.name || `Dip.${assenza.employeeId}`;
-                                                        const nomeCorto = nomeCompleto.length > 12
-                                                            ? `${nomeCompleto.substring(0, 12)}...`
+                                                        const nomeCorto = nomeCompleto.length > 15
+                                                            ? `${nomeCompleto.substring(0, 15)}...`
                                                             : nomeCompleto;
 
                                                         return (
@@ -1060,8 +1060,8 @@ export default function Calendario() {
                                                                 }`}
                                                             >
                                                                 <div className="flex items-center justify-between gap-1">
-                                                                     <span className="truncate text-[10px] md:text-[11px] font-bold">
-                                                                    {nomeCorto}
+                                                                     <span className="text-[10px] md:text-[11px] font-bold">
+                                                                    {nomeCompleto}
                                                                 </span>
                                                                     <span className="text-[9px] md:text-[10px] font-bold bg-white/30 px-1.5 py-0.5 rounded-sm">
                                                                         {assenza.tipo === 'permesso' ? `${assenza.durata}h` : `${assenza.durata}g`}
