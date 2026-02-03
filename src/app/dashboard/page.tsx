@@ -42,7 +42,7 @@ export default function Dashboard() {
         name: '',
         surname: '',
         team: '',
-        role: 'dipendente'
+        role: ''
     });
     const [employeeError, setEmployeeError] = useState('');
 
@@ -147,10 +147,10 @@ export default function Dashboard() {
                             </div>
                             <div>
                                 <h1 className="text-4xl md:text-5xl font-black tracking-tight bg-gradient-to-r from-gray-900 via-zinc-800 to-slate-800 bg-clip-text text-transparent mb-3 leading-tight">
-                                    Dashboard
+                                    Dashboard Personale
                                 </h1>
                                 <p className="text-xl text-zinc-600 font-light flex flex-wrap items-center gap-2">
-                                    <span>Benvenuto</span>
+                                    <span>Ciao</span>
                                     <span className="font-semibold bg-gradient-to-r from-emerald-600 to-green-600 bg-clip-text text-transparent">
                                         {user?.name}
                                     </span>

@@ -355,8 +355,8 @@ export default function Calendario() {
     };
 
     const getAssenzePerData = (dataStr: string): Absence[] => {
-        const assenzeGiorno = assenze.filter(a => {
-            const dataAssenza = a.dataInizio;
+        const assenzeGiorno = assenze.filter(assenza => {  // Rinomina 'a' in 'assenza'
+            const dataAssenza = assenza.dataInizio;
 
             // Match esatto data inizio
             if (dataAssenza === dataStr) return true;
@@ -368,7 +368,7 @@ export default function Calendario() {
                 if (dataItalianaISO === dataStr) return true;
             }
 
-            // Verifica se dataStr cade nel range dell'assenza (dataInizio + durata LAVORATIVI)
+            // Verifica se dataStr cade nel range dell'assenza
             try {
                 let dataInizio: Date;
 
@@ -377,21 +377,20 @@ export default function Calendario() {
                     const [g, m, a] = dataAssenza.split('/').map(Number);
                     dataInizio = new Date(a, m - 1, g);
                 } else {
-                    const [a, m, g] = dataAssenza.split('-').map(Number);
-                    dataInizio = new Date(a, m - 1, g);
+                    const [anno, mese, giorno] = dataAssenza.split('-').map(Number);
+                    dataInizio = new Date(anno, mese - 1, giorno);
                 }
 
                 // Calcola dataFine saltando weekend e festivi
                 let giorniLavorativiContati = 0;
                 let dataCorrente = new Date(dataInizio);
-                dataCorrente.setDate(dataCorrente.getDate() - 1); // Parti dal giorno prima
+                dataCorrente.setDate(dataCorrente.getDate() - 1);
 
-                while (giorniLavorativiContati < a.durata) {
+                while (giorniLavorativiContati < assenza.durata) {  // Usa 'assenza.durata'
                     dataCorrente.setDate(dataCorrente.getDate() + 1);
 
                     const info = getInfoGiorno(dataCorrente.getDate(), dataCorrente.getMonth(), dataCorrente.getFullYear());
 
-                    // Conta solo giorni lavorativi
                     if (info.isLavorativo) {
                         giorniLavorativiContati++;
                     }
@@ -1161,9 +1160,33 @@ export default function Calendario() {
                                     let rangeData = '';
                                     if (assenza.stato === 'approved' && ['ferie', 'malattia', 'smartworking'].includes(assenza.tipo) && Number(assenza.durata) > 1) {
                                         try {
-                                            const [giornoI, meseI, annoI] = assenza.dataInizio.split(/[-/]/);
-                                            const dataInizio = new Date(Number(annoI), Number(meseI) - 1, Number(giornoI));
-                                            const dataFine = new Date(dataInizio.getTime() + (Number(assenza.durata) - 1) * 86400000);
+                                            // Parse dataInizio
+                                            let dataInizio: Date;
+                                            if (assenza.dataInizio.includes('/')) {
+                                                const [g, m, a] = assenza.dataInizio.split('/').map(Number);
+                                                dataInizio = new Date(a, m - 1, g);
+                                            } else {
+                                                const [anno, mese, giorno] = assenza.dataInizio.split('-').map(Number);
+                                                dataInizio = new Date(anno, mese - 1, giorno);
+                                            }
+
+                                            // Calcola dataFine saltando weekend e festivi
+                                            let giorniLavorativiContati = 0;
+                                            let dataCorrente = new Date(dataInizio);
+                                            dataCorrente.setDate(dataCorrente.getDate() - 1);
+
+                                            while (giorniLavorativiContati < assenza.durata) {
+                                                dataCorrente.setDate(dataCorrente.getDate() + 1);
+
+                                                const info = getInfoGiorno(dataCorrente.getDate(), dataCorrente.getMonth(), dataCorrente.getFullYear());
+
+                                                if (info.isLavorativo) {
+                                                    giorniLavorativiContati++;
+                                                }
+                                            }
+
+                                            const dataFine = dataCorrente;
+
                                             rangeData = `${formattaDataItaliana(dataInizio.toISOString().split('T')[0])} - ${formattaDataItaliana(dataFine.toISOString().split('T')[0])}`;
                                         } catch {
                                             rangeData = `${assenza.durata} giorni`;
@@ -1196,9 +1219,9 @@ export default function Calendario() {
                                                                 assenza.tipo === 'permesso' ? 'bg-gradient-to-r from-yellow-500 to-amber-600 text-white border-yellow-400/50' :
                                                                     'bg-gradient-to-r from-blue-500 to-blue-600 text-white border-blue-400/50'
                                                     }`}>
-                                                        <span className="text-2xl">
-                                                            {assenza.tipo === 'ferie' ? '🌴' : assenza.tipo === 'malattia' ? '🤒' : assenza.tipo === 'permesso' ? '⏰' : '🏠'}
-                                                        </span>
+                                <span className="text-2xl">
+                                    {assenza.tipo === 'ferie' ? '🌴' : assenza.tipo === 'malattia' ? '🤒' : assenza.tipo === 'permesso' ? '⏰' : '🏠'}
+                                </span>
                                                         {assenza.tipo.toUpperCase()}
                                                     </div>
 
@@ -1234,8 +1257,8 @@ export default function Calendario() {
                                                                 <><XCircle className="w-5 h-5" />RIFIUTATA</>}
                                                     </div>
                                                     <span className="text-xs text-zinc-500 font-mono px-3 py-1 bg-zinc-100 rounded-lg border border-zinc-200">
-                                                        ID: {assenza.id}
-                                                    </span>
+                                ID: {assenza.id}
+                            </span>
                                                 </div>
                                             </div>
                                         </div>
