@@ -460,7 +460,12 @@ export default function Calendario() {
     };
 
     const exportExcelMensile = () => {
-        const totaliPerDipendente: Record<string, { ferie: number; permesso: number; malattia: number }> = {};
+        const totaliPerDipendente: Record<string, {
+            ferie: number;
+            permesso: number;
+            malattia: number;
+            motivi: string[];
+        }> = {};
 
         assenze
             .filter(a => a.stato !== 'rejected')
@@ -487,8 +492,14 @@ export default function Calendario() {
                     totaliPerDipendente[empName] = {
                         ferie: 0,
                         permesso: 0,
-                        malattia: 0
+                        malattia: 0,
+                        motivi: []
                     };
+                }
+
+                // Aggiungi il motivo se presente
+                if (a.motivo && a.motivo.trim() !== '') {
+                    totaliPerDipendente[empName].motivi.push(a.motivo);
                 }
 
                 if (a.tipo === 'ferie') {
@@ -505,16 +516,22 @@ export default function Calendario() {
         const datiSheet: (string | number)[][] = [];
         datiSheet.push([`TOTALE MENSILE DI: ${nomiMesi[mese]} ${anno}`]);
         datiSheet.push([]);
-        datiSheet.push(['#', 'Dipendente', 'Ferie (giorni)', 'Permesso (ore)', 'Malattia (giorni)']);
+        datiSheet.push(['#', 'Dipendente', 'Ferie (giorni)', 'Permesso (ore)', 'Malattia (giorni)', 'Motivi']);
 
         dipendentiOrdinati.forEach((nome, index) => {
             const totali = totaliPerDipendente[nome];
+            // Unisci i motivi con un separatore
+            const motiviStringa = totali.motivi.length > 0
+                ? totali.motivi.join(' | ')
+                : '-';
+
             datiSheet.push([
                 index + 1,
                 nome,
                 totali.ferie,
                 totali.permesso,
-                totali.malattia
+                totali.malattia,
+                motiviStringa
             ]);
         });
 
@@ -522,11 +539,12 @@ export default function Calendario() {
         const worksheet = XLSX.utils.aoa_to_sheet(datiSheet);
 
         worksheet['!cols'] = [
-            { wch: 5 },
-            { wch: 25 },
-            { wch: 18 },
-            { wch: 18 },
-            { wch: 18 }
+            { wch: 5 },   // #
+            { wch: 25 },  // Dipendente
+            { wch: 18 },  // Ferie
+            { wch: 18 },  // Permesso
+            { wch: 18 },  // Malattia
+            { wch: 40 }   // Motivi
         ];
 
         XLSX.utils.book_append_sheet(workbook, worksheet, 'Totali Mensili');
