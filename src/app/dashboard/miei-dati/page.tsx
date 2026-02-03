@@ -272,7 +272,7 @@ export default function MieiDati() {
             />
 
             <div className="absolute inset-0 bg-gradient-to-r from-emerald-500/2 via-blue-500/1 to-purple-500/2 backdrop-blur-xl pointer-events-none" />
-            <div className="max-w-6xl mx-auto relative z-10 space-y-12">
+            <div className="max-w-7xl mx-auto relative z-10 space-y-12">
 
                 {/* Header */}
                 <div className="bg-white/70 backdrop-blur-3xl rounded-3xl shadow-2xl p-10 border border-white/60 hover:shadow-3xl transition-all duration-700 hover:-translate-y-1 group">
@@ -385,11 +385,11 @@ export default function MieiDati() {
                             <thead>
                             <tr className="bg-gradient-to-r from-white/80 to-zinc-50/80 backdrop-blur-xl">
                                 <th className="text-left py-8 px-10 font-black text-zinc-800 text-xl tracking-tight border-b-2 border-white/50">Data</th>
-                                <th className="text-left py-8 px-10 font-black text-zinc-800 text-xl tracking-tight border-b-2 border-white/50">Tipo</th>
-                                <th className="text-left py-8 px-10 font-black text-zinc-800 text-xl tracking-tight border-b-2 border-white/50">Durata</th>
-                                <th className="text-left py-8 px-10 font-black text-zinc-800 text-xl tracking-tight border-b-2 border-white/50">Stato</th>
-                                <th className="text-left py-8 px-10 font-black text-zinc-800 text-xl tracking-tight border-b-2 border-white/50">Motivo</th>
-                                <th className="text-left py-8 px-10 font-black text-zinc-800 text-xl tracking-tight border-b-2 border-white/50">Azioni</th>
+                                <th className="text-left py-8 px-10  font-black text-zinc-800 text-xl tracking-tight border-b-2 border-white/50">Tipo</th>
+                                <th className="text-left py-8 px-10  font-black text-zinc-800 text-xl tracking-tight border-b-2 border-white/50">Durata</th>
+                                <th className="text-left py-8 px-10  font-black text-zinc-800 text-xl tracking-tight border-b-2 border-white/50">Stato</th>
+                                <th className="text-left py-8 px-10  font-black text-zinc-800 text-xl tracking-tight border-b-2 border-white/50">Motivo</th>
+                                <th className="text-left  py-8 px-10 font-black text-zinc-800 text-xl tracking-tight border-b-2 border-white/50">Azioni</th>
                             </tr>
                             </thead>
                             <tbody className="divide-y divide-zinc-100/50">
@@ -485,8 +485,7 @@ export default function MieiDati() {
                                                 {assenza.motivo ? (
                                                     <span className="font-medium text-zinc-800 line-clamp-2">{assenza.motivo}</span>
                                                 ) : (
-                                                    <span className="text-zinc-400 italic font-light flex items-center gap-2">
-                                                        <AlertCircle className="w-4 h-4" />
+                                                    <span className="text-zinc-400 italic text-sm flex items-center gap-2">
                                                         Nessun motivo
                                                     </span>
                                                 )}
@@ -504,8 +503,7 @@ export default function MieiDati() {
                                                     </button>
                                                 ) : (
                                                     <span className="text-zinc-400 italic text-sm flex items-center gap-2">
-                                                        <XCircle className="w-4 h-4" />
-                                                        Non annullabile
+                                                        Non modificabile
                                                     </span>
                                                 )}
                                             </td>

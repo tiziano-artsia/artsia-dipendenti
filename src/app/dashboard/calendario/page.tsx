@@ -356,7 +356,7 @@ export default function Calendario() {
 
     const getAssenzePerData = (dataStr: string): Absence[] => {
         const assenzeGiorno = assenze.filter(a => {
-            const dataAssenza = a.dataInizio || '';
+            const dataAssenza = a.dataInizio;
 
             // Match esatto data inizio
             if (dataAssenza === dataStr) return true;
@@ -368,29 +368,58 @@ export default function Calendario() {
                 if (dataItalianaISO === dataStr) return true;
             }
 
-            if (a.tipo === 'ferie' && a.durata > 1) {
-                try {
-                    const [annoI, meseI, giornoI] = dataAssenza.split(/[-/]/).map(Number);
-                    const dataInizio = new Date(annoI, meseI - 1, giornoI);
-                    const dataFine = new Date(dataInizio.getTime() + (a.durata - 1) * 86400000);
-                    const dataCheck = new Date(dataStr);
+            // Verifica se dataStr cade nel range dell'assenza (dataInizio + durata LAVORATIVI)
+            try {
+                let dataInizio: Date;
 
-                    if (dataCheck >= dataInizio && dataCheck <= dataFine) {
+                // Parse dataInizio
+                if (dataAssenza.includes('/')) {
+                    const [g, m, a] = dataAssenza.split('/').map(Number);
+                    dataInizio = new Date(a, m - 1, g);
+                } else {
+                    const [a, m, g] = dataAssenza.split('-').map(Number);
+                    dataInizio = new Date(a, m - 1, g);
+                }
+
+                // Calcola dataFine saltando weekend e festivi
+                let giorniLavorativiContati = 0;
+                let dataCorrente = new Date(dataInizio);
+                dataCorrente.setDate(dataCorrente.getDate() - 1); // Parti dal giorno prima
+
+                while (giorniLavorativiContati < a.durata) {
+                    dataCorrente.setDate(dataCorrente.getDate() + 1);
+
+                    const info = getInfoGiorno(dataCorrente.getDate(), dataCorrente.getMonth(), dataCorrente.getFullYear());
+
+                    // Conta solo giorni lavorativi
+                    if (info.isLavorativo) {
+                        giorniLavorativiContati++;
+                    }
+                }
+
+                const dataFine = dataCorrente;
+
+                // Parse dataStr da verificare
+                const [anno, mese, giorno] = dataStr.split('-').map(Number);
+                const dataCheck = new Date(anno, mese - 1, giorno);
+
+                // Verifica se dataCheck è nel range [dataInizio, dataFine] ED è lavorativo
+                if (dataCheck >= dataInizio && dataCheck <= dataFine) {
+                    const infoCheck = getInfoGiorno(dataCheck.getDate(), dataCheck.getMonth(), dataCheck.getFullYear());
+                    if (infoCheck.isLavorativo) {
                         return true;
                     }
-                } catch (error) {
-                    console.warn('Errore calcolo range ferie:', dataAssenza, error);
                 }
+            } catch (error) {
+                console.warn('Errore calcolo range assenza:', dataAssenza, error);
             }
 
             return false;
         });
 
+        // Filtri esistenti...
         const assenzeFiltrate = assenzeGiorno.filter(a => {
-            if (filtriAttivi.length > 0 && !filtriAttivi.includes(a.tipo)) {
-                return false;
-            }
-
+            if (filtriAttivi.length > 0 && !filtriAttivi.includes(a.tipo)) return false;
             if (a.stato !== 'approved' && a.stato !== 'pending') return false;
 
             const employee = getEmployeeById(a.employeeId);
@@ -398,19 +427,14 @@ export default function Calendario() {
             const isTeamMember = employee?.team === userTeam;
 
             if (isAdmin) return true;
-
             if (a.tipo === 'smartworking') return true;
-
             if (['ferie', 'malattia'].includes(a.tipo)) {
                 return isOwnAbsence || (isManager && isTeamMember);
             }
-
-            // 🔥 PERMESSO: propri + team se manager
             if (a.tipo === 'permesso') {
                 return isOwnAbsence || (isManager && isTeamMember);
             }
 
-            // Default: mostra
             return true;
         });
 
@@ -545,7 +569,6 @@ export default function Calendario() {
         return giorni;
     };
 
-    // 🔥 RENDER VISTA GIORNALIERA
     const renderVistaGiornaliera = () => {
         const dataStr = `${giornoCorrente.getFullYear()}-${String(giornoCorrente.getMonth() + 1).padStart(2, '0')}-${String(giornoCorrente.getDate()).padStart(2, '0')}`;
         const assenzeGiorno = getAssenzePerData(dataStr);
@@ -977,7 +1000,7 @@ export default function Calendario() {
                                                 }
                                             }}
                                             className={`
-                                                relative h-20 md:h-32 p-2 md:p-3 rounded-2xl border-2 shadow-lg 
+                                                relative h-20 md:h-54 p-2 md:p-3 rounded-2xl border-2 shadow-lg 
                                                 transition-all duration-300 hover:shadow-xl hover:-translate-y-1 
                                                 backdrop-blur-xl flex flex-col justify-between group cursor-pointer overflow-hidden
                                                 ${assenzeGiorno.length > 0
@@ -1006,6 +1029,17 @@ export default function Calendario() {
                                                     .slice(0, 3)
                                                     .map((assenza, idx) => {
                                                         const employee = getEmployeeById(assenza.employeeId);
+                                                        /* prima cognome poi nome
+                                                        const nomeCompleto = employee?.name
+                                                          ? (() => {
+                                                              const parts = employee.name.split(' ');
+                                                              const cognome = parts[parts.length - 1];
+                                                              const nome = parts.slice(0, -1).join(' ');
+                                                              return `${cognome} ${nome}`;
+                                                            })()
+                                                          : `Dip.${assenza.employeeId}`;
+
+                                                         */
                                                         const nomeCompleto = employee?.name || `Dip.${assenza.employeeId}`;
                                                         const nomeCorto = nomeCompleto.length > 12
                                                             ? `${nomeCompleto.substring(0, 12)}...`
@@ -1026,15 +1060,10 @@ export default function Calendario() {
                                                                                 : 'bg-gradient-to-r from-blue-500/95 to-blue-600/95 text-white border-blue-400/60 shadow-blue-400/40'
                                                                 }`}
                                                             >
-                                                                <span className="truncate text-[10px] md:text-[11px] font-bold">
+                                                                <div className="flex items-center justify-between gap-1">
+                                                                     <span className="truncate text-[10px] md:text-[11px] font-bold">
                                                                     {nomeCorto}
                                                                 </span>
-                                                                <div className="flex items-center justify-between gap-1">
-                                                                    <span className="text-[9px] md:text-[10px] opacity-90">
-                                                                        {assenza.tipo === 'ferie' ? '🌴' :
-                                                                            assenza.tipo === 'malattia' ? '🤒' :
-                                                                                assenza.tipo === 'permesso' ? '⏰' : '🏠'}
-                                                                    </span>
                                                                     <span className="text-[9px] md:text-[10px] font-bold bg-white/30 px-1.5 py-0.5 rounded-sm">
                                                                         {assenza.tipo === 'permesso' ? `${assenza.durata}h` : `${assenza.durata}g`}
                                                                     </span>
@@ -1130,7 +1159,7 @@ export default function Calendario() {
                                     const team = employee?.team || 'N/D';
 
                                     let rangeData = '';
-                                    if (assenza.stato === 'approved' && ['ferie', 'malattia'].includes(assenza.tipo) && Number(assenza.durata) > 1) {
+                                    if (assenza.stato === 'approved' && ['ferie', 'malattia', 'smartworking'].includes(assenza.tipo) && Number(assenza.durata) > 1) {
                                         try {
                                             const [giornoI, meseI, annoI] = assenza.dataInizio.split(/[-/]/);
                                             const dataInizio = new Date(Number(annoI), Number(meseI) - 1, Number(giornoI));
