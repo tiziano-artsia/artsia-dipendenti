@@ -33,7 +33,7 @@ export default function Header() {
                         <Link href="/dashboard" className="flex items-center space-x-3 hover:opacity-80 transition-opacity">
                             <div className="w-12 h-12 bg-white rounded-2xl flex items-center justify-center p-2.5 shadow-xl border border-gray-200">
                                 <img
-                                    src="/public/icons/logo-artsia.svg"
+                                    src="../logo-artsia.svg"
                                     alt="Artsia Logo"
                                     className="w-full h-full object-contain"
                                     onError={(e) => console.error('Logo error:', e)}
