@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
 
+
 export default function LoginPage() {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
@@ -54,7 +55,7 @@ export default function LoginPage() {
                     {/* Logo subtle */}
                     <div className="w-20 h-20 bg-gradient-to-r from-white/20 to-white/10 rounded-2xl mx-auto mb-8 flex items-center justify-center backdrop-blur-xl border border-white/20 shadow-xl group-hover:scale-110 transition-transform duration-500">
                         <img
-                            src="/logo-artsia.svg"
+                            src=" https://www.artsia.it/assets/images/logos/logo-artsia.svg "
                             alt="Artsia Logo"
                             className="w-full h-full object-contain"
                             onError={(e) => console.error('Logo error:', e)}
