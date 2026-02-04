@@ -336,6 +336,7 @@ export async function deleteAbsence(absenceId: string, userId: number): Promise<
         const result = await AbsenceModel.deleteOne({ _id: assenza._id });
 
         return result.deletedCount > 0;
+
     } catch (error) {
         return false;
     }

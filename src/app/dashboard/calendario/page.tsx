@@ -41,7 +41,7 @@ interface Absence {
     dataInizio: string;
     durata: number;
     tipo: 'ferie' | 'permesso' | 'smartworking' | 'malattia';
-    stato: 'pending' | 'approved' | 'rejected';
+    stato: 'pending' | 'approved' | 'rejected' ;
     motivo?: string;
 }
 
@@ -777,11 +777,14 @@ export default function Calendario() {
                                                 <User />   <span className="font-bold">{user?.name}</span> - {user?.team}
                                             </>
                                         )}
-                                        <span className="px-3 py-1 bg-emerald-100/80 text-emerald-700 text-sm font-mono rounded-full border border-emerald-200">
+                                        {/*
+                                         <span className="px-3 py-1 bg-emerald-100/80 text-emerald-700 text-sm font-mono rounded-full border border-emerald-200">
                                             {assenze.filter(a => a.stato === 'approved').length} approvate
                                         </span>
+                                        */}
+
                                         <span className="px-3 py-1 bg-amber-100/80 text-amber-700 text-sm font-mono rounded-full border border-amber-200">
-                                            {assenze.filter(a => a.stato === 'pending').length} pending
+                                            {assenze.filter(a => a.stato === 'pending').length} in attesa di approvazione
                                         </span>
                                     </p>
                                 </div>

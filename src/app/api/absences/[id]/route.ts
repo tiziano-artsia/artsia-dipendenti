@@ -47,7 +47,7 @@ export async function DELETE(
 
         return NextResponse.json({
             success: true,
-            message: 'Richiesta annullata con successo'
+            message: 'Richiesta eliminata con successo'
         });
 
     } catch (error: any) {
