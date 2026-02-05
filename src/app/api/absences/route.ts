@@ -12,7 +12,7 @@ interface JWTPayload {
     role: string;
 }
 
-export function getUserFromToken(request: NextRequest): JWTPayload | null {
+ function getUserFromToken(request: NextRequest): JWTPayload | null {
     try {
         const authHeader = request.headers.get('authorization');
         if (!authHeader?.startsWith('Bearer ')) return null;

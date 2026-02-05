@@ -832,14 +832,15 @@ export default function Calendario() {
                                         )}
                                     </>
                                 )}
-
-                                <button
-                                    onClick={exportExcelMensile}
-                                    className="flex items-center gap-3 px-8 py-4 h-16 bg-gradient-to-r from-blue-500 to-indigo-600 text-white font-black text-lg rounded-2xl shadow-2xl hover:shadow-3xl hover:from-blue-600 hover:to-indigo-700 focus:outline-none focus:ring-4 focus:ring-blue-500/50 transition-all duration-300 hover:-translate-y-1 backdrop-blur-xl border border-blue-400/50"
-                                >
-                                    <Download className="w-5 h-5" />
-                                    Export Excel
-                                </button>
+                                {(isAdmin || isManager) && (
+                                    <button
+                                        onClick={exportExcelMensile}
+                                        className="flex items-center gap-3 px-8 py-4 h-16 bg-gradient-to-r from-blue-500 to-indigo-600 text-white font-black text-lg rounded-2xl shadow-2xl hover:shadow-3xl hover:from-blue-600 hover:to-indigo-700 focus:outline-none focus:ring-4 focus:ring-blue-500/50 transition-all duration-300 hover:-translate-y-1 backdrop-blur-xl border border-blue-400/50"
+                                    >
+                                        <Download className="w-5 h-5" />
+                                        Export Excel
+                                    </button>
+                                )}
                             </div>
                         </div>
                     </div>
