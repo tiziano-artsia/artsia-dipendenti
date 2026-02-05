@@ -1,6 +1,6 @@
 {
     "name": "Artsia Dipendenti Management",
-    "short_name": "Artsia",
+    "short_name": "Artsia Dipendenti",
     "description": "Sistema di gestione presenze e buste paga",
     "start_url": "/",
     "display": "standalone",
