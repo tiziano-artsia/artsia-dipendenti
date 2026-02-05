@@ -250,50 +250,128 @@ export async function updateAbsenceStatus(absenceId: number | string, status: Ab
     return result.modifiedCount > 0;
 }
 
-export type PayslipDoc = {
+interface PayslipDoc {
     id: number;
+    type: 'payslip' | 'document';
     employeeId: number;
     employeeName: string;
-    mese: string;
+    mese?: string;
     anno: string;
-    netto: string;
+    netto?: string;
+    documentName?: string;
     filePath: string;
     createdAt: Date;
     updatedAt: Date;
-};
+}
 
 const payslipSchema = new Schema<PayslipDoc>(
     {
-        id: { type: Number, required: true, unique: true, index: true },
-        employeeId: { type: Number, required: true, index: true },
-        employeeName: { type: String, required: true },
-        mese: { type: String, required: true },
-        anno: { type: String, required: true },
-        netto: { type: String, required: true },
-        filePath: { type: String, required: true },
+        id: {
+            type: Number,
+            required: true,
+            unique: true,
+            index: true
+        },
+        type: {
+            type: String,
+            enum: ['payslip', 'document'],
+            required: true,
+            default: 'payslip',
+            index: true
+        },
+        employeeId: {
+            type: Number,
+            required: true,
+            index: true
+        },
+        employeeName: {
+            type: String,
+            required: true
+        },
+        // Campo per BUSTA PAGA
+        mese: {
+            type: String,
+            required: false,
+            default: null
+        },
+        anno: {
+            type: String,
+            required: true,
+            index: true
+        },
+        // Campo opzionale per BUSTA PAGA
+        netto: {
+            type: String,
+            required: false,
+            default: null
+        },
+        // Campo per DOCUMENTO
+        documentName: {
+            type: String,
+            required: function(this: PayslipDoc) {
+                return this.type === 'document';
+            }
+        },
+        filePath: {
+            type: String,
+            required: true
+        },
     },
-    { timestamps: true }
+    {
+        timestamps: true
+    }
 );
+
+payslipSchema.index({ employeeId: 1, anno: -1, type: 1 });
+payslipSchema.index({ type: 1, anno: -1 });
+
 export const PayslipModel: Model<PayslipDoc> =
     mongoose.models.Payslip || mongoose.model<PayslipDoc>("Payslip", payslipSchema);
 
-export async function getPayslips(filter: Partial<Pick<PayslipDoc, "employeeId" | "mese" | "anno">> = {}) {
+export async function getPayslips(
+    filter: Partial<Pick<PayslipDoc, "employeeId" | "mese" | "anno" | "type">> = {}
+) {
     await connectDB();
-    return PayslipModel.find(filter).sort({ createdAt: -1 }).lean();
+    return PayslipModel.find(filter).sort({ anno: -1, createdAt: -1 }).lean();
 }
 
 export async function createPayslip(data: {
+    type: 'payslip' | 'document';
     employeeId: number;
     employeeName: string;
-    mese: string;
+    mese?: string | null;
     anno: string;
-    netto: string;
+    netto?: string | null;
+    documentName?: string;
     filePath: string;
 }) {
     await connectDB();
-    const doc = await PayslipModel.create({ ...data, id: Date.now() });
+
+    const docData: any = {
+        id: Date.now(),
+        type: data.type,
+        employeeId: data.employeeId,
+        employeeName: data.employeeName,
+        anno: data.anno,
+        filePath: data.filePath,
+        createdAt: new Date()
+    };
+
+    // Campi specifici per busta paga
+    if (data.type === 'payslip') {
+        docData.mese = data.mese;
+        docData.netto = data.netto || null;
+    }
+
+    // Campi specifici per documento
+    if (data.type === 'document') {
+        docData.documentName = data.documentName;
+    }
+
+    const doc = await PayslipModel.create(docData);
     return doc.toObject();
 }
+
 
 export async function getPayslipById(id: number) {
     await connectDB();

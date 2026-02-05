@@ -52,18 +52,19 @@ export function usePendingRequests() {
             }
 
             const data = await res.json();
-            console.log('✅ API DATA:', data.data?.length || 0);
 
-            // 🔥 MAPPING + FILTER pending
+            //  MAPPING + FILTER pending
             const pendingMapped = (data.data || [])
                 .filter((r: any) => r.status === 'pending')
                 .map((r: any) => ({
-                    id: r.id,                    // 1768312766718
-                    dipendente: r.requestedBy || `ID ${r.employeeId}`,  // ← Mappa employeeId → nome (TEMP)
-                    tipo: r.type.toUpperCase(),  // "PERMESSO"
-                    data: r.dataInizio,          // "2026-01-13"
-                    durata: `${r.durata} ore`,   // "2 ore"
-                    stato: r.status,             // "pending"
+                    id: r.id,
+                    dipendente: r.requestedBy || `ID ${r.employeeId}`,
+                    tipo: r.type.toUpperCase(),
+                    data: r.dataInizio,
+                    durata: r.type.toLowerCase() === 'permesso'
+                        ? `${r.durata} ${r.durata === 1 ? 'ora' : 'ore'}`
+                        : `${r.durata} ${r.durata === 1 ? 'giorno' : 'giorni'}`,
+                    stato: r.status,
                     motivo: r.motivo || ''
                 }));
 

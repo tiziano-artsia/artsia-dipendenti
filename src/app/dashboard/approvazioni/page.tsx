@@ -138,9 +138,7 @@ export default function Approvazioni() {
                                                 <div className="text-2xl sm:text-3xl md:text-4xl font-black bg-gradient-to-r from-emerald-500 to-teal-600 bg-clip-text text-transparent">
                                                     {richiesta.durata}
                                                 </div>
-                                                <div className="text-[10px] sm:text-xs text-zinc-500 font-mono uppercase">
-                                                    ore/giorni
-                                                </div>
+
                                             </div>
                                         </div>
 
@@ -263,11 +261,8 @@ export default function Approvazioni() {
                                             </td>
 
                                             <td className="py-6 md:py-8 px-6 md:px-10">
-                                                <div className="text-3xl md:text-4xl font-black bg-gradient-to-r from-emerald-500 to-teal-600 bg-clip-text text-transparent">
+                                                <div className="text-2xl md:text-2xl font-black bg-gradient-to-r from-emerald-500 to-teal-600 bg-clip-text text-transparent">
                                                     {richiesta.durata}
-                                                </div>
-                                                <div className="text-xs md:text-sm text-zinc-500 font-mono uppercase tracking-wider mt-1">
-                                                    ore/giorni
                                                 </div>
                                             </td>
 

@@ -410,7 +410,7 @@ export default function Dashboard() {
                     </div>
                 )}
                 {/* Buste Paga */}
-                {user?.role !== 'admin' && showPayslips === true && (
+                {user?.role !== 'admin'  && (
                     <div className="bg-white/60 backdrop-blur-3xl rounded-2xl sm:rounded-3xl shadow-2xl p-5 sm:p-6 md:p-10 border border-white/70 hover:shadow-3xl transition-all duration-700">
                         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-6 sm:mb-8 md:mb-10 gap-4">
                             <div className="flex items-center gap-3 sm:gap-4">
@@ -507,13 +507,13 @@ export default function Dashboard() {
                                     description: 'Approva richieste'
                                 }
                             ]: []),
-                            ...(isAdmin? [{
+                           {
                                 href: '/dashboard/buste-paga',
-                                label: 'Buste Paga',
+                                label: 'Buste Paga - Documenti',
                                 icon: EuroIcon,
                                 color: 'from-orange-500 to-red-600',
-                                description: 'Carica per dipendente'
-                            }] : []),
+                                description: 'Documenti'
+                            }
                         ].map(({ href, label, icon: Icon, color, description }) => (
 
                             <a
