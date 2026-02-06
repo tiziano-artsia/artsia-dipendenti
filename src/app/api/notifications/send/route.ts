@@ -47,10 +47,11 @@ export async function POST(request: NextRequest) {
 
         if (!result.success) {
             return NextResponse.json(
-                { success: false, error: result.error },
+                { success: false, error: 'Errore durante l\'operazione' },
                 { status: 500 }
             );
         }
+
 
         return NextResponse.json(result);
     } catch (error: any) {

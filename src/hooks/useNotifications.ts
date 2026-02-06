@@ -120,8 +120,10 @@ export function useNotifications() {
 
                 //console.log('🔔 Creando nuova subscription...');
 
+
                 subscription = await registration.pushManager.subscribe({
                     userVisibleOnly: true,
+                    // @ts-ignore
                     applicationServerKey: urlBase64ToUint8Array(vapidPublicKey)
                 });
                 //console.log('✅ Subscription creata');

@@ -2,6 +2,7 @@ import jwt from 'jsonwebtoken';
 import bcrypt from 'bcryptjs';
 import type {Employee} from '@/types';
 import { EmployeeModel, connectDB } from './db';
+import {NextRequest} from "next/server";
 
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
 
@@ -48,11 +49,19 @@ export async function authenticateUser(email: string, password: string) {
     }
 }
 
-export async function getUserFromToken(token: string) {
+
+
+export async function getUserFromToken(request: NextRequest) {
     try {
         await connectDB();
 
-        const decoded = await verifyToken(token);
+        // ✅ Estrai il token dall'header
+        const authHeader = request.headers.get('authorization');
+        if (!authHeader?.startsWith('Bearer ')) return null;
+
+        const token = authHeader.substring(7);
+
+        const decoded = await verifyToken(token); // ✅ Ora passa la stringa
         if (!decoded) return null;
 
         const user = await EmployeeModel.findOne({ id: decoded.id });

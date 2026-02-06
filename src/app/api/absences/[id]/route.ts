@@ -1,4 +1,6 @@
-import {NextResponse} from "next/server";
+import {type NextRequest, NextResponse} from "next/server";
+import {getUserFromToken} from "@/lib/auth";
+import {updateAbsenceStatus} from "@/lib/db";
 
 export async function PATCH(
     request: NextRequest,
@@ -8,17 +10,14 @@ export async function PATCH(
     const { action } = await request.json();
 
     try {
-        const user = getUserFromToken(request);
+        const user = await getUserFromToken(request);
 
-        if (!user) {
-            return NextResponse.json({ error: 'Non autenticato' }, { status: 401 });
-        }
-
-        if (user.role !== 'manager' && user.role !== 'admin') {
+        if (!user || (user.role !== 'manager' && user.role !== 'admin')) {
             return NextResponse.json({ error: 'Non autorizzato' }, { status: 403 });
         }
 
-        // ✅ Prima recupera la richiesta
+
+        //  Prima recupera la richiesta
         const { getAbsences } = await import('@/lib/db');
         const absences = await getAbsences({});
         const absence = absences.find((a: any) => a.id === Number(id));

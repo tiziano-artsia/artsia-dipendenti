@@ -1,6 +1,7 @@
 import './globals.css';
 import type {Metadata} from "next";
 import {NotificationSound} from "@/components/NotificationSound";
+import {PWARegister} from "@/components/PWARegister";
 
 export const metadata: Metadata = {
     title: 'Artsia',
@@ -42,6 +43,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         </head>
 
         <body>
+        <PWARegister />
         <NotificationSound />
         {children}
         </body>

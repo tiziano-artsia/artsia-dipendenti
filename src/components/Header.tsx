@@ -190,7 +190,7 @@ export default function Header() {
                                                             }`}
                                                             onClick={() => {
                                                                 if (!notification.read) {
-                                                                    markAsRead([notification._id]);
+                                                                    markAsRead(notification._id);
                                                                 }
                                                                 if (notification.relatedRequestId) {
                                                                     const user = JSON.parse(localStorage.getItem('user') || '{}');

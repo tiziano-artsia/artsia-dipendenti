@@ -8,6 +8,7 @@ interface Payslip {
     anno: string;
     netto: string;
     employeeName: string;
+    documentName?: string;
 }
 
 export function useUserPayslips() {

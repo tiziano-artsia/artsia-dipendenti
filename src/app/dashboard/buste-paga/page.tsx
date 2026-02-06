@@ -81,6 +81,7 @@ export default function BustePaga() {
             if (list.length > 0 && !selectedYear) {
                 const years = [...new Set(list.map((p: any) => p.anno?.toString()))].filter(Boolean).sort().reverse();
                 if (years.length > 0) {
+                    // @ts-ignore
                     setSelectedYear(years[0]);
                 }
             }
