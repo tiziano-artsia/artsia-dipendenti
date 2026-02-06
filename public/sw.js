@@ -15,11 +15,6 @@ self.addEventListener('push', function(event) {
             icon: data.icon || '/icon-192x192.png',
             badge: data.badge || '/badge-72x72.png',
             tag: data.data?.notificationId || 'notification-' + Date.now(),
-            requireInteraction: true, // ✅ Rimane finché non viene cliccata
-            vibrate: [300, 100, 300, 100, 300], // ✅ Pattern vibrazione mobile
-            silent: false, // ✅ NON silenziosa
-            renotify: true, // ✅ Rinotifica se stessa tag esiste
-            timestamp: Date.now(), // ✅ Timestamp corrente
             data: {
                 url: data.data?.url || '/dashboard',
                 notificationId: data.data?.notificationId,
