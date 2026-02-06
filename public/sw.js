@@ -1,104 +1,4 @@
-self.addEventListener('push', function(event) {
-    console.log('🔔 [SW] Push ricevuta:', event);
-
-    if (!event.data) {
-        console.warn('⚠️ [SW] Push senza dati');
-        return;
-    }
-
-    try {
-        const data = event.data.json();
-        console.log('📦 [SW] Dati push:', data);
-
-        const options = {
-            body: data.body || 'Hai una nuova notifica',
-            icon: data.icon || '/icon-192x192.png',
-            badge: data.badge || '/badge-72x72.png',
-            tag: data.data?.notificationId || 'notification-' + Date.now(),
-            data: {
-                url: data.data?.url || '/dashboard',
-                notificationId: data.data?.notificationId,
-                type: data.data?.type,
-                timestamp: Date.now()
-            },
-            // ✅ ACTIONS per interazione
-            actions: [
-                {
-                    action: 'open',
-                    title: 'Apri'
-                },
-                {
-                    action: 'close',
-                    title: 'Chiudi'
-                }
-            ]
-        };
-
-        console.log('🔔 [SW] Mostra notifica con options:', options);
-
-        event.waitUntil(
-            self.registration.showNotification(data.title || 'Notifica', options)
-                .then(() => {
-                    console.log('✅ [SW] Notifica mostrata con successo');
-
-                    return self.clients.matchAll({ type: 'window', includeUncontrolled: true })
-                        .then(clients => {
-                            clients.forEach(client => {
-                                client.postMessage({
-                                    type: 'PLAY_SOUND'
-                                });
-                            });
-                        });
-                })
-        );
-    } catch (error) {
-        console.error('❌ [SW] Errore parsing push:', error);
-    }
-});
-
-self.addEventListener('notificationclick', function(event) {
-    console.log('👆 [SW] Click su notifica:', event.notification.tag);
-    console.log('👆 [SW] Action:', event.action);
-
-    event.notification.close();
-
-    // Gestisci azioni
-    if (event.action === 'close') {
-        console.log('🔔 [SW] Notifica chiusa');
-        return;
-    }
-
-    const urlToOpen = event.notification.data?.url || '/dashboard';
-    console.log('🔗 [SW] Apertura URL:', urlToOpen);
-
-    event.waitUntil(
-        clients.matchAll({ type: 'window', includeUncontrolled: true })
-            .then(function(clientList) {
-                for (let i = 0; i < clientList.length; i++) {
-                    const client = clientList[i];
-                    if ('focus' in client) {
-                        return client.focus().then(() => {
-                            return client.navigate(urlToOpen);
-                        });
-                    }
-                }
-                if (clients.openWindow) {
-                    return clients.openWindow(urlToOpen);
-                }
-            })
-    );
-});
-
-self.addEventListener('install', function(event) {
-    console.log('⚙️ [SW] Service Worker installato');
-    self.skipWaiting();
-});
-
-self.addEventListener('activate', function(event) {
-    console.log('✅ [SW] Service Worker attivato');
-    event.waitUntil(clients.claim());
-});
-// public/sw.js - VERSIONE COMPLETA FINALE
+// public/sw.js - VERSIONE CORRETTA
 
 const CACHE_NAME = 'artsia-v1';
 const urlsToCache = [
@@ -136,7 +36,7 @@ self.addEventListener('activate', function(event) {
                     }
                 })
             );
-        }).then(() => clients.claim())
+        }).then(() => self.clients.claim())
     );
 });
 
@@ -170,25 +70,6 @@ self.addEventListener('fetch', function(event) {
 self.addEventListener('push', function(event) {
     console.log('🔔 [SW] Push ricevuta:', event);
 
-// Nel sw.js, dentro l'evento 'push'
-    event.waitUntil(
-        self.registration.showNotification(data.title || 'Artsia', options)
-            .then(() => {
-                // ✅ Invia messaggio ai client per aggiornare UI
-                return self.clients.matchAll({
-                    type: 'window',
-                    includeUncontrolled: true
-                }).then(clients => {
-                    clients.forEach(client => {
-                        client.postMessage({
-                            type: 'NEW_NOTIFICATION', // ✅ Messaggio per aggiornare
-                            notification: data
-                        });
-                    });
-                });
-            })
-    );
-
     if (!event.data) {
         console.warn('⚠️ [SW] Push senza dati');
         return;
@@ -202,12 +83,7 @@ self.addEventListener('push', function(event) {
             body: data.body || 'Hai una nuova notifica',
             icon: data.icon || '/logo-artsia.png',
             badge: data.badge || '/logo-artsia.png',
-            tag: 'notification-' + Date.now(), // ✅ Tag unico per iOS
-            requireInteraction: true,
-            vibrate: [200, 100, 200, 100, 200],
-            silent: false, // ✅ Usa suono di sistema
-            renotify: true,
-            timestamp: Date.now(),
+            tag: 'notification-' + Date.now(),
             data: {
                 url: data.data?.url || '/dashboard',
                 notificationId: data.data?.notificationId,
@@ -216,11 +92,11 @@ self.addEventListener('push', function(event) {
             actions: [
                 {
                     action: 'open',
-                    title: '👀 Apri'
+                    title: 'Apri'
                 },
                 {
                     action: 'close',
-                    title: '✖️ Chiudi'
+                    title: 'Chiudi'
                 }
             ]
         };
@@ -230,17 +106,22 @@ self.addEventListener('push', function(event) {
         event.waitUntil(
             self.registration.showNotification(data.title || 'Artsia', options)
                 .then(() => {
-                    console.log('✅ [SW] Notifica mostrata');
+                    console.log('✅ [SW] Notifica mostrata con successo');
 
-                    // Invia messaggio ai client per suono custom
+                    // ✅ Invia messaggi ai client
                     return self.clients.matchAll({
                         type: 'window',
                         includeUncontrolled: true
                     }).then(clients => {
                         clients.forEach(client => {
+                            // Messaggio per aggiornare UI
                             client.postMessage({
-                                type: 'PLAY_SOUND',
+                                type: 'NEW_NOTIFICATION',
                                 notification: data
+                            });
+                            // Messaggio per suono (opzionale)
+                            client.postMessage({
+                                type: 'PLAY_SOUND'
                             });
                         });
                     });
@@ -251,8 +132,10 @@ self.addEventListener('push', function(event) {
     }
 });
 
-//  NOTIFICATION CLICK
+// ✅ NOTIFICATION CLICK
 self.addEventListener('notificationclick', function(event) {
+    console.log('👆 [SW] Click su notifica:', event.notification.tag);
+    console.log('👆 [SW] Action:', event.action);
 
     event.notification.close();
 
@@ -262,34 +145,53 @@ self.addEventListener('notificationclick', function(event) {
         return;
     }
 
+    const notificationId = event.notification.data?.notificationId;
     const urlToOpen = event.notification.data?.url || '/dashboard';
     console.log('🔗 [SW] Apertura URL:', urlToOpen);
 
     event.waitUntil(
-        clients.matchAll({
-            type: 'window',
-            includeUncontrolled: true
-        }).then(function(clientList) {
-            // Se c'è già una finestra aperta
-            for (let i = 0; i < clientList.length; i++) {
-                const client = clientList[i];
-                if ('focus' in client) {
-                    return client.focus().then(() => {
-                        if ('navigate' in client) {
-                            return client.navigate(urlToOpen);
-                        }
-                    });
+        Promise.all([
+            // ✅ 1. Segna come letta (opzionale - senza auth)
+            notificationId ? fetch(`/api/notifications/${notificationId}/read`, {
+                method: 'PATCH',
+                headers: {
+                    'Content-Type': 'application/json'
                 }
-            }
-            // Altrimenti apri nuova finestra
-            if (clients.openWindow) {
-                return clients.openWindow(urlToOpen);
-            }
-        })
+            }).then(response => {
+                if (response.ok) {
+                    console.log('✅ [SW] Notifica segnata come letta');
+                }
+            }).catch(err => {
+                console.error('❌ [SW] Errore mark as read:', err);
+            }) : Promise.resolve(),
+
+            // ✅ 2. Apri/naviga alla pagina
+            self.clients.matchAll({
+                type: 'window',
+                includeUncontrolled: true
+            }).then(function(clientList) {
+                // Se c'è già una finestra aperta, focusla e naviga
+                for (let i = 0; i < clientList.length; i++) {
+                    const client = clientList[i];
+                    if ('focus' in client) {
+                        return client.focus().then(() => {
+                            // ✅ Invia messaggio per aggiornare UI
+                            client.postMessage({
+                                type: 'NOTIFICATION_READ',
+                                notificationId: notificationId
+                            });
+
+                            if ('navigate' in client) {
+                                return client.navigate(urlToOpen);
+                            }
+                        });
+                    }
+                }
+                // Altrimenti apri nuova finestra
+                if (self.clients.openWindow) {
+                    return self.clients.openWindow(urlToOpen);
+                }
+            })
+        ])
     );
 });
-
-
-
-
-
