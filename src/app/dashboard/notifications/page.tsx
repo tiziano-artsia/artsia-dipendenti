@@ -23,7 +23,6 @@ export default function NotificationsPage() {
     const router = useRouter();
     const {
         notifications,
-        loading,
         unreadCount,
         markAsRead,
         markAllAsRead,
@@ -32,6 +31,7 @@ export default function NotificationsPage() {
 
     const [filter, setFilter] = useState<'all' | 'unread' | 'read'>('all');
     const [typeFilter, setTypeFilter] = useState<string>('all');
+    const [loading, setLoading] = useState(false);
 
     // Filtra notifiche
     const filteredNotifications = notifications.filter(n => {
