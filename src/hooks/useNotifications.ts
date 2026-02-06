@@ -299,22 +299,43 @@ export function useNotifications() {
         }
     }, [user, token, permission, loadNotifications, requestPermission, setNotifications]);
 
-    // Polling per nuove notifiche (ogni 30 secondi)
+    // hooks/useNotifications.ts - Versione ottimizzata con SSE
+
     useEffect(() => {
         if (!user || !token) return;
 
-        //console.log('🔔 Avvio polling notifiche (ogni 30s)');
+        let eventSource: EventSource | null = null;
 
-        const interval = setInterval(() => {
-            //console.log('🔔 Polling notifiche...');
-            loadNotifications();
-        }, 30000); // 30 secondi
+        const connectSSE = () => {
+            // Connessione real-time al server
+            eventSource = new EventSource(`/api/notifications/stream?token=${token}`);
+
+            eventSource.onmessage = (event) => {
+                const data = JSON.parse(event.data);
+                console.log('🔔 Nuova notifica in tempo reale:', data);
+
+                // Aggiorna stato immediatamente
+                setNotifications(prev => [data.notification, ...prev]);
+                setUnreadCount(prev => prev + 1);
+            };
+
+            eventSource.onerror = (error) => {
+                console.error('❌ SSE error:', error);
+                eventSource?.close();
+
+                // Riconnetti dopo 5 secondi
+                setTimeout(connectSSE, 5000);
+            };
+        };
+
+        connectSSE();
 
         return () => {
-            //console.log('🔔 Stop polling notifiche');
-            clearInterval(interval);
+            eventSource?.close();
         };
-    }, [user, token, loadNotifications]);
+    }, [user, token]);
+
+
 
     return {
         notifications,

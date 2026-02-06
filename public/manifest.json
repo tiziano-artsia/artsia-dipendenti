@@ -2,10 +2,13 @@
     "name": "Artsia Dipendenti Management",
     "short_name": "Artsia Dipendenti",
     "description": "Sistema di gestione presenze e buste paga",
-    "start_url": "/",
+    "start_url": "/dashboard",
+    "scope": "/",
     "display": "standalone",
     "background_color": "#ffffff",
     "theme_color": "#662D87",
+    "orientation": "portrait",
+    "categories": ["productivity", "business"],
     "icons": [
         {
             "src": "/logo-artsia.png",
@@ -31,7 +34,43 @@
             "type": "image/png",
             "purpose": "maskable"
         }
+    ],
+    "shortcuts": [
+        {
+            "name": "Dashboard",
+            "short_name": "Home",
+            "description": "Vai alla dashboard principale",
+            "url": "/dashboard",
+            "icons": [
+                {
+                    "src": "/logo-artsia.png",
+                    "sizes": "96x96"
+                }
+            ]
+        },
+        {
+            "name": "Notifiche",
+            "short_name": "Notifiche",
+            "description": "Vedi le notifiche",
+            "url": "/dashboard/notifications",
+            "icons": [
+                {
+                    "src": "/logo-artsia.png",
+                    "sizes": "96x96"
+                }
+            ]
+        },
+        {
+            "name": "Le mie Richieste",
+            "short_name": "Richieste",
+            "description": "Gestisci le tue richieste",
+            "url": "/dashboard/miei-dati",
+            "icons": [
+                {
+                    "src": "/logo-artsia.png",
+                    "sizes": "96x96"
+                }
+            ]
+        }
     ]
 }
-
-
