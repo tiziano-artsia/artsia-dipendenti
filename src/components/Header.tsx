@@ -18,7 +18,7 @@ export default function Header() {
         requestPermission,
         markAsRead,
         markAllAsRead,
-        fetchNotifications // ✅ Assicurati che useNotifications esponga questa funzione
+        fetchNotifications
     } = useNotifications();
     const unreadCount = useAtomValue(unreadCountAtom);
     const [isDropdownOpen, setIsDropdownOpen] = useAtom(notificationDropdownAtom);
@@ -194,21 +194,12 @@ export default function Header() {
                                     )}
                                 </button>
 
-                                {/* ✅ Dropdown - CORRETTO */}
+
                                 {isDropdownOpen && (
                                     <div className="fixed md:absolute left-0 right-0 md:left-auto md:right-0 top-full md:top-auto md:mt-2 w-full md:w-96 bg-white md:rounded-2xl shadow-2xl border-t md:border border-gray-200 z-50 max-h-[calc(100vh-4rem)] md:max-h-[32rem] flex flex-col">
                                         {/* Header */}
                                         <div className="bg-gradient-to-r from-purple-600 to-blue-600 px-4 py-4 flex items-center justify-between flex-shrink-0">
                                             <h3 className="text-white font-semibold text-lg">Notifiche</h3>
-                                            {unreadCount > 0 && (
-                                                <button
-                                                    onClick={() => markAllAsRead()}
-                                                    className="text-white/90 hover:text-white text-sm flex items-center gap-1 hover:bg-white/10 px-2 py-1 rounded-lg transition-colors"
-                                                >
-                                                    <Check className="w-4 h-4" />
-                                                    <span>Tutte lette</span>
-                                                </button>
-                                            )}
                                         </div>
 
                                         {/* Lista */}
@@ -230,7 +221,7 @@ export default function Header() {
                                                             onClick={() => handleNotificationClick(notification)}
                                                         >
                                                             <div className="flex gap-3">
-                                                                <div className={`${style.bg} ${style.border} border rounded-lg p-2 flex-shrink-0`}>
+                                                                <div className={`${style.bg} ${style.border} border rounded-lg p-2 flex-shrink-0 h-8`}>
                                                                     <Bell className={`w-4 h-4 ${style.color}`} />
                                                                 </div>
                                                                 <div className="flex-1 min-w-0">
