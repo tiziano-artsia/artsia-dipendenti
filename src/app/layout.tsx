@@ -1,5 +1,6 @@
 import './globals.css';
 import type {Metadata} from "next";
+import {NotificationSound} from "@/components/NotificationSound";
 
 export const metadata: Metadata = {
     title: 'Artsia',
@@ -26,7 +27,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <head>
             <meta name="mobile-web-app-capable" content="yes" />
         </head>
-        <body>{children}</body>
+
+        <body>
+        <NotificationSound />
+        {children}</body>
         </html>
     );
 }

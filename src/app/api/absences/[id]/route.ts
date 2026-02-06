@@ -1,62 +1,4 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { updateAbsenceStatus, deleteAbsence } from '@/lib/db';
-import jwt from 'jsonwebtoken';
-
-const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
-
-interface JWTPayload {
-    name: string;
-    email: string;
-    id: number;
-    role: string;
-}
-
-function getUserFromToken(request: NextRequest): JWTPayload | null {
-    try {
-        const authHeader = request.headers.get('authorization');
-        if (!authHeader?.startsWith('Bearer ')) return null;
-
-        const token = authHeader.substring(7);
-        return jwt.verify(token, JWT_SECRET) as JWTPayload;
-    } catch {
-        return null;
-    }
-}
-
-export async function DELETE(
-    request: NextRequest,
-    { params }: { params: Promise<{ id: string }> }
-) {
-    const { id } = await params;
-
-    try {
-        const user = getUserFromToken(request);
-
-        if (!user) {
-            return NextResponse.json({ error: 'Non autenticato' }, { status: 401 });
-        }
-
-        const success = await deleteAbsence(id, user.id);
-
-        if (!success) {
-            return NextResponse.json(
-                { error: 'Impossibile cancellare la richiesta. Verifica che sia tua e in stato pending.' },
-                { status: 403 }
-            );
-        }
-
-        return NextResponse.json({
-            success: true,
-            message: 'Richiesta eliminata con successo'
-        });
-
-    } catch (error: any) {
-        return NextResponse.json({
-            error: 'Errore server durante la cancellazione',
-            details: error.message
-        }, { status: 500 });
-    }
-}
+import {NextResponse} from "next/server";
 
 export async function PATCH(
     request: NextRequest,
@@ -76,6 +18,15 @@ export async function PATCH(
             return NextResponse.json({ error: 'Non autorizzato' }, { status: 403 });
         }
 
+        // ✅ Prima recupera la richiesta
+        const { getAbsences } = await import('@/lib/db');
+        const absences = await getAbsences({});
+        const absence = absences.find((a: any) => a.id === Number(id));
+
+        if (!absence) {
+            return NextResponse.json({ error: 'Assenza non trovata' }, { status: 404 });
+        }
+
         const success = await updateAbsenceStatus(
             id,
             action === 'approve' ? 'approved' : 'rejected',
@@ -83,32 +34,47 @@ export async function PATCH(
         );
 
         if (!success) {
-            return NextResponse.json({ error: 'Assenza non trovata' }, { status: 404 });
+            return NextResponse.json({ error: 'Errore aggiornamento' }, { status: 404 });
+        }
+
+        // ✅ INVIA NOTIFICA AL DIPENDENTE
+        try {
+            const { sendNotification } = await import('@/lib/sendNotification');
+
+            const typeNorm = absence.type?.toLowerCase() || absence.tipo?.toLowerCase();
+            let notificationType: 'leave_approved' | 'leave_rejected' | 'permit_approved' | 'permit_rejected';
+            let tipoLabel: string;
+
+            if (typeNorm === 'ferie') {
+                notificationType = action === 'approve' ? 'leave_approved' : 'leave_rejected';
+                tipoLabel = 'Ferie';
+            } else if (typeNorm === 'permesso') {
+                notificationType = action === 'approve' ? 'permit_approved' : 'permit_rejected';
+                tipoLabel = 'Permesso';
+            } else {
+                notificationType = action === 'approve' ? 'leave_approved' : 'leave_rejected';
+                tipoLabel = 'Malattia';
+            }
+
+            const statusLabel = action === 'approve' ? 'approvata' : 'rifiutata';
+            const emoji = action === 'approve' ? '✅' : '❌';
+            const dataFormattata = new Date(absence.dataInizio || absence.data).toLocaleDateString('it-IT');
+
+            await sendNotification({
+                userId: String(absence.employeeId),
+                type: notificationType,
+                title: `${tipoLabel} ${statusLabel}`,
+                body: `${emoji} La tua richiesta di ${typeNorm} del ${dataFormattata} è stata ${statusLabel} da ${user.name}`,
+                relatedRequestId: String(absence.id),
+                url: `/dashboard/miei-dati`
+            });
+
+            console.log(`✅ Notifica ${action} inviata al dipendente ${absence.employeeId}`);
+        } catch (notifError) {
+            console.error('❌ Errore invio notifica dipendente:', notifError);
         }
 
         return NextResponse.json({ success: true });
-    } catch (error) {
-        return NextResponse.json({ error: 'Errore server' }, { status: 500 });
-    }
-}
-
-export async function GET(
-    request: NextRequest,
-    { params }: { params: Promise<{ id: string }> }
-) {
-    const { id } = await params;
-
-    try {
-        const user = getUserFromToken(request);
-
-        if (!user) {
-            return NextResponse.json({ error: 'Non autenticato' }, { status: 401 });
-        }
-
-        return NextResponse.json({
-            error: 'Metodo non implementato'
-        }, { status: 501 });
-
     } catch (error) {
         return NextResponse.json({ error: 'Errore server' }, { status: 500 });
     }

@@ -449,14 +449,20 @@ export default function Dashboard() {
 
                                         <div className="relative z-10 flex items-start justify-between mb-2 sm:mb-3">
                                             <h3 className="font-black text-lg sm:text-xl text-zinc-800 group-hover:text-indigo-700">
-                                                {payslip.mese.charAt(0).toUpperCase() + payslip.mese.slice(1)} {payslip.anno}
+                                                {payslip.mese
+                                                    ? `${payslip.mese.charAt(0).toUpperCase()}${payslip.mese.slice(1)} ${payslip.anno}`
+                                                    : (payslip.documentName || `Documento ${payslip.anno}`)
+                                                }
                                             </h3>
+
                                             <Euro className="w-4 h-4 sm:w-5 sm:h-5 text-indigo-500 group-hover:scale-110 transition-transform" />
                                         </div>
 
-                                        <p className="text-xl sm:text-2xl font-black text-indigo-600 mb-2">
-                                            {showPayslips ? `€${payslip.netto}` : '****'}
-                                        </p>
+                                        {payslip.netto && (
+                                            <p className="text-xl sm:text-2xl font-black text-indigo-600 mb-2">
+                                                {showPayslips ? `€${payslip.netto}` : '****'}
+                                            </p>
+                                        )}
 
                                         <div className="flex items-center gap-2 text-[10px] sm:text-xs font-mono text-zinc-500 uppercase tracking-wider">
                                             <span>Scarica PDF</span>

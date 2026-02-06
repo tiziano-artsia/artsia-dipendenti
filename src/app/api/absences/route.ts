@@ -1,6 +1,7 @@
 // src/app/api/absences/route.ts
 import { NextRequest, NextResponse } from 'next/server';
-import { getAbsences, createAbsence, updateAbsenceStatus } from '@/lib/db';
+import { getAbsences, createAbsence, updateAbsenceStatus, getEmployeesByRole } from '@/lib/db';
+import { sendNotification } from '@/lib/sendNotification';
 import jwt from 'jsonwebtoken';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
@@ -12,7 +13,7 @@ interface JWTPayload {
     role: string;
 }
 
- function getUserFromToken(request: NextRequest): JWTPayload | null {
+function getUserFromToken(request: NextRequest): JWTPayload | null {
     try {
         const authHeader = request.headers.get('authorization');
         if (!authHeader?.startsWith('Bearer ')) return null;
@@ -40,7 +41,6 @@ export async function GET(request: NextRequest) {
             filter: employeeIdParam || 'tutti'
         });
 
-        // Costruisci filtro
         const filter: any = {};
         if (user.role !== 'admin') {
             filter.$or = [
@@ -48,11 +48,8 @@ export async function GET(request: NextRequest) {
                 { status: 'approved' }
             ];
         } else if (employeeIdParam) {
-            // Admin con filtro specifico
             filter.employeeId = Number(employeeIdParam);
         }
-
-        // Admin senza param = tutti (filter vuoto)
 
         console.log('🔍 Filtro:', filter);
 
@@ -66,7 +63,7 @@ export async function GET(request: NextRequest) {
         });
 
     } catch (error: any) {
-        console.error(' GET error:', error.message || error);
+        console.error('❌ GET error:', error.message || error);
         return NextResponse.json(
             { error: 'Errore interno server', details: error.message },
             { status: 500 }
@@ -120,18 +117,74 @@ export async function POST(request: NextRequest) {
             dataInizio: body.dataInizio,
             durata: Number(body.durata),
             motivo: (body.motivo || '').trim(),
-            status: status, // ✅ Auto-approved per smartworking
+            status: status,
             requestedBy: body.requestedBy || user.name || user.email,
-            approvedBy: approvedBy, // ✅ Auto-approved
+            approvedBy: approvedBy,
             createdAt: body.createdAt || new Date().toISOString(),
             updatedAt: body.updatedAt || new Date().toISOString(),
-            // Campi legacy (se DB li richiede)
             data: body.dataInizio,
             stato: status,
             tipo: typeNorm
         });
 
-        console.log('✅ Creata:', newAbsence);
+        console.log('✅ Richiesta creata:', newAbsence.id);
+
+        // ✅ INVIA NOTIFICHE AGLI ADMIN (solo per ferie e permessi in pending)
+        // ✅ INVIA NOTIFICHE AGLI ADMIN (ferie, permesso, malattia in pending)
+        if (status === 'pending' && (typeNorm === 'ferie' || typeNorm === 'permesso' || typeNorm === 'malattia')) {
+            console.log('📬 Invio notifiche agli admin per', typeNorm);
+
+            try {
+                // Recupera tutti gli admin
+                const admins = await getEmployeesByRole('admin');
+                console.log('👥 Admin trovati:', admins.length);
+
+                if (admins.length > 0) {
+                    // Determina il tipo di notifica
+                    let notificationType: 'leave_request' | 'permit_request';
+                    let tipoLabel: string;
+
+                    if (typeNorm === 'ferie') {
+                        notificationType = 'leave_request';
+                        tipoLabel = 'Ferie';
+                    } else if (typeNorm === 'permesso') {
+                        notificationType = 'permit_request';
+                        tipoLabel = 'Permesso';
+                    } else {
+                        notificationType = 'leave_request'; // usa lo stesso tipo per malattia
+                        tipoLabel = 'Malattia';
+                    }
+
+                    const dataFormattata = new Date(body.dataInizio).toLocaleDateString('it-IT');
+                    const unitaMisura = typeNorm === 'permesso' ? 'ore' : 'giorni';
+
+                    // Invia notifica a ogni admin
+                    for (const admin of admins) {
+                        try {
+                            await sendNotification({
+                                userId: String(admin.id),
+                                type: notificationType,
+                                title: `Nuova Richiesta di ${tipoLabel}`,
+                                body: `${user.name} ha richiesto ${typeNorm} dal ${dataFormattata} (${body.durata} ${unitaMisura})`,
+                                relatedRequestId: String(newAbsence.id),
+                                url: `/dashboard/approvazioni`
+                            });
+                            console.log(`✅ Notifica inviata ad admin ${admin.name} (ID: ${admin.id})`);
+                        } catch (notifError) {
+                            console.error(`❌ Errore notifica admin ${admin.id}:`, notifError);
+                        }
+                    }
+                } else {
+                    console.warn('⚠️ Nessun admin trovato per le notifiche');
+                }
+            } catch (adminError) {
+                console.error('❌ Errore recupero admin:', adminError);
+                // Non bloccare la creazione della richiesta
+            }
+        } else {
+            console.log('ℹ️ Notifiche non inviate:', status, typeNorm);
+        }
+
 
         // Response con data italiana
         const responseData = {
@@ -168,6 +221,15 @@ export async function PATCH(request: NextRequest) {
             return NextResponse.json({ error: 'id e action (approve/reject) obbligatori' }, { status: 400 });
         }
 
+        // ✅ Prima recupera la richiesta per sapere a chi inviare la notifica
+        const absences = await getAbsences({});
+        const absence = absences.find((a: any) => a.id === Number(id));
+
+        if (!absence) {
+            return NextResponse.json({ error: 'Assenza non trovata' }, { status: 404 });
+        }
+
+        // Aggiorna lo stato
         const result = await updateAbsenceStatus(
             id,
             action === 'approve' ? 'approved' : 'rejected',
@@ -175,10 +237,47 @@ export async function PATCH(request: NextRequest) {
         );
 
         if (!result) {
-            return NextResponse.json({ error: 'Assenza non trovata' }, { status: 404 });
+            return NextResponse.json({ error: 'Errore aggiornamento' }, { status: 404 });
         }
 
         console.log('✅ Aggiornato:', { id, status: action });
+
+        // ✅ INVIA NOTIFICA AL DIPENDENTE
+        try {
+            const typeNorm = absence.type?.toLowerCase() || absence.tipo?.toLowerCase();
+            let notificationType: 'leave_approved' | 'leave_rejected' | 'permit_approved' | 'permit_rejected';
+            let tipoLabel: string;
+
+            if (typeNorm === 'ferie') {
+                notificationType = action === 'approve' ? 'leave_approved' : 'leave_rejected';
+                tipoLabel = 'Ferie';
+            } else if (typeNorm === 'permesso') {
+                notificationType = action === 'approve' ? 'permit_approved' : 'permit_rejected';
+                tipoLabel = 'Permesso';
+            } else {
+                notificationType = action === 'approve' ? 'leave_approved' : 'leave_rejected';
+                tipoLabel = 'Malattia';
+            }
+
+            const statusLabel = action === 'approve' ? 'approvata' : 'rifiutata';
+            const emoji = action === 'approve' ? '✅' : '❌';
+            const dataFormattata = new Date(absence.dataInizio || absence.data).toLocaleDateString('it-IT');
+
+            await sendNotification({
+                userId: String(absence.employeeId),
+                type: notificationType,
+                title: `${tipoLabel} ${statusLabel}`,
+                body: `${emoji} La tua richiesta di ${typeNorm} del ${dataFormattata} è stata ${statusLabel} da ${user.name}`,
+                relatedRequestId: String(absence.id),
+                url: `/dashboard/miei-dati`
+            });
+
+            console.log(`✅ Notifica ${action} inviata al dipendente ${absence.employeeId}`);
+        } catch (notifError) {
+            console.error('❌ Errore invio notifica dipendente:', notifError);
+            // Non bloccare l'approvazione/rifiuto
+        }
+
         return NextResponse.json({ success: true });
 
     } catch (error) {
@@ -186,5 +285,3 @@ export async function PATCH(request: NextRequest) {
         return NextResponse.json({ error: 'Errore aggiornamento' }, { status: 500 });
     }
 }
-
-

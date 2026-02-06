@@ -419,3 +419,9 @@ export async function deleteAbsence(absenceId: string, userId: number): Promise<
         return false;
     }
 }
+
+
+export async function getEmployeesByRole(role: Role) {
+    await connectDB();
+    return EmployeeModel.find({ role }).lean<EmployeeDoc[]>();
+}
