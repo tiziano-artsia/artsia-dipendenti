@@ -5,8 +5,9 @@ import {
     notificationsAtom,
     pushPermissionAtom,
     notificationsLoadingAtom,
+    unreadCountAtom
 } from '@/lib/atoms/notificationAtoms';
-import { useEffect, useCallback, useRef, useState } from 'react';
+import { useEffect, useCallback, useRef } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 
 function urlBase64ToUint8Array(base64String: string): Uint8Array {
@@ -22,17 +23,27 @@ function urlBase64ToUint8Array(base64String: string): Uint8Array {
     return outputArray;
 }
 
+// ✅ Suono notifica
+function playNotificationSound() {
+    try {
+        const audio = new Audio('/public/sound/notification-sound.mp3');
+        audio.volume = 0.5;
+        audio.play().catch(err => console.warn('⚠️ Errore riproduzione suono:', err));
+    } catch (error) {
+        console.warn('⚠️ Audio non disponibile');
+    }
+}
+
 export function useNotifications() {
     const { user, token } = useAuth();
     const [notifications, setNotifications] = useAtom(notificationsAtom);
     const [permission, setPermission] = useAtom(pushPermissionAtom);
+    const [unreadCount, setUnreadCount] = useAtom(unreadCountAtom);
     const setLoading = useSetAtom(notificationsLoadingAtom);
-    const [unreadCount, setUnreadCount] = useState(0);
-    const [hasMore, setHasMore] = useState(false);
-    const [error, setError] = useState<string | null>(null);
     const hasInitialized = useRef(false);
+    const previousUnreadCount = useRef(0);
 
-    // Helper per fetch con autenticazione
+    // ✅ Helper per fetch con autenticazione
     const authenticatedFetch = useCallback(async (url: string, options: RequestInit = {}) => {
         const headers: Record<string, string> = {
             'Content-Type': 'application/json',
@@ -49,15 +60,12 @@ export function useNotifications() {
         });
     }, [token]);
 
-    // Carica notifiche dal server
-    const loadNotifications = useCallback(async () => {
-        if (!user || !token) {
-            return;
-        }
+    // ✅ Carica notifiche dal server (con flag manual per evitare suono)
+    const fetchNotifications = useCallback(async (manual = false) => {
+        if (!user || !token) return;
 
         try {
             setLoading(true);
-            setError(null);
 
             const response = await authenticatedFetch('/api/notifications');
 
@@ -67,35 +75,38 @@ export function useNotifications() {
             }
 
             const data = await response.json();
+            const newNotifications = data.notifications || [];
+            const newUnreadCount = data.unreadCount || 0;
 
-            setNotifications(data.notifications || []);
-            setUnreadCount(data.unreadCount || 0);
-            setHasMore(data.hasMore || false);
+            setNotifications(newNotifications);
+            setUnreadCount(newUnreadCount);
+
+            // ✅ Suona SOLO se:
+            // 1. NON è un refresh manuale
+            // 2. Ci sono nuove notifiche non lette
+            if (!manual && newUnreadCount > previousUnreadCount.current) {
+                playNotificationSound();
+            }
+
+            previousUnreadCount.current = newUnreadCount;
         } catch (err: any) {
-            setError(err.message);
+            console.error('❌ Errore fetch notifiche:', err);
         } finally {
             setLoading(false);
         }
-    }, [user, token, authenticatedFetch, setNotifications, setLoading]);
+    }, [user, token, authenticatedFetch, setNotifications, setUnreadCount, setLoading]);
 
-    // Richiedi permesso e registra subscription
+    // ✅ Richiedi permesso e registra subscription
     const requestPermission = useCallback(async () => {
-
-        if (!('Notification' in window)) {
-            return false;
-        }
-
-        if (!('serviceWorker' in navigator)) {
+        if (!('Notification' in window) || !('serviceWorker' in navigator)) {
             return false;
         }
 
         if (!user || !token) {
-        
             return false;
         }
 
         try {
-            // Richiedi permesso
             const result = await Notification.requestPermission();
             setPermission(result);
 
@@ -103,143 +114,102 @@ export function useNotifications() {
                 return false;
             }
 
-            // Attendi che il service worker sia pronto
             const registration = await navigator.serviceWorker.register('/sw.js');
-
-            // Controlla se esiste già una subscription
             let subscription = await registration.pushManager.getSubscription();
 
-            // Se non esiste, creala
             if (!subscription) {
                 const vapidPublicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
 
                 if (!vapidPublicKey) {
-                    //console.erro('❌ VAPID public key mancante nel .env');
+                    console.error('❌ VAPID public key mancante');
                     return false;
                 }
 
-                //console.log('🔔 Creando nuova subscription...');
-
-
                 subscription = await registration.pushManager.subscribe({
                     userVisibleOnly: true,
-                    // @ts-ignore
                     applicationServerKey: urlBase64ToUint8Array(vapidPublicKey)
                 });
-                //console.log('✅ Subscription creata');
             }
 
-            // Invia subscription al server
             const subscriptionData = subscription.toJSON();
-            //console.log('📤 Inviando subscription al server...');
 
             const response = await authenticatedFetch('/api/notifications/subscribe', {
                 method: 'POST',
-                body: JSON.stringify({
-                    subscription: subscriptionData
-                })
+                body: JSON.stringify({ subscription: subscriptionData })
             });
-
-            //console.log('📡 Response status:', response.status);
 
             if (!response.ok) {
                 const error = await response.json();
-                //console.erro('❌ Errore response subscribe:', error);
                 throw new Error(`Errore: ${error.error || response.statusText}`);
             }
 
-            const responseData = await response.json();
-            //console.log('✅ Subscription registrata con successo:', responseData);
             return true;
         } catch (error: any) {
-            //console.erro('❌ Errore richiesta permesso:', error);
+            console.error('❌ Errore richiesta permesso:', error);
             return false;
         }
     }, [user, token, authenticatedFetch, setPermission]);
 
-    // Segna singola notifica come letta
+    // ✅ Segna singola notifica come letta
     const markAsRead = useCallback(async (notificationId: string) => {
-        if (!user || !token) {
-            console.warn('⚠️ markAsRead: user o token mancante');
-            return;
-        }
+        if (!user || !token) return;
 
         try {
-            //console.log('✅ Segnando come letta:', notificationId);
-
             const response = await authenticatedFetch(`/api/notifications/${notificationId}/read`, {
                 method: 'PATCH'
             });
 
             if (!response.ok) {
                 const error = await response.json();
-                //console.erro('❌ Errore markAsRead:', error);
                 throw new Error(`Errore: ${error.error || response.statusText}`);
             }
 
-            // Aggiorna stato locale
             setNotifications(prev =>
                 prev.map(n =>
                     n._id === notificationId ? { ...n, read: true } : n
                 )
             );
             setUnreadCount(prev => Math.max(0, prev - 1));
-            //console.log('✅ Notifica segnata come letta');
         } catch (error) {
-            //console.erro('❌ Errore mark as read:', error);
+            console.error('❌ Errore mark as read:', error);
         }
-    }, [user, token, authenticatedFetch, setNotifications]);
+    }, [user, token, authenticatedFetch, setNotifications, setUnreadCount]);
 
-    // Segna tutte come lette
+    // ✅ Segna tutte come lette
     const markAllAsRead = useCallback(async () => {
-        if (!user || !token) {
-            console.warn('⚠️ markAllAsRead: user o token mancante');
-            return;
-        }
+        if (!user || !token) return;
 
         try {
-            //console.log('✅ Segnando tutte come lette');
-
             const response = await authenticatedFetch('/api/notifications/read-all', {
                 method: 'PATCH'
             });
 
             if (!response.ok) {
                 const error = await response.json();
-                //console.erro('❌ Errore markAllAsRead:', error);
                 throw new Error(`Errore: ${error.error || response.statusText}`);
             }
 
-            // Aggiorna stato locale
             setNotifications(prev => prev.map(n => ({ ...n, read: true })));
             setUnreadCount(0);
-            //console.log('✅ Tutte le notifiche segnate come lette');
         } catch (error) {
-            //console.erro('❌ Errore mark all as read:', error);
+            console.error('❌ Errore mark all as read:', error);
         }
-    }, [user, token, authenticatedFetch, setNotifications]);
+    }, [user, token, authenticatedFetch, setNotifications, setUnreadCount]);
 
-    // Elimina notifica
+    // ✅ Elimina notifica
     const deleteNotification = useCallback(async (notificationId: string) => {
-        if (!user || !token) {
-            console.warn('⚠️ deleteNotification: user o token mancante');
-            return;
-        }
+        if (!user || !token) return;
 
         try {
-            //console.log('🗑️ Eliminando notifica:', notificationId);
-
             const response = await authenticatedFetch(`/api/notifications/${notificationId}`, {
                 method: 'DELETE'
             });
 
             if (!response.ok) {
                 const error = await response.json();
-                //console.erro('❌ Errore deleteNotification:', error);
                 throw new Error(`Errore: ${error.error || response.statusText}`);
             }
 
-            // Aggiorna stato locale
             setNotifications(prev => {
                 const notification = prev.find(n => n._id === notificationId);
                 if (notification && !notification.read) {
@@ -247,111 +217,68 @@ export function useNotifications() {
                 }
                 return prev.filter(n => n._id !== notificationId);
             });
-            //console.log('✅ Notifica eliminata');
         } catch (error) {
-            //console.erro('❌ Errore delete notification:', error);
+            console.error('❌ Errore delete notification:', error);
         }
-    }, [user, token, authenticatedFetch, setNotifications]);
+    }, [user, token, authenticatedFetch, setNotifications, setUnreadCount]);
 
-    // Carica più notifiche (pagination)
-    const loadMore = useCallback(async () => {
-        if (!hasMore || !user || !token) return;
-
-        try {
-            const offset = notifications.length;
-            const response = await authenticatedFetch(`/api/notifications?offset=${offset}`);
-
-            if (response.ok) {
-                const data = await response.json();
-                setNotifications(prev => [...prev, ...(data.notifications || [])]);
-                setHasMore(data.hasMore || false);
-            }
-        } catch (error) {
-            //console.erro('❌ Errore loadMore:', error);
-        }
-    }, [hasMore, user, token, notifications.length, authenticatedFetch, setNotifications]);
-
-    // Refresh manuale
-    const refresh = useCallback(() => {
-        //console.log('🔄 Refresh notifiche');
-        loadNotifications();
-    }, [loadNotifications]);
-
-    // Inizializzazione
+    // ✅ Inizializzazione
     useEffect(() => {
         if (user && token && !hasInitialized.current) {
             hasInitialized.current = true;
+            fetchNotifications(false); // false = automatico, può suonare
 
-
-            loadNotifications();
-
-            // Se il permesso era già stato concesso, registra la subscription
             if (permission === 'granted') {
-                //console.log('🔔 Permesso già concesso, registrando subscription...');
                 requestPermission();
             }
         }
 
-        // Reset quando l'utente fa logout
         if ((!user || !token) && hasInitialized.current) {
-            //console.log('🔔 Reset notifiche - logout');
             hasInitialized.current = false;
             setNotifications([]);
             setUnreadCount(0);
+            previousUnreadCount.current = 0;
         }
-    }, [user, token, permission, loadNotifications, requestPermission, setNotifications]);
+    }, [user, token, permission, fetchNotifications, requestPermission, setNotifications, setUnreadCount]);
 
-    // hooks/useNotifications.ts - Versione ottimizzata con SSE
-
+    // ✅ Ascolta messaggi dal Service Worker per aggiornare in real-time
     useEffect(() => {
         if (!user || !token) return;
 
-        let eventSource: EventSource | null = null;
-
-        const connectSSE = () => {
-            // Connessione real-time al server
-            eventSource = new EventSource(`/api/notifications/stream?token=${token}`);
-
-            eventSource.onmessage = (event) => {
-                const data = JSON.parse(event.data);
-                console.log('🔔 Nuova notifica in tempo reale:', data);
-
-                // Aggiorna stato immediatamente
-                setNotifications(prev => [data.notification, ...prev]);
-                setUnreadCount(prev => prev + 1);
-            };
-
-            eventSource.onerror = (error) => {
-                console.error('❌ SSE error:', error);
-                eventSource?.close();
-
-                // Riconnetti dopo 5 secondi
-                setTimeout(connectSSE, 5000);
-            };
+        const handleMessage = (event: MessageEvent) => {
+            if (event.data?.type === 'NEW_NOTIFICATION') {
+                console.log('🔔 Nuova notifica ricevuta dal SW');
+                fetchNotifications(true); // true = manuale, NO suono (il SW già ha mostrato la notifica)
+            }
         };
 
-        connectSSE();
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.addEventListener('message', handleMessage);
+            return () => {
+                navigator.serviceWorker.removeEventListener('message', handleMessage);
+            };
+        }
+    }, [user, token, fetchNotifications]);
 
-        return () => {
-            eventSource?.close();
-        };
-    }, [user, token]);
+    // ✅ Polling ogni 30 secondi (backup se SSE/SW fallisce)
+    useEffect(() => {
+        if (!user || !token) return;
 
+        const interval = setInterval(() => {
+            fetchNotifications(true); // true = polling silenzioso
+        }, 3000);
 
+        return () => clearInterval(interval);
+    }, [user, token, fetchNotifications]);
 
     return {
         notifications,
-        loading: false,
-        error,
         unreadCount,
-        hasMore,
         permission,
         requestPermission,
-        loadNotifications,
+        fetchNotifications,
         markAsRead,
         markAllAsRead,
-        deleteNotification,
-        loadMore,
-        refresh
+        deleteNotification
     };
 }

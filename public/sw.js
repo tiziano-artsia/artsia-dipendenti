@@ -170,6 +170,25 @@ self.addEventListener('fetch', function(event) {
 self.addEventListener('push', function(event) {
     console.log('🔔 [SW] Push ricevuta:', event);
 
+// Nel sw.js, dentro l'evento 'push'
+    event.waitUntil(
+        self.registration.showNotification(data.title || 'Artsia', options)
+            .then(() => {
+                // ✅ Invia messaggio ai client per aggiornare UI
+                return self.clients.matchAll({
+                    type: 'window',
+                    includeUncontrolled: true
+                }).then(clients => {
+                    clients.forEach(client => {
+                        client.postMessage({
+                            type: 'NEW_NOTIFICATION', // ✅ Messaggio per aggiornare
+                            notification: data
+                        });
+                    });
+                });
+            })
+    );
+
     if (!event.data) {
         console.warn('⚠️ [SW] Push senza dati');
         return;
