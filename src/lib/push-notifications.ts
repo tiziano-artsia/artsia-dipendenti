@@ -141,6 +141,7 @@ export class PushNotificationService {
             if (process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY) {
                 const subscription = await registration.pushManager.subscribe({
                     userVisibleOnly: true,
+                    // @ts-ignore
                     applicationServerKey: this.urlBase64ToUint8Array(
                         process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY
                     )
