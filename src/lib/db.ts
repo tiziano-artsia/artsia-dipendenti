@@ -373,10 +373,22 @@ export async function createPayslip(data: {
 }
 
 
-export async function getPayslipById(id: number) {
+// Sostituisci questa funzione:
+export async function getPayslipById(id: number, type?: 'payslip' | 'document') {
     await connectDB();
-    return PayslipModel.findOne({ id }).lean();
+    const filter: any = { id };
+
+    if (type) {
+        filter.$or = [
+            { type: type },
+            { type: { $exists: false } }
+        ];
+    }
+
+    return PayslipModel.findOne(filter).lean();
 }
+
+
 
 
 
