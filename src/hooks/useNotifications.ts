@@ -1,4 +1,4 @@
-// hooks/useNotifications.ts - VERSIONE CORRETTA
+// hooks/useNotifications.ts - VERSIONE CON DEBUG COMPLETO
 
 'use client';
 
@@ -11,6 +11,10 @@ import {
 } from '@/lib/atoms/notificationAtoms';
 import { useEffect, useCallback, useRef } from 'react';
 import { useAuth } from '@/hooks/useAuth';
+
+// ✅ Chiavi localStorage
+const PERMISSION_STORAGE_KEY = 'artsia_notification_permission';
+const PERMISSION_REQUESTED_KEY = 'artsia_permission_requested';
 
 function urlBase64ToUint8Array(base64String: string): Uint8Array {
     const padding = '='.repeat((4 - base64String.length % 4) % 4);
@@ -35,14 +39,116 @@ function playNotificationSound() {
     }
 }
 
+// ✅ Salva permesso in localStorage
+function savePermissionToStorage(permission: NotificationPermission) {
+    try {
+        localStorage.setItem(PERMISSION_STORAGE_KEY, permission);
+        if (permission === 'granted' || permission === 'denied') {
+            localStorage.setItem(PERMISSION_REQUESTED_KEY, 'true');
+        }
+        console.log('💾 Permesso salvato in localStorage:', permission);
+    } catch (error) {
+        console.warn('⚠️ Impossibile salvare in localStorage');
+    }
+}
+
+// ✅ Leggi permesso da localStorage
+function getPermissionFromStorage(): NotificationPermission | null {
+    try {
+        const stored = localStorage.getItem(PERMISSION_STORAGE_KEY);
+        if (stored === 'granted' || stored === 'denied' || stored === 'default') {
+            return stored as NotificationPermission;
+        }
+    } catch (error) {
+        console.warn('⚠️ Impossibile leggere da localStorage');
+    }
+    return null;
+}
+
+// ✅ Verifica se il permesso è già stato richiesto
+function hasPermissionBeenRequested(): boolean {
+    try {
+        return localStorage.getItem(PERMISSION_REQUESTED_KEY) === 'true';
+    } catch (error) {
+        return false;
+    }
+}
+
 export function useNotifications() {
     const { user, token } = useAuth();
     const [notifications, setNotifications] = useAtom(notificationsAtom);
     const [permission, setPermission] = useAtom(pushPermissionAtom);
-    const unreadCount = useAtomValue(unreadCountAtom); // ✅ Solo lettura
+    const unreadCount = useAtomValue(unreadCountAtom);
     const setLoading = useSetAtom(notificationsLoadingAtom);
     const hasInitialized = useRef(false);
     const previousUnreadCount = useRef(0);
+
+    // ✅ Debug info all'avvio
+    useEffect(() => {
+        if (typeof window === 'undefined') return;
+
+        console.group('🔍 DEBUG NOTIFICHE - Info Sistema');
+        console.log('📍 Hostname:', window.location.hostname);
+        console.log('🔒 Protocol:', window.location.protocol);
+        console.log('🔐 isSecureContext:', window.isSecureContext);
+        console.log('🔔 Notification API:', 'Notification' in window);
+        console.log('⚙️ ServiceWorker API:', 'serviceWorker' in navigator);
+        console.log('📱 User Agent:', navigator.userAgent);
+        console.log('🌐 Browser permission:', 'Notification' in window ? Notification.permission : 'N/A');
+        console.log('💾 Stored permission:', getPermissionFromStorage());
+
+        // Rileva piattaforma
+        const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+        const isAndroid = /Android/.test(navigator.userAgent);
+        const isStandalone = window.matchMedia('(display-mode: standalone)').matches ||
+            (navigator as any).standalone === true;
+        console.log('📱 iOS:', isIOS);
+        console.log('🤖 Android:', isAndroid);
+        console.log('📲 Standalone PWA:', isStandalone);
+
+        if (isIOS) {
+            // Estrai versione iOS
+            const match = navigator.userAgent.match(/OS (\d+)_(\d+)/);
+            if (match) {
+                const version = `${match[1]}.${match[2]}`;
+                console.log('📱 iOS Version:', version);
+                const majorVersion = parseInt(match[1]);
+                if (majorVersion < 16) {
+                    console.warn('⚠️ iOS < 16.4 non supporta Web Push Notifications!');
+                } else if (majorVersion === 16 && parseInt(match[2]) < 4) {
+                    console.warn('⚠️ iOS 16.0-16.3 non supporta Web Push Notifications! Serve iOS 16.4+');
+                }
+            }
+        }
+
+        console.groupEnd();
+    }, []);
+
+    // ✅ Inizializza permesso da localStorage all'avvio
+    useEffect(() => {
+        if (typeof window === 'undefined' || !('Notification' in window)) return;
+
+        const storedPermission = getPermissionFromStorage();
+        const browserPermission = Notification.permission;
+
+        console.log('🔄 Inizializzazione permesso:');
+        console.log('- Stored:', storedPermission);
+        console.log('- Browser:', browserPermission);
+
+        if (storedPermission) {
+            setPermission(storedPermission);
+            console.log('✅ Permesso caricato da localStorage:', storedPermission);
+        } else if (browserPermission !== 'default') {
+            setPermission(browserPermission);
+            savePermissionToStorage(browserPermission);
+            console.log('✅ Permesso caricato dal browser:', browserPermission);
+        } else if (browserPermission === 'default' && storedPermission === 'granted') {
+            setPermission('granted');
+            console.log('✅ Permesso ripristinato da localStorage (iOS fix)');
+        } else {
+            setPermission(browserPermission);
+        }
+    }, [setPermission]);
 
     const authenticatedFetch = useCallback(async (url: string, options: RequestInit = {}) => {
         const headers: Record<string, string> = {
@@ -78,7 +184,6 @@ export function useNotifications() {
 
             setNotifications(newNotifications);
 
-            // ✅ Calcola unreadCount localmente per il suono
             const newUnreadCount = newNotifications.filter((n: any) => !n.read).length;
 
             if (!manual && newUnreadCount > previousUnreadCount.current) {
@@ -94,56 +199,188 @@ export function useNotifications() {
     }, [user, token, authenticatedFetch, setNotifications, setLoading]);
 
     const requestPermission = useCallback(async () => {
+        console.group('🔔 REQUEST PERMISSION - START');
+
+        // ✅ Verifica prerequisiti
+        console.log('1️⃣ Verifica prerequisiti...');
+
+        if (!window.isSecureContext) {
+            console.error('❌ ERRORE: Contesto NON sicuro!');
+            console.error('   Serve HTTPS o localhost');
+            console.error('   Attuale:', window.location.protocol + '//' + window.location.hostname);
+            alert('⚠️ Le notifiche richiedono HTTPS o localhost.\nAttualmente sei su: ' + window.location.protocol);
+            console.groupEnd();
+            return false;
+        }
+
         if (!('Notification' in window) || !('serviceWorker' in navigator)) {
+            console.error('❌ Browser non supporta notifiche o Service Worker');
+            console.groupEnd();
             return false;
         }
 
         if (!user || !token) {
+            console.warn('⚠️ Utente non autenticato');
+            console.groupEnd();
             return false;
         }
 
-        try {
-            const result = await Notification.requestPermission();
-            setPermission(result);
+        console.log('✅ Prerequisiti OK');
+        console.log('   - Secure context:', window.isSecureContext);
+        console.log('   - Notification API:', true);
+        console.log('   - ServiceWorker API:', true);
+        console.log('   - User authenticated:', true);
 
-            if (result !== 'granted') {
+        // ✅ Verifica permesso salvato
+        console.log('2️⃣ Verifica permesso salvato...');
+        const storedPermission = getPermissionFromStorage();
+        console.log('   Stored permission:', storedPermission);
+
+        if (storedPermission === 'granted') {
+            console.log('✅ Permesso già concesso (da localStorage)');
+            setPermission('granted');
+
+            try {
+                const registration = await navigator.serviceWorker.ready;
+                let subscription = await registration.pushManager.getSubscription();
+                console.log('   Subscription esistente:', !!subscription);
+
+                if (!subscription) {
+                    console.log('   Creazione nuova subscription...');
+                    const vapidPublicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
+                    if (!vapidPublicKey) {
+                        console.error('❌ VAPID public key mancante');
+                        console.groupEnd();
+                        return false;
+                    }
+
+                    subscription = await registration.pushManager.subscribe({
+                        userVisibleOnly: true,
+                        applicationServerKey: urlBase64ToUint8Array(vapidPublicKey)
+                    });
+                    console.log('✅ Subscription creata');
+
+                    await authenticatedFetch('/api/notifications/register-device', {
+                        method: 'POST',
+                        body: JSON.stringify({ subscription: subscription.toJSON() })
+                    });
+                    console.log('✅ Device registrato');
+                }
+            } catch (error) {
+                console.error('❌ Errore registrazione subscription:', error);
+            }
+
+            console.groupEnd();
+            return true;
+        }
+
+        if (storedPermission === 'denied') {
+            console.log('⛔ Permesso già negato in precedenza');
+            console.groupEnd();
+            return false;
+        }
+
+        // ✅ Richiesta permesso
+        try {
+            console.log('3️⃣ Richiesta permesso al browser...');
+            console.log('   Permission PRIMA della richiesta:', Notification.permission);
+
+            const result = await Notification.requestPermission();
+
+            console.log('   Permission DOPO la richiesta:', result);
+            console.log('   Browser Notification.permission:', Notification.permission);
+
+            // ✅ Gestisci i 3 casi
+            if (result === 'granted') {
+                console.log('✅ GRANTED - Permesso concesso!');
+                savePermissionToStorage('granted');
+                setPermission('granted');
+            } else if (result === 'denied') {
+                console.error('❌ DENIED - Permesso negato!');
+                console.error('   Possibili cause:');
+                console.error('   1. Hai cliccato "Blocca" o "Non consentire"');
+                console.error('   2. iOS < 16.4 (controlla versione iOS sopra)');
+                console.error('   3. Non sei su HTTPS/localhost');
+                console.error('   4. Permesso bloccato nelle impostazioni browser');
+                savePermissionToStorage('denied');
+                setPermission('denied');
+                console.groupEnd();
+                return false;
+            } else if (result === 'default') {
+                console.warn('⚠️ DEFAULT - Utente ha ignorato il popup (iOS)');
+                setPermission('default');
+                // NON salvare in localStorage
+                console.groupEnd();
                 return false;
             }
 
-            const registration = await navigator.serviceWorker.register('/sw.js');
+            if (result !== 'granted') {
+                console.groupEnd();
+                return false;
+            }
+
+            console.log('4️⃣ Registrazione Service Worker...');
+            const registration = await navigator.serviceWorker.ready;
+            console.log('   ServiceWorker ready:', registration.scope);
+
             let subscription = await registration.pushManager.getSubscription();
+            console.log('   Subscription esistente:', !!subscription);
 
             if (!subscription) {
+                console.log('   Creazione subscription...');
                 const vapidPublicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
 
                 if (!vapidPublicKey) {
-                    console.error('❌ VAPID public key mancante');
+                    console.error('❌ VAPID public key mancante in .env.local');
+                    console.error('   Aggiungi: NEXT_PUBLIC_VAPID_PUBLIC_KEY=...');
+                    console.groupEnd();
                     return false;
                 }
 
+                console.log('   VAPID key presente:', vapidPublicKey.substring(0, 20) + '...');
 
                 subscription = await registration.pushManager.subscribe({
                     userVisibleOnly: true,
-                    // @ts-ignore
                     applicationServerKey: urlBase64ToUint8Array(vapidPublicKey)
                 });
+
+                console.log('✅ Subscription creata:', subscription.endpoint);
             }
 
+            console.log('5️⃣ Registrazione device su server...');
             const subscriptionData = subscription.toJSON();
 
-            const response = await authenticatedFetch('/api/notifications/subscribe', {
+            const response = await authenticatedFetch('/api/notifications/register-device', {
                 method: 'POST',
                 body: JSON.stringify({ subscription: subscriptionData })
             });
 
             if (!response.ok) {
                 const error = await response.json();
+                console.error('❌ Errore API:', error);
                 throw new Error(`Errore: ${error.error || response.statusText}`);
             }
 
+            const responseData = await response.json();
+            console.log('✅ Device registrato con successo:', responseData);
+            console.groupEnd();
             return true;
         } catch (error: any) {
-            console.error('❌ Errore richiesta permesso:', error);
+            console.error('❌ ERRORE durante requestPermission:');
+            console.error('   Name:', error.name);
+            console.error('   Message:', error.message);
+            console.error('   Stack:', error.stack);
+
+            // Fallback: verifica se il browser ha comunque granted
+            if (Notification.permission === 'granted') {
+                console.log('⚠️ Errore ma permesso browser è "granted", salvo comunque');
+                savePermissionToStorage('granted');
+                setPermission('granted');
+                console.groupEnd();
+                return true;
+            }
+
+            console.groupEnd();
             return false;
         }
     }, [user, token, authenticatedFetch, setPermission]);
@@ -161,7 +398,6 @@ export function useNotifications() {
                 throw new Error(`Errore: ${error.error || response.statusText}`);
             }
 
-            // ✅ Aggiorna solo notifications, unreadCount si calcola automaticamente
             setNotifications(prev =>
                 prev.map(n =>
                     n._id === notificationId ? { ...n, read: true } : n
@@ -185,7 +421,6 @@ export function useNotifications() {
                 throw new Error(`Errore: ${error.error || response.statusText}`);
             }
 
-            // ✅ Aggiorna solo notifications
             setNotifications(prev => prev.map(n => ({ ...n, read: true })));
         } catch (error) {
             console.error('❌ Errore mark all as read:', error);
@@ -205,19 +440,20 @@ export function useNotifications() {
                 throw new Error(`Errore: ${error.error || response.statusText}`);
             }
 
-            // ✅ Aggiorna solo notifications
             setNotifications(prev => prev.filter(n => n._id !== notificationId));
         } catch (error) {
             console.error('❌ Errore delete notification:', error);
         }
     }, [user, token, authenticatedFetch, setNotifications]);
 
+    // ✅ Inizializzazione
     useEffect(() => {
         if (user && token && !hasInitialized.current) {
             hasInitialized.current = true;
             fetchNotifications(false);
 
-            if (permission === 'granted') {
+            const storedPermission = getPermissionFromStorage();
+            if (storedPermission === 'granted') {
                 requestPermission();
             }
         }
@@ -227,8 +463,9 @@ export function useNotifications() {
             setNotifications([]);
             previousUnreadCount.current = 0;
         }
-    }, [user, token, permission, fetchNotifications, requestPermission, setNotifications]);
+    }, [user, token, fetchNotifications, requestPermission, setNotifications]);
 
+    // ✅ Listener per messaggi dal Service Worker
     useEffect(() => {
         if (!user || !token) return;
 
@@ -247,6 +484,7 @@ export function useNotifications() {
         }
     }, [user, token, fetchNotifications]);
 
+    // ✅ Polling ogni 30 secondi
     useEffect(() => {
         if (!user || !token) return;
 
@@ -265,6 +503,7 @@ export function useNotifications() {
         fetchNotifications,
         markAsRead,
         markAllAsRead,
-        deleteNotification
+        deleteNotification,
+        hasPermissionBeenRequested: hasPermissionBeenRequested()
     };
 }

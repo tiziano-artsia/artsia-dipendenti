@@ -143,40 +143,13 @@ export default function Header() {
 
     return (
         <>
-            {/* Banner Permessi */}
-            {showPermissionBanner && permission !== 'granted' && (
-                <div className="bg-gradient-to-r from-purple-600 to-blue-600 text-white px-4 md:px-6 py-3">
-                    <div className="max-w-7xl mx-auto flex items-center justify-between gap-3">
-                        <div className="flex items-center gap-2 md:gap-3 flex-1 min-w-0">
-                            <Bell className="w-4 h-4 md:w-5 md:h-5 flex-shrink-0" />
-                            <p className="text-xs md:text-sm font-medium truncate">
-                                Abilita le notifiche per aggiornamenti in tempo reale
-                            </p>
-                        </div>
-                        <div className="flex items-center gap-2 flex-shrink-0">
-                            <button
-                                onClick={() => {
-                                    requestPermission();
-                                    setShowPermissionBanner(false);
-                                }}
-                                className="px-3 md:px-4 py-1.5 md:py-2 bg-white text-purple-600 rounded-lg text-xs md:text-sm font-semibold hover:bg-gray-100 transition-colors"
-                            >
-                                Attiva
-                            </button>
-                            <button
-                                onClick={() => setShowPermissionBanner(false)}
-                                className="p-1.5 md:p-2 hover:bg-white/10 rounded-lg transition-colors"
-                            >
-                                <X className="w-3 h-3 md:w-4 md:h-4" />
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            )}
 
-            <header className="bg-white shadow-sm border-b border-gray-100 sticky top-0 z-40">
+
+
+            <header className="bg-white shadow-sm border-b border-gray-100 sticky top-0 z-40 mt-10">
                 <div className="max-w-7xl mx-auto px-4 md:px-6 py-3 md:py-4">
                     <div className="flex items-center justify-between">
+
                         {/* Logo e Back */}
                         <div className="flex items-center gap-2 md:gap-3 flex-1 min-w-0">
                             {showBackButton && (
@@ -311,6 +284,36 @@ export default function Header() {
                     </div>
                 </div>
             </header>
+            {/* Banner Permessi */}
+            {showPermissionBanner && permission !== 'granted' && (
+                <div className="bg-gradient-to-r from-purple-600 to-blue-600 text-white px-4 md:px-6 py-3">
+                    <div className="max-w-7xl mx-auto flex items-center justify-center gap-3">
+                        <div className="flex items-center gap-2 md:gap-3">
+                            <Bell className="w-4 h-4 md:w-5 md:h-5 flex-shrink-0" />
+                            <p className="text-xs md:text-sm font-medium">
+                                Abilita le notifiche per aggiornamenti in tempo reale
+                            </p>
+                        </div>
+                        <div className="flex items-center gap-2 flex-shrink-0">
+                            <button
+                                onClick={() => {
+                                    requestPermission();
+                                    setShowPermissionBanner(false);
+                                }}
+                                className="px-3 md:px-4 py-1.5 md:py-2 bg-white text-purple-600 rounded-lg text-xs md:text-sm font-semibold hover:bg-gray-100 transition-colors"
+                            >
+                                Attiva
+                            </button>
+                            <button
+                                onClick={() => setShowPermissionBanner(false)}
+                                className="p-1.5 md:p-2 hover:bg-white/10 rounded-lg transition-colors"
+                            >
+                                <X className="w-3 h-3 md:w-4 md:h-4" />
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </>
     );
 }

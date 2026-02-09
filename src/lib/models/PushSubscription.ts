@@ -1,53 +1,52 @@
-import mongoose, { Schema, Document, Model } from 'mongoose';
+// lib/models/PushSubscription.ts
+import mongoose from 'mongoose';
 
-export interface IPushSubscription extends Document {
-    userId: string;
-    endpoint: string;
-    keys: {
-        p256dh: string;
-        auth: string;
-    };
-    userAgent?: string;
-    createdAt: Date;
-}
-
-const PushSubscriptionSchema = new Schema<IPushSubscription>({
+const PushSubscriptionSchema = new mongoose.Schema({
     userId: {
-        type: String,  // String type
+        type: Number,
         required: true,
         index: true
     },
     endpoint: {
         type: String,
         required: true,
-        unique: true
+        index: true
     },
     keys: {
-        p256dh: { type: String, required: true },
-        auth: { type: String, required: true }
+        p256dh: {
+            type: String,
+            required: true
+        },
+        auth: {
+            type: String,
+            required: true
+        }
+    },
+    platform: {
+        type: String,
+        enum: ['ios', 'android', 'web'],
+        default: 'web'
     },
     userAgent: {
-        type: String,
-        required: false
+        type: String
     },
     createdAt: {
         type: Date,
-        default: Date.now,
-        expires: 60 * 60 * 24 * 90
+        default: Date.now
+    },
+    lastUsed: {
+        type: Date,
+        default: Date.now
     }
 }, {
-    strict: true,          // ← AGGIUNGI QUESTO
-    strictQuery: false     // ← AGGIUNGI QUESTO
+    timestamps: true
 });
 
+// ✅ Indice composto per evitare duplicati
 PushSubscriptionSchema.index({ userId: 1, endpoint: 1 }, { unique: true });
 
-//  ELIMINA IL MODELLO SE GIÀ ESISTE (importante per hot reload)
-if (mongoose.models.PushSubscription) {
-    delete mongoose.models.PushSubscription;
-}
+// ✅ TTL index: rimuove subscription inattive dopo 90 giorni
+PushSubscriptionSchema.index({ lastUsed: 1 }, { expireAfterSeconds: 7776000 }); // 90 giorni
 
-const PushSubscription: Model<IPushSubscription> =
-    mongoose.model<IPushSubscription>('PushSubscription', PushSubscriptionSchema);
-
-export default PushSubscription;
+export default mongoose.models.PushSubscription ||
+mongoose.model('PushSubscription', PushSubscriptionSchema);

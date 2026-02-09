@@ -5,11 +5,26 @@
   "private": true,
   "scripts": {
     "dev": "next dev --turbopack",
-    "build": "next build --turbopack",
+    "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "cap:sync": "npx cap sync",
+    "cap:ios": "npm run cap:sync && npx cap open ios",
+    "cap:android": "npm run cap:sync && npx cap open android",
+    "cap:run:ios": "npm run cap:sync && npx cap run ios",
+    "cap:run:android": "npm run cap:sync && npx cap run android"
   },
   "dependencies": {
+    "@capacitor/app": "^8.0.0",
+    "@capacitor/cli": "^8.0.2",
+    "@capacitor/core": "^8.0.2",
+    "@capacitor/haptics": "^8.0.0",
+    "@capacitor/ios": "^8.0.2",
+    "@capacitor/network": "^8.0.0",
+    "@capacitor/push-notifications": "^8.0.0",
+    "@capacitor/status-bar": "^8.0.0",
+    "@capacitor/toast": "^8.0.0",
+    "@capawesome/capacitor-badge": "^8.0.0",
     "@ducanh2912/next-pwa": "^10.2.9",
     "@radix-ui/react-slot": "^1.2.4",
     "@tailwindcss/vite": "^4.1.18",
@@ -41,6 +56,7 @@
     "zod": "^4.3.5"
   },
   "devDependencies": {
+    "@capacitor/assets": "^3.0.5",
     "@eslint/eslintrc": "^3",
     "@tailwindcss/postcss": "^4.1.18",
     "@types/bcryptjs": "^2.4.6",

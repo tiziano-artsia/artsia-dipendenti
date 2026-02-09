@@ -43,7 +43,6 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
 
         <body>
         <PWARegister />
-        <NotificationSound />
         {children}
         </body>
         </html>
