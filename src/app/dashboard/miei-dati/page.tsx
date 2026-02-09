@@ -387,7 +387,36 @@ export default function MieiDati() {
                                     const tipoLower = (assenza.tipo || '').toLowerCase();
                                     const isPermesso = tipoLower === 'permesso';
                                     const TipoIcon = getTipoIcon(assenza.tipo);
-                                    const canCancel = true;
+                                    const canCancel = (() => {
+                                        if (assenza.stato !== 'pending') return false;
+
+                                        const dataString = assenza.dataInizio || assenza.data;
+                                        if (!dataString || dataString === 'N/D') return false;
+
+                                        try {
+                                            let dataRichiesta: Date;
+
+                                            // Parsing della data
+                                            if (dataString.includes('/')) {
+                                                // Formato DD/MM/YYYY
+                                                const [giorno, mese, anno] = dataString.split('/').map(Number);
+                                                dataRichiesta = new Date(anno, mese - 1, giorno);
+                                            } else {
+                                                // Formato YYYY-MM-DD o ISO
+                                                dataRichiesta = new Date(dataString);
+                                            }
+
+                                            // Reset ore per confronto solo date
+                                            const oggi = new Date();
+                                            oggi.setHours(0, 0, 0, 0);
+                                            dataRichiesta.setHours(0, 0, 0, 0);
+
+                                            // Se oggi è DOPO la data della richiesta → non può annullare
+                                            return oggi <= dataRichiesta;
+                                        } catch (error) {
+                                            return false;
+                                        }
+                                    })();
 
                                     return (
                                         <div
@@ -509,7 +538,32 @@ export default function MieiDati() {
                                         const tipoLower = (assenza.tipo || '').toLowerCase();
                                         const isPermesso = tipoLower === 'permesso';
                                         const TipoIcon = getTipoIcon(assenza.tipo);
-                                        const canCancel = true;
+                                        const canCancel = (() => {
+                                            if (assenza.stato !== 'pending') return false;
+
+                                            const dataString = assenza.dataInizio || assenza.data;
+                                            if (!dataString || dataString === 'N/D') return false;
+
+                                            try {
+                                                let dataRichiesta: Date;
+
+                                                if (dataString.includes('/')) {
+                                                    const [giorno, mese, anno] = dataString.split('/').map(Number);
+                                                    dataRichiesta = new Date(anno, mese - 1, giorno);
+                                                } else {
+                                                    dataRichiesta = new Date(dataString);
+                                                }
+
+                                                const oggi = new Date();
+                                                oggi.setHours(0, 0, 0, 0);
+                                                dataRichiesta.setHours(0, 0, 0, 0);
+
+                                                return oggi <= dataRichiesta;
+                                            } catch {
+                                                return false;
+                                            }
+                                        })();
+
 
                                         return (
                                             <tr key={assenza.id || assenza._id || index} className="hover:bg-gradient-to-r hover:from-blue-50/80 hover:to-indigo-50/80 backdrop-blur-xl transition-all duration-300 group">
