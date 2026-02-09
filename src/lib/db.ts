@@ -133,23 +133,12 @@ export async function ensureSeeded() {
     await connectDB();
 
     const employeeCount = await EmployeeModel.countDocuments();
-    if (employeeCount > 0) return;
+    if (employeeCount > 0) {
+        console.log(" Database già popolato");
+        return;
+    }
 
-    console.log("🌱 Seeding demo data...");
-
-    const passHash = await bcrypt.hash("pass123", 10);
-    const adminHash = await bcrypt.hash("admin123", 10);
-
-    await EmployeeModel.insertMany(
-        demoEmployees.map((e) => ({
-            ...e,
-            passwordHash: e.role === "admin" ? adminHash : passHash,
-        }))
-    );
-
-    //await AbsenceModel.insertMany(demoAbsences);
-
-    console.log("✅ Seed completato (dipendenti + assenze demo)");
+    console.log(" Database vuoto - nessun seeding automatico");
 }
 
 /**

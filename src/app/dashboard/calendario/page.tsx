@@ -14,19 +14,14 @@ import {
     CheckCircle,
     XCircle,
     AlertCircle,
-    Plane,
-    Stethoscope,
-    Home,
     User,
     Filter,
 } from 'lucide-react';
-import DashboardHeader from '@/components/DashboardHeader';
-import { string } from 'zod';
+
 import toast, { Toaster } from 'react-hot-toast';
 
 interface AbsenceBackend {
     id: string;
-    id: number;
     employeeId: number;
     date: string;
     duration: number;
