@@ -19,7 +19,7 @@ import {
     Euro,
     Download,
     EuroIcon,
-    Lock
+    Lock, Archive
 } from 'lucide-react';
 import { useState } from 'react';
 import { useUserPayslips } from '@/hooks/useUserPayslips';
@@ -418,7 +418,7 @@ export default function Dashboard() {
                             <div className="flex items-center gap-3 sm:gap-4">
                                 <FileText className="w-8 h-8 sm:w-10 sm:h-10 md:w-12 md:h-12 text-indigo-600 shrink-0" />
                                 <h2 className="text-2xl sm:text-3xl md:text-4xl font-black tracking-tight bg-gradient-to-r from-zinc-800 to-slate-700 bg-clip-text text-transparent">
-                                    Ultime Buste Paga
+                                    Ultimi Documenti
                                 </h2>
                             </div>
                             <button
@@ -434,11 +434,11 @@ export default function Dashboard() {
                             {loadingUserPayslips ? (
                                 <div className="col-span-full flex items-center justify-center py-12">
                                     <Loader2 className="w-6 h-6 sm:w-8 sm:h-8 animate-spin text-indigo-500 mr-2" />
-                                    <span className="text-sm sm:text-base">Caricamento buste paga...</span>
+                                    <span className="text-sm sm:text-base">Caricamento documenti...</span>
                                 </div>
                             ) : userPayslips.length === 0 ? (
                                 <div className="col-span-full text-center py-12 text-zinc-500 text-sm sm:text-base">
-                                    Nessuna busta paga disponibile
+                                    Nessuna documento disponibile
                                 </div>
                             ) : (
                                 userPayslips.slice(0, 3).map((payslip) => (
@@ -478,8 +478,8 @@ export default function Dashboard() {
                                 className="group p-5 sm:p-6 bg-gradient-to-br from-indigo-50 to-purple-50 border-2 border-dashed border-indigo-200 hover:border-indigo-400 rounded-xl sm:rounded-2xl hover:shadow-lg hover:-translate-y-1 transition-all duration-400 flex flex-col items-center justify-center text-center active:scale-95"
                             >
                                 <FileText className="w-10 h-10 sm:w-12 sm:h-12 text-indigo-400 mb-3 sm:mb-4 group-hover:scale-110 transition-transform" />
-                                <h3 className="font-black text-lg sm:text-xl text-zinc-700 mb-1 sm:mb-2">Vedi Tutte</h3>
-                                <p className="text-xs sm:text-sm text-zinc-500">Archivio completo buste paga</p>
+                                <h3 className="font-black text-lg sm:text-xl text-zinc-700 mb-1 sm:mb-2">Vedi Tutti</h3>
+                                <p className="text-xs sm:text-sm text-zinc-500">Archivio completo Documenti</p>
                             </a>
                         </div>
                     </div>
@@ -516,9 +516,9 @@ export default function Dashboard() {
                                 }
                             ]: []),
                            {
-                                href: '/dashboard/buste-paga',
-                                label: 'Buste Paga - Documenti',
-                                icon: EuroIcon,
+                                href: '/dashboard/documenti',
+                                label: 'Documenti',
+                                icon: Archive,
                                 color: 'from-orange-500 to-red-600',
                                 description: 'Documenti'
                             }
