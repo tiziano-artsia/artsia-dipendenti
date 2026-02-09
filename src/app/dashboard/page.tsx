@@ -310,6 +310,7 @@ export default function Dashboard() {
                                         <option value="">Seleziona team</option>
                                         <option value="Sviluppo">Sviluppo</option>
                                         <option value="Digital">Digital</option>
+                                        {user?.role === 'admin' && <option value="Admin">Admin</option>}
                                     </select>
                                 </div>
                                 <div>
@@ -321,6 +322,7 @@ export default function Dashboard() {
                                     >
                                         <option value="dipendente">Dipendente</option>
                                         <option value="manager">Manager</option>
+                                        {user?.role === 'admin' && <option value="admin">Admin</option>}
                                     </select>
                                 </div>
                                 {employeeError && <p className="text-red-500 text-xs sm:text-sm">{employeeError}</p>}
