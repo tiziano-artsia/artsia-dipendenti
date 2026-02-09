@@ -1,6 +1,6 @@
 import {type NextRequest, NextResponse} from "next/server";
 import {getUserFromToken} from "@/lib/auth";
-import {updateAbsenceStatus} from "@/lib/db";
+import {deleteAbsence, updateAbsenceStatus} from "@/lib/db";
 
 export async function PATCH(
     request: NextRequest,
@@ -16,8 +16,7 @@ export async function PATCH(
             return NextResponse.json({ error: 'Non autorizzato' }, { status: 403 });
         }
 
-
-        //  Prima recupera la richiesta
+        // Prima recupera la richiesta
         const { getAbsences } = await import('@/lib/db');
         const absences = await getAbsences({});
         const absence = absences.find((a: any) => a.id === Number(id));
@@ -41,18 +40,28 @@ export async function PATCH(
             const { sendNotification } = await import('@/lib/sendNotification');
 
             const typeNorm = absence.type?.toLowerCase() || absence.tipo?.toLowerCase();
-            let notificationType: 'leave_approved' | 'leave_rejected' | 'permit_approved' | 'permit_rejected';
-            let tipoLabel: string;
 
-            if (typeNorm === 'ferie') {
-                notificationType = action === 'approve' ? 'leave_approved' : 'leave_rejected';
-                tipoLabel = 'Ferie';
-            } else if (typeNorm === 'permesso') {
+            // ✅ Mappa completa tipo → label
+            const tipoLabels: Record<string, string> = {
+                'ferie': 'Ferie',
+                'permesso': 'Permesso',
+                'malattia': 'Malattia',
+                'smartworking': 'Smartworking',
+                'festivita': 'Festività',
+                'fuori-sede': 'Fuori Sede',
+                'congedo-parentale': 'Congedo Parentale'
+            };
+
+            const tipoLabel = tipoLabels[typeNorm] || 'Assenza';
+
+            // Determina il tipo di notifica
+            let notificationType: 'leave_approved' | 'leave_rejected' | 'permit_approved' | 'permit_rejected';
+
+            if (typeNorm === 'permesso') {
                 notificationType = action === 'approve' ? 'permit_approved' : 'permit_rejected';
-                tipoLabel = 'Permesso';
             } else {
+                // Tutti gli altri tipi usano leave_*
                 notificationType = action === 'approve' ? 'leave_approved' : 'leave_rejected';
-                tipoLabel = 'Malattia';
             }
 
             const statusLabel = action === 'approve' ? 'approvata' : 'rifiutata';
@@ -63,18 +72,57 @@ export async function PATCH(
                 userId: String(absence.employeeId),
                 type: notificationType,
                 title: `${tipoLabel} ${statusLabel}`,
-                body: `${emoji} La tua richiesta di ${typeNorm} del ${dataFormattata} è stata ${statusLabel} da ${user.name}`,
+                body: `${emoji} La tua richiesta di ${tipoLabel} del ${dataFormattata} è stata ${statusLabel} da ${user.name}`,
                 relatedRequestId: String(absence.id),
                 url: `/dashboard/miei-dati`
             });
 
-            console.log(`✅ Notifica ${action} inviata al dipendente ${absence.employeeId}`);
+            console.log(`✅ Notifica ${action} inviata al dipendente ${absence.employeeId} per ${tipoLabel}`);
         } catch (notifError) {
             console.error('❌ Errore invio notifica dipendente:', notifError);
         }
 
         return NextResponse.json({ success: true });
     } catch (error) {
+        console.error('❌ PATCH error:', error);
         return NextResponse.json({ error: 'Errore server' }, { status: 500 });
+    }
+}
+
+
+export async function DELETE(
+    request: NextRequest,
+    { params }: { params: Promise<{ id: string }> }
+) {
+    try {
+        const user = await getUserFromToken(request);
+
+        if (!user) {
+            return NextResponse.json({ error: 'Non autenticato' }, { status: 401 });
+        }
+
+        const { id } = await params;
+
+        console.log('🗑️ DELETE richiesta:', { id, userId: user.id });
+
+        // Cancella l'assenza (la funzione deleteAbsence già verifica che sia del dipendente)
+        const success = await deleteAbsence(id, user.id);
+
+        if (!success) {
+            return NextResponse.json(
+                { error: 'Assenza non trovata o non autorizzato' },
+                { status: 404 }
+            );
+        }
+
+        console.log('✅ Assenza eliminata:', id);
+        return NextResponse.json({ success: true });
+
+    } catch (error: any) {
+        console.error('❌ DELETE error:', error);
+        return NextResponse.json(
+            { error: 'Errore server', details: error.message },
+            { status: 500 }
+        );
     }
 }

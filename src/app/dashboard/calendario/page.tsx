@@ -477,14 +477,42 @@ export default function Calendario() {
             ferie: number;
             permesso: number;
             malattia: number;
+            smartworking: number;
+            festivita: number;
+            'fuori-sede': number;
+            'congedo-parentale': number;
             motivi: string[];
         }> = {};
 
-        assenze
-            .filter(a => a.stato !== 'rejected')
-            .filter(a => {
-                // tieni solo assenze del mese/anno selezionato
-                const raw = a.dataInizio || '';
+        const giorniFestiviDelMese: number[] = [];
+        const giorniTotaliMese = getGiorniMese(mese, anno);
+
+        for (let giorno = 1; giorno <= giorniTotaliMese; giorno++) {
+            const info = getInfoGiorno(giorno, mese, anno);
+            if (info.isFestivo) {
+                giorniFestiviDelMese.push(giorno);
+            }
+        }
+
+
+
+        employees.forEach((emp) => {
+            totaliPerDipendente[emp.name] = {
+                ferie: 0,
+                permesso: 0,
+                malattia: 0,
+                smartworking: 0,
+                festivita: giorniFestiviDelMese.length,
+                'fuori-sede': 0,
+                'congedo-parentale': 0,
+                motivi: []
+            };
+        });
+
+        const assenzeDelMese = assenze
+            .filter((a) => a.stato !== 'rejected')
+            .filter((a) => {
+                const raw = a.dataInizio;
                 let date: Date | null = null;
 
                 if (raw.includes('/')) {
@@ -497,89 +525,147 @@ export default function Calendario() {
 
                 if (!date || isNaN(date.getTime())) return false;
                 return date.getMonth() === mese && date.getFullYear() === anno;
-            })
-            .forEach(a => {
-                const empName = getEmployeeById(a.employeeId)?.name || 'N/D';
-
-                if (!totaliPerDipendente[empName]) {
-                    totaliPerDipendente[empName] = {
-                        ferie: 0,
-                        permesso: 0,
-                        malattia: 0,
-                        motivi: []
-                    };
-                }
-
-                // Aggiungi il motivo se presente
-                if (a.motivo && a.motivo.trim() !== '') {
-                    totaliPerDipendente[empName].motivi.push(a.motivo);
-                }
-
-                if (a.tipo === 'ferie') {
-                    totaliPerDipendente[empName].ferie += a.durata;
-                } else if (a.tipo === 'permesso') {
-                    totaliPerDipendente[empName].permesso += a.durata;
-                } else if (a.tipo === 'malattia') {
-                    totaliPerDipendente[empName].malattia += a.durata;
-                }
             });
+
+        console.log('📊 Assenze del mese:', assenzeDelMese.length);
+
+        assenzeDelMese.forEach((a) => {
+            const empName = getEmployeeById(a.employeeId)?.name || 'N/D';
+
+            // Se il dipendente non esiste ancora, crealo
+            if (!totaliPerDipendente[empName]) {
+                totaliPerDipendente[empName] = {
+                    ferie: 0,
+                    permesso: 0,
+                    malattia: 0,
+                    smartworking: 0,
+                    festivita: giorniFestiviDelMese.length,
+                    'fuori-sede': 0,
+                    'congedo-parentale': 0,
+                    motivi: []
+                };
+            }
+
+            // Aggiungi motivo
+            if (a.motivo && a.motivo.trim() !== '') {
+                totaliPerDipendente[empName].motivi.push(a.motivo);
+            }
+
+            // Normalizza il tipo
+            const tipoNorm = a.tipo
+                .toLowerCase()
+                .normalize('NFD')
+                .replace(/[\u0300-\u036f]/g, '')
+                .replace(/\s+/g, '-');
+
+            // Incrementa contatore
+            if (tipoNorm === 'ferie') {
+                totaliPerDipendente[empName].ferie += a.durata;
+            } else if (tipoNorm === 'permesso') {
+                totaliPerDipendente[empName].permesso += a.durata;
+            } else if (tipoNorm === 'malattia') {
+                totaliPerDipendente[empName].malattia += a.durata;
+            } else if (tipoNorm === 'smartworking') {
+                totaliPerDipendente[empName].smartworking += a.durata;
+            } else if (tipoNorm === 'festivita') {
+                // Se qualcuno ha assenze di tipo "festivita", le sommiamo (caso raro)
+                totaliPerDipendente[empName].festivita += a.durata;
+            } else if (tipoNorm === 'fuori-sede') {
+                totaliPerDipendente[empName]['fuori-sede'] += a.durata;
+            } else if (tipoNorm === 'congedo-parentale') {
+                totaliPerDipendente[empName]['congedo-parentale'] += a.durata;
+            }
+        });
+
 
         const dipendentiOrdinati = Object.keys(totaliPerDipendente).sort();
 
-        const datiSheet: (string | number)[][] = [];
-        datiSheet.push([`TOTALE MENSILE DI: ${nomiMesi[mese]} ${anno}`]);
-        datiSheet.push([]);
-        datiSheet.push(['#', 'Dipendente', 'Ferie (giorni)', 'Permesso (ore)', 'Malattia (giorni)', 'Motivi']);
+        // Verifica quali colonne hanno valori > 0
+        const haFestivita = giorniFestiviDelMese.length > 0; // ✅ Se ci sono festività nel mese, mostra colonna
+        const haFuoriSede = dipendentiOrdinati.some(nome => totaliPerDipendente[nome]['fuori-sede'] > 0);
+        const haCongedoParentale = dipendentiOrdinati.some(nome => totaliPerDipendente[nome]['congedo-parentale'] > 0);
 
+        const datiSheet: (string | number)[][] = [];
+        datiSheet.push([`TOTALE MENSILE DI ${nomiMesi[mese]} ${anno}`]);
+        datiSheet.push([]);
+
+        // Header dinamico
+        const headerRow = ['', 'Dipendente', 'Ferie (giorni)', 'Permesso (ore)', 'Malattia (giorni)', 'Smartworking (giorni)'];
+
+        if (haFestivita) headerRow.push('Festività (giorni)');
+        if (haFuoriSede) headerRow.push('Fuori Sede (giorni)');
+        if (haCongedoParentale) headerRow.push('Congedo Parentale (giorni)');
+
+        headerRow.push('Motivi');
+
+        datiSheet.push(headerRow);
+
+        // Righe dipendenti
         dipendentiOrdinati.forEach((nome, index) => {
             const totali = totaliPerDipendente[nome];
-            // Unisci i motivi con un separatore
-            const motiviStringa = totali.motivi.length > 0
-                ? totali.motivi.join(' | ')
-                : '-';
+            const motiviStringa = totali.motivi.length > 0 ? totali.motivi.join(' - ') : '';
 
-            datiSheet.push([
+            const row: (string | number)[] = [
                 index + 1,
                 nome,
                 totali.ferie,
                 totali.permesso,
                 totali.malattia,
-                motiviStringa
-            ]);
+                totali.smartworking
+            ];
+
+            if (haFestivita) row.push(totali.festivita);
+            if (haFuoriSede) row.push(totali['fuori-sede']);
+            if (haCongedoParentale) row.push(totali['congedo-parentale']);
+
+            row.push(motiviStringa);
+
+            datiSheet.push(row);
         });
 
+        // Crea workbook
         const workbook = XLSX.utils.book_new();
         const worksheet = XLSX.utils.aoa_to_sheet(datiSheet);
 
-        worksheet['!cols'] = [
-            {wch: 5},   // #
-            {wch: 25},  // Dipendente
-            {wch: 18},  // Ferie
-            {wch: 18},  // Permesso
-            {wch: 18},  // Malattia
-            {wch: 40}   // Motivi
+        // Larghezza colonne
+        const colWidths = [
+            { wch: 5 },
+            { wch: 25 },
+            { wch: 18 },
+            { wch: 18 },
+            { wch: 18 },
+            { wch: 20 }
         ];
+
+        if (haFestivita) colWidths.push({ wch: 20 });
+        if (haFuoriSede) colWidths.push({ wch: 20 });
+        if (haCongedoParentale) colWidths.push({ wch: 25 });
+
+        colWidths.push({ wch: 40 });
+
+        worksheet['!cols'] = colWidths;
 
         XLSX.utils.book_append_sheet(workbook, worksheet, 'Totali Mensili');
 
-        const excelBuffer = XLSX.write(workbook, {bookType: 'xlsx', type: 'array'});
+        // Genera buffer
+        const excelBuffer = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' });
 
-        downloadFile(excelBuffer, `totali_assenze_${nomiMesi[mese]}_${anno}.xlsx`);
-    };
-
-    const downloadFile = (content: any, filename: string) => {
-        const blob = new Blob([content], {
-            type: content instanceof ArrayBuffer
-                ? 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
-                : 'text/csv;charset=utf-8;'
+        // Crea Blob e download
+        const blob = new Blob([excelBuffer], {
+            type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
         });
+
         const link = document.createElement('a');
         link.href = URL.createObjectURL(blob);
-        link.download = filename;
+        link.download = `totali_assenze_${nomiMesi[mese]}_${anno}.xlsx`;
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
+        URL.revokeObjectURL(link.href);
+
+        toast.success(' Excel esportato con successo!');
     };
+
 
     //  FUNZIONI PER VISTA SETTIMANALE
     const getInizioSettimana = (date: Date) => {

@@ -44,7 +44,7 @@ export async function connectDB() {
  */
 export type Role = "dipendente" | "manager" | "admin";
 export type Team = "Sviluppo" | "Digital" | "Admin";
-export type AbsenceType = "ferie" | "permesso" | "smartworking" | "malattia";
+export type AbsenceType = "ferie" | "permesso" | "smartworking" | "malattia" | "festivita" | "fuori-sede" | "congedo-parentale";
 export type AbsenceStatus = "pending" | "approved" | "rejected";
 
 export type EmployeeDoc = {
@@ -96,7 +96,11 @@ const absenceSchema = new Schema<AbsenceDoc>(
     {
         id: { type: Number, required: true, unique: true, index: true },
         employeeId: { type: Number, required: true, index: true },
-        type: { type: String, required: true, enum: ["ferie", "permesso", "smartworking","malattia"] },
+        type: {
+            type: String,
+            required: true,
+            enum: ["ferie", "permesso", "smartworking", "malattia", "festivita", "fuori-sede", "congedo-parentale"]
+        },
         dataInizio: { type: String, required: true }, // YYYY-MM-DD
         durata: { type: Number, required: true },
         motivo: { type: String, default: "" },
@@ -110,6 +114,7 @@ const absenceSchema = new Schema<AbsenceDoc>(
     { timestamps: true }
 );
 
+
 export const EmployeeModel: Model<EmployeeDoc> =
     mongoose.models.Employee || mongoose.model<EmployeeDoc>("Employee", employeeSchema);
 
@@ -122,29 +127,6 @@ export const AbsenceModel: Model<AbsenceDoc> =
  * - password altri: pass123
  */
 
-const demoEmployees = [
-    // Team Sviluppo (8)
-    { id: 1, name: "Marco Rossi", email: "marco.rossi@azienda.it", team: "Sviluppo" as const, role: "manager" as const },
-    { id: 2, name: "Luca Bianchi", email: "luca.bianchi@azienda.it", team: "Sviluppo" as const, role: "dipendente" as const },
-    { id: 3, name: "Andrea Verdi", email: "andrea.verdi@azienda.it", team: "Sviluppo" as const, role: "dipendente" as const },
-    { id: 4, name: "Paolo Neri", email: "paolo.neri@azienda.it", team: "Sviluppo" as const, role: "dipendente" as const },
-    { id: 5, name: "Gabriele Blu", email: "gabriele.blu@azienda.it", team: "Sviluppo" as const, role: "dipendente" as const },
-    { id: 6, name: "Sofia Rossi", email: "sofia.rossi@azienda.it", team: "Sviluppo" as const, role: "dipendente" as const },
-    { id: 7, name: "Michele Gialli", email: "michele.gialli@azienda.it", team: "Sviluppo" as const, role: "dipendente" as const },
-    { id: 8, name: "Federica Viola", email: "federica.viola@azienda.it", team: "Sviluppo" as const, role: "dipendente" as const },
-
-    // Team Digital (7)
-    { id: 9, name: "Elena Ferrari", email: "elena.ferrari@azienda.it", team: "Digital" as const, role: "manager" as const },
-    { id: 10, name: "Marco Bianchi", email: "marco.bianchi@azienda.it", team: "Digital" as const, role: "dipendente" as const },
-    { id: 11, name: "Chiara Rossi", email: "chiara.rossi@azienda.it", team: "Digital" as const, role: "dipendente" as const },
-    { id: 12, name: "Davide Rizzo", email: "davide.rizzo@azienda.it", team: "Digital" as const, role: "dipendente" as const },
-    { id: 13, name: "Laura Marini", email: "laura.marini@azienda.it", team: "Digital" as const, role: "dipendente" as const },
-    { id: 14, name: "Giovanni Russo", email: "giovanni.russo@azienda.it", team: "Digital" as const, role: "dipendente" as const },
-    { id: 15, name: "Valentina Costa", email: "valentina.costa@azienda.it", team: "Digital" as const, role: "dipendente" as const },
-
-    // Admin
-    { id: 100, name: "Admin", email: "admin@azienda.it", team: "Admin" as const, role: "admin" as const },
-];
 
 
 export async function ensureSeeded() {

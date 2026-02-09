@@ -3,7 +3,24 @@
 import { useState, useMemo } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { useMyAbsences } from '@/hooks/useMyAbsences';
-import { FileText, Calendar, Clock, Sun, Home, Bed, CheckCircle, XCircle, Loader2, Send, RotateCcw, AlertCircle, Filter, X, Trash2 } from 'lucide-react';
+import {
+    FileText,
+    Calendar,
+    Clock,
+    Sun,
+    Home,
+    Bed,
+    CheckCircle,
+    XCircle,
+    Loader2,
+    Send,
+    RotateCcw,
+    AlertCircle,
+    Filter,
+    X,
+    Trash2,
+    MapPin, Baby
+} from 'lucide-react';
 import type {AbsenceDoc} from "@/lib/db";
 import toast, {Toaster} from "react-hot-toast";
 
@@ -147,13 +164,30 @@ export default function MieiDati() {
     };
 
     const getTipoIcon = (tipo: string) => {
-        const tipoLower = tipo?.toLowerCase() || '';
+        const tipoLower = tipo?.toLowerCase().replace(/\s+/g, '-') || '';
         if (tipoLower === 'ferie') return Sun;
         if (tipoLower === 'permesso') return Clock;
         if (tipoLower === 'smartworking') return Home;
         if (tipoLower === 'malattia') return Bed;
+        if (tipoLower === 'festivita' || tipoLower === 'festività') return Calendar;
+        if (tipoLower === 'fuori-sede') return MapPin;
+        if (tipoLower === 'congedo-parentale') return Baby;
         return Calendar;
     };
+
+    const getTipoLabel = (tipo: string) => {
+        const tipoLower = tipo?.toLowerCase().replace(/\s+/g, '-') || '';
+        return tipoLower === 'ferie' ? 'Ferie' :
+            tipoLower === 'malattia' ? 'Malattia' :
+                tipoLower === 'smartworking' ? 'Smartworking' :
+                    tipoLower === 'permesso' ? 'Permesso' :
+                        tipoLower === 'festivita' || tipoLower === 'festività' ? 'Festività' :
+                            tipoLower === 'fuori-sede' ? 'Fuori Sede' :
+                                tipoLower === 'congedo-parentale' ? 'Congedo Parentale' :
+                                    'Altro';
+    };
+
+
 
     const formattaData = (dataIso: string): string => {
         if (!dataIso) return 'N/D';
@@ -165,12 +199,6 @@ export default function MieiDati() {
         }
     };
 
-    const getTipoLabel = (tipo: string) => {
-        const tipoLower = tipo?.toLowerCase() || '';
-        return tipoLower === 'ferie' ? 'Ferie' :
-            tipoLower === 'malattia' ? 'Malattia' :
-                tipoLower === 'smartworking' ? 'Smartworking' : 'Permesso';
-    };
 
     const resetFiltri = () => {
         setFiltri({ tipo: 'tutti', stato: 'tutti', periodo: 'tutti' });
@@ -311,12 +339,15 @@ export default function MieiDati() {
                                 onChange={(e) => setFiltri({ ...filtri, tipo: e.target.value })}
                                 className="w-full px-3 sm:px-4 py-2.5 sm:py-3 text-sm sm:text-base bg-white/80 border-2 border-zinc-200 rounded-xl font-semibold text-zinc-800 focus:ring-4 focus:ring-emerald-500/20 focus:border-emerald-500 shadow-md hover:shadow-lg transition-all"
                             >
-                                <option value="tutti">📋 Tutti i tipi</option>
-                                <option value="ferie">🌴 Ferie</option>
-                                <option value="malattia">🤒 Malattia</option>
-                                <option value="permesso">⏰ Permesso</option>
-                                <option value="smartworking">🏠 Smartworking</option>
+                                <option value="tutti"> Tutti i tipi</option>
+                                <option value="ferie"> Ferie</option>
+                                <option value="malattia"> Malattia</option>
+                                <option value="permesso"> Permesso</option>
+                                <option value="smartworking"> Smartworking</option>
+                                <option value="fuori-sede"> Fuori Sede</option>
+                                <option value="congedo-parentale"> Congedo Parentale</option>
                             </select>
+
                         </div>
 
                         <div>
@@ -459,11 +490,18 @@ export default function MieiDati() {
                                                                 ? 'bg-gradient-to-r from-rose-400/90 to-red-500/90 text-white'
                                                                 : tipoLower === 'smartworking'
                                                                     ? 'bg-gradient-to-r from-blue-400/90 to-blue-500/90 text-white'
-                                                                    : 'bg-gradient-to-r from-yellow-400/90 to-amber-500/90 text-white'
+                                                                    : tipoLower === 'permesso'
+                                                                            ? 'bg-gradient-to-r from-purple-400/90 to-purple-500/90 text-white'
+                                                                            : tipoLower === 'fuori-sede'
+                                                                                ? 'bg-gradient-to-r from-cyan-400/90 to-cyan-500/90 text-white'
+                                                                                : tipoLower === 'congedo-parentale'
+                                                                                    ? 'bg-gradient-to-r from-pink-400/90 to-pink-500/90 text-white'
+                                                                                    : 'bg-gradient-to-r from-gray-400/90 to-gray-500/90 text-white'
                                                     }`}>
-                                                    <TipoIcon className="w-4 h-4" />
+    <TipoIcon className="w-4 h-4" />
                                                         {getTipoLabel(assenza.tipo)}
-                                                </span>
+</span>
+
                                                 </div>
                                                 <div>
                                                     <span className="text-xs font-bold text-zinc-500 uppercase tracking-wider block mb-2">Durata</span>
@@ -678,11 +716,14 @@ export default function MieiDati() {
                                     required
                                 >
                                     <option value="">Seleziona tipo...</option>
-                                    <option value="ferie">🌴 Ferie (giorni)</option>
-                                    <option value="malattia">🤒 Malattia (giorni)</option>
-                                    <option value="permesso">⏰ Permesso (ore)</option>
-                                    <option value="smartworking">🏠 Smartworking (giorni)</option>
+                                    <option value="ferie"> Ferie </option>
+                                    <option value="malattia"> Malattia </option>
+                                    <option value="permesso"> Permesso </option>
+                                    <option value="smartworking"> Smartworking </option>
+                                    <option value="fuori-sede"> Fuori Sede </option>
+                                    <option value="congedo-parentale"> Congedo Parentale </option>
                                 </select>
+
                             </div>
 
                             <div>

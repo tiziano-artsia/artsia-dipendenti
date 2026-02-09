@@ -82,7 +82,17 @@ export async function POST(request: NextRequest) {
         console.log('📥 POST body:', body);
 
         const typeNorm = (body.type || '').trim().toLowerCase();
-        const tipiValidi = new Set(['ferie', 'permesso', 'smartworking', 'malattia']);
+
+        // ✅ AGGIORNATO: nuovi tipi inclusi
+        const tipiValidi = new Set([
+            'ferie',
+            'permesso',
+            'smartworking',
+            'malattia',
+            'festivita',
+            'fuori-sede',
+            'congedo-parentale'
+        ]);
 
         if (!tipiValidi.has(typeNorm)) {
             console.log('❌ Tipo invalido:', body.type, '→', typeNorm);
@@ -102,13 +112,14 @@ export async function POST(request: NextRequest) {
             );
         }
 
-        // 🔥 AUTO-APPROVA SMARTWORKING
+        // 🔥 AUTO-APPROVA: smartworking e festività (festività sono giorni rossi del calendario)
         let status = body.status || 'pending';
         let approvedBy = body.approvedBy || null;
 
-        if (typeNorm === 'smartworking') {
+        if (typeNorm === 'smartworking' || typeNorm === 'festivita') {
             status = 'approved';
             approvedBy = user.id;
+            console.log(`✅ Auto-approvato: ${typeNorm}`);
         }
 
         const newAbsence = await createAbsence({
@@ -127,33 +138,30 @@ export async function POST(request: NextRequest) {
             tipo: typeNorm
         });
 
-        console.log('✅ Richiesta creata:', newAbsence.id);
+        console.log('✅ Richiesta creata:', newAbsence.id, 'Status:', status);
 
-        // ✅ INVIA NOTIFICHE AGLI ADMIN (solo per ferie e permessi in pending)
-        // ✅ INVIA NOTIFICHE AGLI ADMIN (ferie, permesso, malattia in pending)
-        if (status === 'pending' && (typeNorm === 'ferie' || typeNorm === 'permesso' || typeNorm === 'malattia')) {
+        // ✅ INVIA NOTIFICHE agli admin per tipi che richiedono approvazione
+        const tipiRichiedonoApprovazione = ['ferie', 'permesso', 'malattia', 'fuori-sede', 'congedo-parentale'];
+
+        if (status === 'pending' && tipiRichiedonoApprovazione.includes(typeNorm)) {
             console.log('📬 Invio notifiche agli admin per', typeNorm);
 
             try {
-                // Recupera tutti gli admin
                 const admins = await getEmployeesByRole('admin');
                 console.log('👥 Admin trovati:', admins.length);
 
                 if (admins.length > 0) {
-                    // Determina il tipo di notifica
-                    let notificationType: 'leave_request' | 'permit_request';
-                    let tipoLabel: string;
+                    // Mappa tipo → label
+                    const tipoLabels: Record<string, string> = {
+                        'ferie': 'Ferie',
+                        'permesso': 'Permesso',
+                        'malattia': 'Malattia',
+                        'fuori-sede': 'Fuori Sede',
+                        'congedo-parentale': 'Congedo Parentale'
+                    };
 
-                    if (typeNorm === 'ferie') {
-                        notificationType = 'leave_request';
-                        tipoLabel = 'Ferie';
-                    } else if (typeNorm === 'permesso') {
-                        notificationType = 'permit_request';
-                        tipoLabel = 'Permesso';
-                    } else {
-                        notificationType = 'leave_request'; // usa lo stesso tipo per malattia
-                        tipoLabel = 'Malattia';
-                    }
+                    const tipoLabel = tipoLabels[typeNorm] || 'Assenza';
+                    const notificationType = typeNorm === 'permesso' ? 'permit_request' : 'leave_request';
 
                     const dataFormattata = new Date(body.dataInizio).toLocaleDateString('it-IT');
                     const unitaMisura = typeNorm === 'permesso' ? 'ore' : 'giorni';
@@ -165,7 +173,7 @@ export async function POST(request: NextRequest) {
                                 userId: String(admin.id),
                                 type: notificationType,
                                 title: `Nuova Richiesta di ${tipoLabel}`,
-                                body: `${user.name} ha richiesto ${typeNorm} dal ${dataFormattata} (${body.durata} ${unitaMisura})`,
+                                body: `${user.name} ha richiesto ${tipoLabel} dal ${dataFormattata} (${body.durata} ${unitaMisura})`,
                                 relatedRequestId: String(newAbsence.id),
                                 url: `/dashboard/approvazioni`
                             });
@@ -179,12 +187,10 @@ export async function POST(request: NextRequest) {
                 }
             } catch (adminError) {
                 console.error('❌ Errore recupero admin:', adminError);
-                // Non bloccare la creazione della richiesta
             }
         } else {
-            console.log('ℹ️ Notifiche non inviate:', status, typeNorm);
+            console.log('ℹ️ Notifiche non inviate - Status:', status, 'Tipo:', typeNorm);
         }
-
 
         // Response con data italiana
         const responseData = {
@@ -221,7 +227,7 @@ export async function PATCH(request: NextRequest) {
             return NextResponse.json({ error: 'id e action (approve/reject) obbligatori' }, { status: 400 });
         }
 
-        // ✅ Prima recupera la richiesta per sapere a chi inviare la notifica
+        // Recupera la richiesta per la notifica
         const absences = await getAbsences({});
         const absence = absences.find((a: any) => a.id === Number(id));
 
@@ -245,18 +251,26 @@ export async function PATCH(request: NextRequest) {
         // ✅ INVIA NOTIFICA AL DIPENDENTE
         try {
             const typeNorm = absence.type?.toLowerCase() || absence.tipo?.toLowerCase();
-            let notificationType: 'leave_approved' | 'leave_rejected' | 'permit_approved' | 'permit_rejected';
-            let tipoLabel: string;
 
-            if (typeNorm === 'ferie') {
-                notificationType = action === 'approve' ? 'leave_approved' : 'leave_rejected';
-                tipoLabel = 'Ferie';
-            } else if (typeNorm === 'permesso') {
+            // Mappa tipo → label
+            const tipoLabels: Record<string, string> = {
+                'ferie': 'Ferie',
+                'permesso': 'Permesso',
+                'malattia': 'Malattia',
+                'fuori-sede': 'Fuori Sede',
+                'congedo-parentale': 'Congedo Parentale',
+                'smartworking': 'Smartworking',
+                'festivita': 'Festività'
+            };
+
+            const tipoLabel = tipoLabels[typeNorm] || 'Assenza';
+
+            let notificationType: 'leave_approved' | 'leave_rejected' | 'permit_approved' | 'permit_rejected';
+
+            if (typeNorm === 'permesso') {
                 notificationType = action === 'approve' ? 'permit_approved' : 'permit_rejected';
-                tipoLabel = 'Permesso';
             } else {
                 notificationType = action === 'approve' ? 'leave_approved' : 'leave_rejected';
-                tipoLabel = 'Malattia';
             }
 
             const statusLabel = action === 'approve' ? 'approvata' : 'rifiutata';
@@ -267,7 +281,7 @@ export async function PATCH(request: NextRequest) {
                 userId: String(absence.employeeId),
                 type: notificationType,
                 title: `${tipoLabel} ${statusLabel}`,
-                body: `${emoji} La tua richiesta di ${typeNorm} del ${dataFormattata} è stata ${statusLabel} da ${user.name}`,
+                body: `${emoji} La tua richiesta di ${tipoLabel} del ${dataFormattata} è stata ${statusLabel} da ${user.name}`,
                 relatedRequestId: String(absence.id),
                 url: `/dashboard/miei-dati`
             });
@@ -275,7 +289,6 @@ export async function PATCH(request: NextRequest) {
             console.log(`✅ Notifica ${action} inviata al dipendente ${absence.employeeId}`);
         } catch (notifError) {
             console.error('❌ Errore invio notifica dipendente:', notifError);
-            // Non bloccare l'approvazione/rifiuto
         }
 
         return NextResponse.json({ success: true });
