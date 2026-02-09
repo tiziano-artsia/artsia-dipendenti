@@ -1,14 +1,25 @@
-/** @type {import('next').NextConfig} */
+import withPWAInit from '@ducanh2912/next-pwa';
+
+const isDev = process.env.NODE_ENV === 'development';
+const isCapacitorBuild = process.env.CAPACITOR_BUILD === 'true';
+
+const withPWA = withPWAInit({
+    dest: 'public',
+    disable: isDev || isCapacitorBuild,
+    register: true,
+});
+
+type OutputType = 'export' | 'standalone' | undefined;
+
 const nextConfig = {
-    output: process.env.CAPACITOR_BUILD === 'true' ? 'export' : undefined,
+    output: (isCapacitorBuild ? 'export' : undefined) as OutputType,
 
     images: {
-        unoptimized: process.env.CAPACITOR_BUILD === 'true'
+        unoptimized: isCapacitorBuild
     },
 
-    // Rewrites solo per dev
     async rewrites() {
-        if (process.env.CAPACITOR_BUILD === 'true') {
+        if (isCapacitorBuild) {
             return [];
         }
         return [
@@ -20,6 +31,7 @@ const nextConfig = {
     },
 
     trailingSlash: true,
-};
+    turbopack: {},
+} as const;
 
-export default nextConfig;
+export default withPWA(nextConfig);
