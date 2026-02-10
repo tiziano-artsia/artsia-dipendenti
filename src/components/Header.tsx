@@ -176,9 +176,9 @@ export default function Header() {
                             </Link>
                         </div>
 
-                        {/* Campanello */}
+                        {/* Campanello - Solo Desktop */}
                         {user && (
-                            <div className="relative">
+                            <div className="relative hidden md:block">
                                 <button
                                     ref={buttonRef}
                                     onClick={toggleDropdown}
@@ -188,8 +188,8 @@ export default function Header() {
                                     <Bell className="w-5 h-5 md:w-6 md:h-6 text-gray-600" />
                                     {unreadCount > 0 && (
                                         <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center">
-                                            {unreadCount > 9 ? '9+' : unreadCount}
-                                        </span>
+                    {unreadCount > 9 ? '9+' : unreadCount}
+                </span>
                                     )}
                                 </button>
 
@@ -202,7 +202,7 @@ export default function Header() {
 
                                         <div
                                             ref={dropdownRef}
-                                            className="fixed md:absolute left-4 right-4 md:left-auto md:right-0 bottom-24 md:bottom-auto md:top-full md:mt-2 w-auto md:w-96 bg-white shadow-2xl rounded-2xl border border-gray-200 z-50 max-h-[60vh] md:max-h-[32rem] flex flex-col overflow-hidden"
+                                            className="absolute right-0 top-full mt-2 w-96 bg-white shadow-2xl rounded-2xl border border-gray-200 z-50 max-h-[32rem] flex flex-col overflow-hidden"
                                         >
                                             <div className="bg-gradient-to-r from-purple-600 to-blue-600 px-4 py-4 flex-shrink-0 rounded-t-2xl">
                                                 <h3 className="text-white font-semibold text-lg">Notifiche</h3>
@@ -268,6 +268,7 @@ export default function Header() {
                                 )}
                             </div>
                         )}
+
                     </div>
                 </div>
             </header>
@@ -307,9 +308,8 @@ export default function Header() {
             {user && (
                 <nav
                     className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 z-50 shadow-lg"
-                    style={{ paddingBottom: 'env(safe-area-inset-bottom, 16px)' }}
                 >
-                    <div className="px-5 pt-3 pb-2">
+                    <div className="pt-2 pb-2">
                         <div className="grid grid-cols-4 gap-1">
                             {/* Home */}
                             <Link

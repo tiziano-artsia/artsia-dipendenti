@@ -34,7 +34,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
     return    <>
         <Header />
-        <main className="flex-1 h-screen">
+        <main className="flex-1 min-h-screen">
             {children}
         </main>
     </>;
