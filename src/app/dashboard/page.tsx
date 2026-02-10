@@ -134,7 +134,7 @@ export default function Dashboard() {
     }
 
     return (
-        <div className="min-h-screen bg-gray-50 p-3 sm:p-4 md:p-8 relative overflow-hidden">
+        <div className="min-h-screen bg-gray-50 p-3 sm:p-4 md:p-8 relative overflow-hidden pb-20 md:pb-8">
             <div className="absolute inset-0 bg-gray-50 backdrop-blur-xl pointer-events-none" />
 
             <div className="max-w-7xl mx-auto relative z-10 space-y-4 sm:space-y-6 md:space-y-8">

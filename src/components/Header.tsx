@@ -277,8 +277,7 @@ export default function Header() {
                 </div>
             </header>
 
-            {/* ✅ Header Mobile (top minimal - solo logo) */}
-            <header className="md:hidden bg-white/70 backdrop-blur-md shadow-sm border-b border-gray-100/50 sticky top-0 z-40 pt-safe-mobile">
+            <header className="md:hidden bg-white/95 backdrop-blur-xl shadow-sm border-b border-gray-100/50 sticky top-0 z-40 pt-safe-mobile">
                 <div className="px-4 py-3">
                     <Link href="/dashboard" className="flex items-center gap-2 justify-start">
                         <div className="w-8 h-8 bg-white rounded-xl flex items-center justify-center p-1.5 shadow-lg border border-gray-200">
@@ -295,10 +294,10 @@ export default function Header() {
                 </div>
             </header>
 
+
             {/* ✅ Bottom Navigation Mobile */}
             {user && (
-                <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-white/80 backdrop-blur-md border-t border-gray-200 z-50 pb-safe mt-5">
-                    <div className="grid grid-cols-4 h-16">
+                <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-white/98 backdrop-blur-xl border-t border-gray-200 z-50 pb-safe shadow-lg">                    <div className="grid grid-cols-4 h-16">
                         {/* Home */}
                         <Link
                             href="/dashboard"

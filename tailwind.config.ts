@@ -9,7 +9,14 @@ export default {
         './pages/**/*.{js,ts,jsx,tsx,mdx}',
     ],
     theme: {
-        extend: {},
+        extend: {
+            spacing: {
+                'safe-top': 'env(safe-area-inset-top)',
+                'safe-bottom': 'env(safe-area-inset-bottom)',
+                'nav-height': '4rem',
+                'mobile-content': 'calc(4rem + env(safe-area-inset-bottom, 0px))'
+            }
+        },
     },
     plugins: [],
 } satisfies Config
