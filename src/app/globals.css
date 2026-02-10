@@ -4,25 +4,6 @@
   --font-sans: system-ui, sans-serif;
 }
 
-/* ==================== Safe Area iOS ==================== */
-
-.pb-safe {
-  padding-bottom: env(safe-area-inset-bottom, 0px);
-}
-
-.pt-safe {
-  padding-top: env(safe-area-inset-top, 0px);
-}
-
-/* Desktop: rimuovi padding safe area */
-@media (min-width: 768px) {
-  .pt-safe {
-    padding-top: 0 !important;
-  }
-  .pb-safe {
-    padding-bottom: 0 !important;
-  }
-}
 
 /* ==================== Scrollbar Hide ==================== */
 
