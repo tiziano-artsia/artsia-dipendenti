@@ -30,7 +30,6 @@ export default function Header() {
 
     // ==================== Effects ====================
 
-    // Banner notifiche con delay
     useEffect(() => {
         const dismissed = localStorage.getItem('notification_banner_dismissed') === 'true';
 
@@ -133,16 +132,13 @@ export default function Header() {
         }
     };
 
-    // ✅ NUOVO: Logica intelligente per il click sul campanello
     const toggleDropdown = (e: React.MouseEvent | React.TouchEvent) => {
         e.preventDefault();
         e.stopPropagation();
 
-        // Se ci sono notifiche non lette, mostra dropdown
         if (unreadCount > 0) {
             setIsDropdownOpen(!isDropdownOpen);
         } else {
-            // Altrimenti vai alla pagina notifiche
             router.push('/dashboard/notifications');
         }
     };
@@ -161,10 +157,9 @@ export default function Header() {
         return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
     };
 
-
     return (
         <>
-            {/* Top Header */}
+            {/* Top Header - ✅ Nessun style inline */}
             <header className="bg-white shadow-sm border-b border-gray-200 sticky top-0 z-40">
                 <div className="max-w-7xl mx-auto px-4 md:px-6 py-3 md:py-4">
                     <div className="flex items-center justify-between">
@@ -216,7 +211,6 @@ export default function Header() {
                                     )}
                                 </button>
 
-                                {/* ✅ Dropdown solo se aperto E ci sono notifiche */}
                                 {isDropdownOpen && unreadCount > 0 && (
                                     <div
                                         ref={dropdownRef}
@@ -282,7 +276,7 @@ export default function Header() {
 
             {/* Banner Permessi */}
             {showPermissionBanner && permission !== 'granted' && (
-                <div className="bg-gradient-to-r from-purple-600 to-blue-600 text-white px-4 md:px-6 py-3 animate-slideDown">
+                <div className="bg-gradient-to-r from-purple-600 to-blue-600 text-white px-4 md:px-6 py-3 animate-slideDown sm:hidden">
                     <div className="max-w-7xl mx-auto flex items-center justify-between gap-3">
                         <div className="flex items-center gap-2 md:gap-3 flex-1 min-w-0">
                             <Bell className="w-4 h-4 md:w-5 md:h-5 flex-shrink-0" />
@@ -309,12 +303,10 @@ export default function Header() {
                 </div>
             )}
 
-            {/* Bottom Navigation Mobile */}
+            {/* Bottom Navigation Mobile - ✅ Padding fisso */}
             {user && (
-                <nav
-                    className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 z-50 shadow-lg"
-                >
-                    <div className="pt-2 pb-2">
+                <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 z-50 shadow-lg">
+                    <div className="px-5 pt-3 pb-5">
                         <div className="grid grid-cols-4 gap-1">
                             {/* Home */}
                             <Link
