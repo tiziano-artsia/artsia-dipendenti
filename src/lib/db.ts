@@ -56,6 +56,8 @@ export type EmployeeDoc = {
     passwordHash: string;
     createdAt: Date;
     updatedAt: Date;
+    pushToken?: string | null;
+    badgeCount?: number;
 };
 
 export type AbsenceDoc = {
@@ -88,6 +90,8 @@ const employeeSchema = new Schema<EmployeeDoc>(
         team: { type: String, required: true, enum: ["Sviluppo", "Digital", "Admin"] },
         role: { type: String, required: true, enum: ["dipendente", "manager", "admin"] },
         passwordHash: { type: String, required: true },
+        pushToken: { type: String, default: null },
+        badgeCount: { type: Number, default: 0 }
     },
     { timestamps: true }
 );

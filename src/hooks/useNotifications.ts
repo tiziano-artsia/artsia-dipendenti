@@ -1,4 +1,4 @@
-// hooks/useNotifications.ts - VERSIONE AGGIORNATA CON SW LISTENER
+// hooks/useNotifications.ts - VERSIONE CON BADGE SYNC
 
 'use client';
 
@@ -11,6 +11,8 @@ import {
 } from '@/lib/atoms/notificationAtoms';
 import { useEffect, useCallback, useRef } from 'react';
 import { useAuth } from '@/hooks/useAuth';
+import { PushNotificationService } from '@/lib/push-notifications';
+import { Capacitor } from '@capacitor/core';
 
 const PERMISSION_STORAGE_KEY = 'artsia_notification_permission';
 const PERMISSION_REQUESTED_KEY = 'artsia_permission_requested';
@@ -38,7 +40,6 @@ function playNotificationSound() {
     }
 }
 
-// ✅ Salva permesso in localStorage
 function savePermissionToStorage(permission: NotificationPermission) {
     try {
         localStorage.setItem(PERMISSION_STORAGE_KEY, permission);
@@ -51,7 +52,6 @@ function savePermissionToStorage(permission: NotificationPermission) {
     }
 }
 
-// ✅ Leggi permesso da localStorage
 function getPermissionFromStorage(): NotificationPermission | null {
     try {
         const stored = localStorage.getItem(PERMISSION_STORAGE_KEY);
@@ -64,7 +64,6 @@ function getPermissionFromStorage(): NotificationPermission | null {
     return null;
 }
 
-// ✅ Verifica se il permesso è già stato richiesto
 function hasPermissionBeenRequested(): boolean {
     try {
         return localStorage.getItem(PERMISSION_REQUESTED_KEY) === 'true';
@@ -82,7 +81,14 @@ export function useNotifications() {
     const hasInitialized = useRef(false);
     const previousUnreadCount = useRef(0);
 
-    // ✅ Debug info all'avvio
+    // ✅ Sincronizza badge quando cambia unreadCount
+    useEffect(() => {
+        if (Capacitor.isNativePlatform()) {
+            PushNotificationService.setBadgeCount(unreadCount);
+            console.log(`🔢 Badge sincronizzato: ${unreadCount}`);
+        }
+    }, [unreadCount]);
+
     useEffect(() => {
         if (typeof window === 'undefined') return;
 
@@ -95,8 +101,9 @@ export function useNotifications() {
         console.log('📱 User Agent:', navigator.userAgent);
         console.log('🌐 Browser permission:', 'Notification' in window ? Notification.permission : 'N/A');
         console.log('💾 Stored permission:', getPermissionFromStorage());
+        console.log('📱 Capacitor Native:', Capacitor.isNativePlatform());
+        console.log('📱 Platform:', Capacitor.getPlatform());
 
-        // Rileva piattaforma
         const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
         const isAndroid = /Android/.test(navigator.userAgent);
         const isStandalone = window.matchMedia('(display-mode: standalone)').matches ||
@@ -122,7 +129,6 @@ export function useNotifications() {
         console.groupEnd();
     }, []);
 
-    // ✅ Inizializza permesso da localStorage all'avvio
     useEffect(() => {
         if (typeof window === 'undefined' || !('Notification' in window)) return;
 
@@ -184,11 +190,18 @@ export function useNotifications() {
 
             const newUnreadCount = newNotifications.filter((n: any) => !n.read).length;
 
+            // ✅ Suono solo se ci sono nuove notifiche non lette
             if (!manual && newUnreadCount > previousUnreadCount.current) {
                 playNotificationSound();
             }
 
             previousUnreadCount.current = newUnreadCount;
+
+            // ✅ Sincronizza badge (se native)
+            if (Capacitor.isNativePlatform()) {
+                await PushNotificationService.setBadgeCount(newUnreadCount);
+            }
+
         } catch (err: any) {
             console.error('❌ Errore fetch notifiche:', err);
         } finally {
@@ -323,7 +336,6 @@ export function useNotifications() {
 
                 console.log('   VAPID key presente:', vapidPublicKey.substring(0, 20) + '...');
 
-
                 subscription = await registration.pushManager.subscribe({
                     userVisibleOnly: true,
                     // @ts-ignore
@@ -388,6 +400,9 @@ export function useNotifications() {
                     n._id === notificationId ? { ...n, read: true } : n
                 )
             );
+
+            // ✅ Badge si aggiorna automaticamente tramite useEffect su unreadCount
+
         } catch (error) {
             console.error('❌ Errore mark as read:', error);
         }
@@ -407,6 +422,9 @@ export function useNotifications() {
             }
 
             setNotifications(prev => prev.map(n => ({ ...n, read: true })));
+
+            // ✅ Badge diventa 0 automaticamente
+
         } catch (error) {
             console.error('❌ Errore mark all as read:', error);
         }
@@ -426,12 +444,14 @@ export function useNotifications() {
             }
 
             setNotifications(prev => prev.filter(n => n._id !== notificationId));
+
+            // ✅ Badge si aggiorna automaticamente
+
         } catch (error) {
             console.error('❌ Errore delete notification:', error);
         }
     }, [user, token, authenticatedFetch, setNotifications]);
 
-    // ✅ Inizializzazione
     useEffect(() => {
         if (user && token && !hasInitialized.current) {
             hasInitialized.current = true;
@@ -447,10 +467,14 @@ export function useNotifications() {
             hasInitialized.current = false;
             setNotifications([]);
             previousUnreadCount.current = 0;
+
+            // ✅ Reset badge al logout
+            if (Capacitor.isNativePlatform()) {
+                PushNotificationService.clearBadge();
+            }
         }
     }, [user, token, fetchNotifications, requestPermission, setNotifications]);
 
-    // ✅ NUOVO: Listener per notifiche dal Service Worker (evento custom)
     useEffect(() => {
         if (!user || !token) return;
 
@@ -468,7 +492,6 @@ export function useNotifications() {
         };
     }, [user, token, fetchNotifications]);
 
-    // ✅ Listener per messaggi dal Service Worker (MessageEvent)
     useEffect(() => {
         if (!user || !token) return;
 
@@ -488,7 +511,6 @@ export function useNotifications() {
         }
     }, [user, token, fetchNotifications]);
 
-    // ✅ Polling ogni 30 secondi
     useEffect(() => {
         if (!user || !token) return;
 

@@ -1,5 +1,6 @@
 import { atom } from 'jotai';
 import { atomWithStorage } from 'jotai/utils';
+import { PushNotificationService } from '@/lib/push-notifications';
 
 export interface Notification {
     _id: string;
@@ -20,6 +21,19 @@ export const unreadCountAtom = atom((get) => {
     const notifications = get(notificationsAtom);
     return notifications.filter(n => !n.read).length;
 });
+
+// ✅ Atom per sincronizzare badge con unread count
+export const syncBadgeAtom = atom(
+    null,
+    async (get, set) => {
+        const unreadCount = get(unreadCountAtom);
+
+        // Sincronizza badge iOS/Android
+        await PushNotificationService.setBadgeCount(unreadCount);
+
+        console.log(`🔢 Badge sincronizzato: ${unreadCount}`);
+    }
+);
 
 // Atom per lo stato del permesso push
 export const pushPermissionAtom = atomWithStorage<NotificationPermission>(
