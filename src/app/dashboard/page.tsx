@@ -412,7 +412,7 @@ export default function Dashboard() {
                     </div>
                 )}
                 {/* Buste Paga */}
-                {user?.role !== 'admin'  && (
+                {user?.role !== 'admin'  && userPayslips.length > 0 && (
                     <div className="bg-white/60 backdrop-blur-3xl rounded-2xl sm:rounded-3xl shadow-2xl p-5 sm:p-6 md:p-10 border border-white/70 hover:shadow-3xl transition-all duration-700">
                         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-6 sm:mb-8 md:mb-10 gap-4">
                             <div className="flex items-center gap-3 sm:gap-4">
