@@ -277,7 +277,7 @@ export default function Header() {
                 </div>
             </header>
 
-            <header className="md:hidden bg-white/95 backdrop-blur-xl shadow-sm border-b border-gray-100/50 sticky top-0 z-40 pt-safe-mobile">
+            <header className="md:hidden bg-white/95 backdrop-blur-xl shadow-sm border-b border-gray-100/50 sticky top-0 z-40 ">
                 <div className="px-4 py-3">
                     <Link href="/dashboard" className="flex items-center gap-2 justify-start">
                         <div className="w-8 h-8 bg-white rounded-xl flex items-center justify-center p-1.5 shadow-lg border border-gray-200">
