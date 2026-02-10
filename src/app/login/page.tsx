@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
-import { Biometrics } from '@capacitor/biometrics';
+import { NativeBiometric, BiometryType } from '@capgo/capacitor-native-biometric';
 import { Capacitor } from '@capacitor/core';
 
 export default function LoginPage() {
@@ -12,67 +12,92 @@ export default function LoginPage() {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
     const [biometricAvailable, setBiometricAvailable] = useState(false);
+    const [biometryType, setBiometryType] = useState<BiometryType>(BiometryType.NONE);
     const router = useRouter();
     const { login } = useAuth();
 
     // ✅ Controlla disponibilità Face ID/Touch ID
     useEffect(() => {
-        checkBiometricAvailability();
+        checkBiometric();
     }, []);
 
-    const checkBiometricAvailability = async () => {
+    const checkBiometric = async () => {
         if (!Capacitor.isNativePlatform()) return;
 
         try {
-            const result = await Biometrics.isAvailable();
-            setBiometricAvailable(result.isAvailable);
+            const result = await NativeBiometric.isAvailable();
 
-            // Se ha già fatto login prima, prova auto-login con Face ID
-            const savedEmail = localStorage.getItem('lastEmail');
-            if (savedEmail && result.isAvailable) {
-                setEmail(savedEmail);
+            if (result.isAvailable) {
+                setBiometricAvailable(true);
+                setBiometryType(result.biometryType);
+
+                // Se ha credenziali salvate, mostra Face ID automaticamente
+                const hasCredentials = localStorage.getItem('has_biometric_credentials');
+                if (hasCredentials === 'true') {
+                    // Auto-trigger Face ID dopo 500ms
+                    setTimeout(() => handleBiometricLogin(), 500);
+                }
             }
         } catch (error) {
             console.error('Biometric check error:', error);
         }
     };
 
-    // ✅ Login con Face ID
+    // ✅ Nome biometria per UI
+    const getBiometryName = () => {
+        switch (biometryType) {
+            case BiometryType.FACE_ID: return 'Face ID';
+            case BiometryType.TOUCH_ID: return 'Touch ID';
+            case BiometryType.FINGERPRINT: return 'Impronta';
+            default: return 'Biometria';
+        }
+    };
+
+    // ✅ Login con Face ID/Touch ID
     const handleBiometricLogin = async () => {
         setLoading(true);
         setError('');
 
         try {
-            // Autentica con Face ID/Touch ID
-            await Biometrics.verify({
-                reason: 'Accedi con Face ID',
+            // 1. Verifica identità con Face ID
+            await NativeBiometric.verifyIdentity({
+                reason: 'Accedi con ' + getBiometryName(),
                 title: 'Autenticazione',
                 subtitle: 'Gestione Dipendenti',
-                cancelTitle: 'Annulla'
+                description: 'Verifica la tua identità per accedere',
             });
 
-            // Recupera credenziali salvate (devi salvarle in modo sicuro!)
-            const savedToken = localStorage.getItem('biometric_token');
-            const savedUser = localStorage.getItem('biometric_user');
+            // 2. Recupera credenziali salvate in modo sicuro (Keychain iOS)
+            const credentials = await NativeBiometric.getCredentials({
+                server: 'artsia-app',
+            });
 
-            if (savedToken && savedUser) {
-                const user = JSON.parse(savedUser);
-                localStorage.setItem('token', savedToken);
-                localStorage.setItem('user', savedUser);
-                login(user, savedToken);
-                router.push('/dashboard');
-            } else {
-                setError('Credenziali non trovate. Effettua login con email/password');
-            }
+            // 3. Login automatico
+            const savedUser = JSON.parse(credentials.username); // Salviamo user come JSON
+            const token = credentials.password; // In realtà è il token
+
+            localStorage.setItem('token', token);
+            localStorage.setItem('user', credentials.username);
+            login(savedUser, token);
+            router.push('/dashboard');
+
         } catch (error: any) {
-            setError('Autenticazione biometrica fallita');
+            // Gestione errori Face ID
+            if (error.code === 10) {
+                console.log('Utente ha annullato');
+            } else if (error.code === 13) {
+                setError('Credenziali biometriche non trovate. Effettua login con email/password.');
+                localStorage.removeItem('has_biometric_credentials');
+            } else {
+                setError('Autenticazione fallita. Riprova.');
+            }
             console.error('Biometric auth error:', error);
         } finally {
             setLoading(false);
         }
     };
 
-    //  Login tradizionale
+    // ✅ Login tradizionale con email/password
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setLoading(true);
@@ -90,13 +115,22 @@ export default function LoginPage() {
             if (data.success && data.token && data.user) {
                 localStorage.setItem('token', data.token);
                 localStorage.setItem('user', JSON.stringify(data.user));
-
-                // ✅ Salva per Face ID futuro (ATTENZIONE: usa storage sicuro in produzione!)
-                localStorage.setItem('biometric_token', data.token);
-                localStorage.setItem('biometric_user', JSON.stringify(data.user));
-                localStorage.setItem('lastEmail', email);
-
                 login(data.user, data.token);
+
+                // ✅ Salva credenziali in modo sicuro per Face ID futuro
+                if (biometricAvailable) {
+                    try {
+                        await NativeBiometric.setCredentials({
+                            username: JSON.stringify(data.user), // Salviamo user completo
+                            password: data.token, // Salviamo il token (NON la password!)
+                            server: 'artsia-app',
+                        });
+                        localStorage.setItem('has_biometric_credentials', 'true');
+                    } catch (err) {
+                        console.error('Error saving biometric credentials:', err);
+                    }
+                }
+
                 router.push('/dashboard');
             } else {
                 setError(data.error || 'Credenziali non valide');
@@ -123,7 +157,7 @@ export default function LoginPage() {
                         />
                     </div>
 
-                    <h1 className="text-3xl font-light tracking-wide text-white/95 text-center mb-2 leading-tight">
+                    <h1 className="text-3xl font-light tracking-wide text-white/95 text-center mb-2">
                         Gestione
                     </h1>
                     <p className="text-white/60 text-sm text-center font-light tracking-wider uppercase mb-12">
@@ -136,26 +170,28 @@ export default function LoginPage() {
                         </div>
                     )}
 
-                    {/* ✅ Bottone Face ID (se disponibile) */}
+                    {/* ✅ Bottone Face ID/Touch ID */}
                     {biometricAvailable && (
-                        <button
-                            type="button"
-                            onClick={handleBiometricLogin}
-                            disabled={loading}
-                            className="w-full h-14 bg-gradient-to-r from-blue-500/20 to-purple-500/20 backdrop-blur-xl border border-white/20 rounded-2xl text-lg font-light text-white/95 shadow-2xl hover:shadow-3xl hover:from-blue-500/30 hover:to-purple-500/30 transition-all duration-500 mb-6 flex items-center justify-center gap-3 disabled:opacity-40"
-                        >
-                            <span className="text-2xl">🔐</span>
-                            Accedi con Face ID
-                        </button>
-                    )}
+                        <>
+                            <button
+                                type="button"
+                                onClick={handleBiometricLogin}
+                                disabled={loading}
+                                className="w-full h-14 bg-gradient-to-r from-blue-500/20 to-purple-500/20 backdrop-blur-xl border border-white/20 rounded-2xl text-lg font-light text-white/95 shadow-2xl hover:shadow-3xl hover:from-blue-500/30 hover:to-purple-500/30 transition-all duration-500 mb-6 flex items-center justify-center gap-3 disabled:opacity-40"
+                            >
+                                <span className="text-2xl">
+                                    {biometryType === BiometryType.FACE_ID ? '👤' : '👆'}
+                                </span>
+                                Accedi con {getBiometryName()}
+                            </button>
 
-                    {/* Separatore */}
-                    {biometricAvailable && (
-                        <div className="flex items-center gap-4 mb-6">
-                            <div className="flex-1 h-px bg-white/10" />
-                            <span className="text-white/40 text-xs uppercase tracking-widest">oppure</span>
-                            <div className="flex-1 h-px bg-white/10" />
-                        </div>
+                            {/* Separatore */}
+                            <div className="flex items-center gap-4 mb-6">
+                                <div className="flex-1 h-px bg-white/10" />
+                                <span className="text-white/40 text-xs uppercase tracking-widest">oppure</span>
+                                <div className="flex-1 h-px bg-white/10" />
+                            </div>
+                        </>
                     )}
 
                     {/* Form tradizionale */}

@@ -2,6 +2,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import {NativeBiometric} from "@capgo/capacitor-native-biometric";
 
 export interface Employee {
     id: number;
@@ -50,7 +51,15 @@ export function useAuth() {
         if (loginToken) setToken(loginToken);  // ← SET TOKEN
     };
 
-    const logout = () => {
+    async function logout = () => {
+        try {
+            await NativeBiometric.deleteCredentials({
+                server: 'artsia-app',
+            });
+            localStorage.removeItem('has_biometric_credentials');
+        } catch (error) {
+            console.error('Error deleting biometric credentials:', error);
+        }
         localStorage.removeItem('user');
         localStorage.removeItem('token');  // ← PULISCI TOKEN
         setUser(null);
