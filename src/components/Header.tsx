@@ -10,14 +10,13 @@ import { unreadCountAtom, notificationDropdownAtom } from '@/lib/atoms/notificat
 import { useEffect, useRef, useState } from 'react';
 
 export default function Header() {
-    const { user, logout } = useAuth();
+    const { user } = useAuth();
     const pathname = usePathname();
     const {
         notifications,
         permission,
         requestPermission,
         markAsRead,
-        markAllAsRead,
         fetchNotifications
     } = useNotifications();
     const unreadCount = useAtomValue(unreadCountAtom);
@@ -28,6 +27,8 @@ export default function Header() {
 
     const showBackButton = pathname.startsWith('/dashboard') && pathname !== '/dashboard/';
 
+    // ==================== Effects ====================
+
     useEffect(() => {
         if (user && permission === 'default') {
             setShowPermissionBanner(true);
@@ -35,6 +36,8 @@ export default function Header() {
     }, [user, permission]);
 
     useEffect(() => {
+        if (!isDropdownOpen) return;
+
         function handleClickOutside(event: MouseEvent | TouchEvent) {
             if (
                 dropdownRef.current &&
@@ -46,14 +49,12 @@ export default function Header() {
             }
         }
 
-        if (isDropdownOpen) {
-            document.addEventListener('mousedown', handleClickOutside);
-            document.addEventListener('touchstart', handleClickOutside);
-            return () => {
-                document.removeEventListener('mousedown', handleClickOutside);
-                document.removeEventListener('touchstart', handleClickOutside);
-            };
-        }
+        document.addEventListener('mousedown', handleClickOutside);
+        document.addEventListener('touchstart', handleClickOutside);
+        return () => {
+            document.removeEventListener('mousedown', handleClickOutside);
+            document.removeEventListener('touchstart', handleClickOutside);
+        };
     }, [isDropdownOpen, setIsDropdownOpen]);
 
     useEffect(() => {
@@ -68,21 +69,21 @@ export default function Header() {
     }, [isDropdownOpen]);
 
     useEffect(() => {
+        if (!('serviceWorker' in navigator)) return;
+
         const handleMessage = (event: MessageEvent) => {
             if (event.data?.type === 'NEW_NOTIFICATION') {
-                if (fetchNotifications) {
-                    fetchNotifications(true);
-                }
+                fetchNotifications?.(true);
             }
         };
 
-        if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.addEventListener('message', handleMessage);
-            return () => {
-                navigator.serviceWorker.removeEventListener('message', handleMessage);
-            };
-        }
+        navigator.serviceWorker.addEventListener('message', handleMessage);
+        return () => {
+            navigator.serviceWorker.removeEventListener('message', handleMessage);
+        };
     }, [fetchNotifications]);
+
+    // ==================== Handlers ====================
 
     const formatNotificationTime = (dateString: string) => {
         const date = new Date(dateString);
@@ -100,40 +101,29 @@ export default function Header() {
     };
 
     const getNotificationStyle = (type: string) => {
-        switch (type) {
-            case 'leave_request':
-            case 'permit_request':
-                return { color: 'text-blue-600', bg: 'bg-blue-50', border: 'border-blue-200' };
-            case 'leave_approved':
-            case 'permit_approved':
-                return { color: 'text-green-600', bg: 'bg-green-50', border: 'border-green-200' };
-            case 'leave_rejected':
-            case 'permit_rejected':
-                return { color: 'text-red-600', bg: 'bg-red-50', border: 'border-red-200' };
-            default:
-                return { color: 'text-gray-600', bg: 'bg-gray-50', border: 'border-gray-200' };
-        }
+        const styles = {
+            leave_request: { color: 'text-blue-600', bg: 'bg-blue-50', border: 'border-blue-200' },
+            permit_request: { color: 'text-blue-600', bg: 'bg-blue-50', border: 'border-blue-200' },
+            leave_approved: { color: 'text-green-600', bg: 'bg-green-50', border: 'border-green-200' },
+            permit_approved: { color: 'text-green-600', bg: 'bg-green-50', border: 'border-green-200' },
+            leave_rejected: { color: 'text-red-600', bg: 'bg-red-50', border: 'border-red-200' },
+            permit_rejected: { color: 'text-red-600', bg: 'bg-red-50', border: 'border-red-200' },
+        };
+        return styles[type as keyof typeof styles] || { color: 'text-gray-600', bg: 'bg-gray-50', border: 'border-gray-200' };
     };
 
     const handleNotificationClick = async (notification: any) => {
-        // Segna come letta PRIMA di navigare
         if (!notification.read) {
             await markAsRead(notification._id);
         }
 
         setIsDropdownOpen(false);
 
-        //  Naviga DOPO aver segnato come letta
         if (notification.relatedRequestId) {
             const user = JSON.parse(localStorage.getItem('user') || '{}');
-            if (user.role === 'admin') {
-                window.location.href = `/dashboard/approvazioni`;
-            } else {
-                window.location.href = `/dashboard/miei-dati`;
-            }
+            window.location.href = user.role === 'admin' ? '/dashboard/approvazioni' : '/dashboard/miei-dati';
         }
     };
-
 
     const toggleDropdown = (e: React.MouseEvent | React.TouchEvent) => {
         e.preventDefault();
@@ -141,35 +131,34 @@ export default function Header() {
         setIsDropdownOpen(!isDropdownOpen);
     };
 
-    // ✅ Genera iniziali per avatar
     const getInitials = (name: string) => {
-        return name
-            .split(' ')
-            .map(n => n[0])
-            .join('')
-            .toUpperCase()
-            .slice(0, 2);
+        return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
     };
+
+    // ==================== Render ====================
 
     return (
         <>
-            {/* ✅ Header Desktop (top) */}
-            <header className="hidden md:block bg-white/70 backdrop-blur-md shadow-sm border-b border-gray-100/50 sticky top-0 z-40">
-                <div className="max-w-7xl mx-auto px-6 py-4">
+            {/* Top Header */}
+            <header
+                className="bg-white shadow-sm border-b border-gray-200 sticky top-0 z-40"
+                style={{ paddingTop: 'env(safe-area-inset-top, 0px)' }}
+            >
+                <div className="max-w-7xl mx-auto px-4 md:px-6 py-3 md:py-4">
                     <div className="flex items-center justify-between">
                         {/* Logo e Back */}
-                        <div className="flex items-center gap-3 flex-1 min-w-0">
+                        <div className="flex items-center gap-2 md:gap-3 flex-1 min-w-0">
                             {showBackButton && (
                                 <Link
                                     href="/dashboard"
-                                    className="p-2 hover:bg-gray-100 rounded-xl transition-all"
+                                    className="p-2 hover:bg-gray-100 rounded-xl transition-colors"
                                 >
                                     <ArrowLeft className="w-5 h-5 text-gray-600" />
                                 </Link>
                             )}
 
-                            <Link href="/dashboard" className="flex items-center gap-3 min-w-0">
-                                <div className="w-12 h-12 bg-white rounded-2xl flex items-center justify-center p-2 shadow-lg border border-gray-200 flex-shrink-0">
+                            <Link href="/dashboard" className="flex items-center gap-2 md:gap-3 min-w-0">
+                                <div className="w-10 h-10 md:w-12 md:h-12 bg-white rounded-xl md:rounded-2xl flex items-center justify-center p-2 shadow-lg border border-gray-200 flex-shrink-0">
                                     <img
                                         src="https://www.artsia.it/assets/images/logos/logo-artsia.svg"
                                         alt="Artsia"
@@ -177,26 +166,26 @@ export default function Header() {
                                     />
                                 </div>
                                 <div className="min-w-0">
-                                    <h1 className="text-2xl font-bold text-gray-900 truncate">
+                                    <h1 className="text-lg md:text-2xl font-bold text-gray-900 truncate">
                                         Artsia SRL
                                     </h1>
-                                    <p className="text-xs text-gray-500">
+                                    <p className="text-xs text-gray-500 hidden md:block">
                                         Gestione Dipendenti
                                     </p>
                                 </div>
                             </Link>
                         </div>
 
-                        {/* Campanello Desktop */}
+                        {/* Campanello */}
                         {user && (
                             <div className="relative">
                                 <button
                                     ref={buttonRef}
                                     onClick={toggleDropdown}
-                                    className="relative p-2 hover:bg-gray-100 rounded-xl transition-all"
+                                    className="relative p-2 hover:bg-gray-100 active:bg-gray-200 rounded-xl transition-colors"
                                     aria-label="Notifiche"
                                 >
-                                    <Bell className="w-6 h-6 text-gray-600" />
+                                    <Bell className="w-5 h-5 md:w-6 md:h-6 text-gray-600" />
                                     {unreadCount > 0 && (
                                         <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center">
                                             {unreadCount > 9 ? '9+' : unreadCount}
@@ -205,71 +194,77 @@ export default function Header() {
                                 </button>
 
                                 {isDropdownOpen && (
-                                    <div
-                                        ref={dropdownRef}
-                                        className="absolute right-0 top-full mt-2 w-96 bg-white shadow-2xl rounded-2xl border border-gray-200 z-50 max-h-[32rem] flex flex-col overflow-hidden"
-                                    >
-                                        <div className="bg-gradient-to-r from-purple-600 to-blue-600 px-4 py-4 flex items-center justify-between flex-shrink-0 rounded-t-2xl">
-                                            <h3 className="text-white font-semibold text-lg">Notifiche</h3>
-                                        </div>
+                                    <>
+                                        <div
+                                            className="fixed inset-0 bg-black/50 z-40 md:hidden"
+                                            onClick={() => setIsDropdownOpen(false)}
+                                        />
 
-                                        <div className="flex-1 overflow-y-auto">
-                                            {notifications.length === 0 ? (
-                                                <div className="px-4 py-12 text-center">
-                                                    <Bell className="w-12 h-12 text-gray-300 mx-auto mb-3" />
-                                                    <p className="text-gray-500 text-sm">Nessuna notifica</p>
-                                                </div>
-                                            ) : (
-                                                notifications.map((notification) => {
-                                                    const style = getNotificationStyle(notification.type);
-                                                    return (
-                                                        <div
-                                                            key={notification._id}
-                                                            className={`px-4 py-3.5 border-b border-gray-100 hover:bg-gray-50 cursor-pointer transition-colors ${
-                                                                !notification.read ? 'bg-blue-50/50' : ''
-                                                            }`}
-                                                            onClick={() => handleNotificationClick(notification)}
-                                                        >
-                                                            <div className="flex gap-3">
-                                                                <div className={`${style.bg} ${style.border} border rounded-lg p-2 flex-shrink-0 h-fit`}>
-                                                                    <Bell className={`w-4 h-4 ${style.color}`} />
-                                                                </div>
+                                        <div
+                                            ref={dropdownRef}
+                                            className="fixed md:absolute left-4 right-4 md:left-auto md:right-0 bottom-24 md:bottom-auto md:top-full md:mt-2 w-auto md:w-96 bg-white shadow-2xl rounded-2xl border border-gray-200 z-50 max-h-[60vh] md:max-h-[32rem] flex flex-col overflow-hidden"
+                                        >
+                                            <div className="bg-gradient-to-r from-purple-600 to-blue-600 px-4 py-4 flex-shrink-0 rounded-t-2xl">
+                                                <h3 className="text-white font-semibold text-lg">Notifiche</h3>
+                                            </div>
 
-                                                                <div className="flex-1 min-w-0">
-                                                                    <div className="flex items-start justify-between gap-2 mb-1">
-                                                                        <h4 className={`text-sm ${!notification.read ? 'font-bold' : 'font-semibold'} text-gray-900 line-clamp-2`}>
-                                                                            {notification.title}
-                                                                        </h4>
-                                                                        {!notification.read && (
-                                                                            <div className="w-2 h-2 bg-blue-600 rounded-full flex-shrink-0 mt-1"></div>
-                                                                        )}
+                                            <div className="flex-1 overflow-y-auto">
+                                                {notifications.length === 0 ? (
+                                                    <div className="px-4 py-12 text-center">
+                                                        <Bell className="w-12 h-12 text-gray-300 mx-auto mb-3" />
+                                                        <p className="text-gray-500 text-sm">Nessuna notifica</p>
+                                                    </div>
+                                                ) : (
+                                                    notifications.map((notification) => {
+                                                        const style = getNotificationStyle(notification.type);
+                                                        return (
+                                                            <div
+                                                                key={notification._id}
+                                                                className={`px-4 py-3.5 border-b border-gray-100 hover:bg-gray-50 active:bg-gray-100 cursor-pointer transition-colors ${
+                                                                    !notification.read ? 'bg-blue-50/50' : ''
+                                                                }`}
+                                                                onClick={() => handleNotificationClick(notification)}
+                                                            >
+                                                                <div className="flex gap-3">
+                                                                    <div className={`${style.bg} ${style.border} border rounded-lg p-2 flex-shrink-0 h-fit`}>
+                                                                        <Bell className={`w-4 h-4 ${style.color}`} />
                                                                     </div>
-                                                                    <p className="text-sm text-gray-600 line-clamp-2">
-                                                                        {notification.body}
-                                                                    </p>
-                                                                    <p className="text-xs text-gray-400 mt-1.5">
-                                                                        {formatNotificationTime(notification.createdAt)}
-                                                                    </p>
+                                                                    <div className="flex-1 min-w-0">
+                                                                        <div className="flex items-start justify-between gap-2 mb-1">
+                                                                            <h4 className={`text-sm ${!notification.read ? 'font-bold' : 'font-semibold'} text-gray-900 line-clamp-2`}>
+                                                                                {notification.title}
+                                                                            </h4>
+                                                                            {!notification.read && (
+                                                                                <div className="w-2 h-2 bg-blue-600 rounded-full flex-shrink-0 mt-1" />
+                                                                            )}
+                                                                        </div>
+                                                                        <p className="text-sm text-gray-600 line-clamp-2">
+                                                                            {notification.body}
+                                                                        </p>
+                                                                        <p className="text-xs text-gray-400 mt-1.5">
+                                                                            {formatNotificationTime(notification.createdAt)}
+                                                                        </p>
+                                                                    </div>
                                                                 </div>
                                                             </div>
-                                                        </div>
-                                                    );
-                                                })
+                                                        );
+                                                    })
+                                                )}
+                                            </div>
+
+                                            {notifications.length > 0 && (
+                                                <div className="bg-gray-50 px-4 py-3 text-center border-t border-gray-200 flex-shrink-0 rounded-b-2xl">
+                                                    <Link
+                                                        href="/dashboard/notifications"
+                                                        className="text-sm text-purple-600 hover:text-purple-700 font-medium"
+                                                        onClick={() => setIsDropdownOpen(false)}
+                                                    >
+                                                        Vedi tutte
+                                                    </Link>
+                                                </div>
                                             )}
                                         </div>
-
-                                        {notifications.length > 0 && (
-                                            <div className="bg-gray-50 px-4 py-3 text-center border-t border-gray-200 flex-shrink-0 rounded-b-2xl">
-                                                <Link
-                                                    href="/dashboard/notifications"
-                                                    className="text-sm text-purple-600 hover:text-purple-700 font-medium inline-block"
-                                                    onClick={() => setIsDropdownOpen(false)}
-                                                >
-                                                    Vedi tutte le notifiche
-                                                </Link>
-                                            </div>
-                                        )}
-                                    </div>
+                                    </>
                                 )}
                             </div>
                         )}
@@ -277,170 +272,13 @@ export default function Header() {
                 </div>
             </header>
 
-            <header className="md:hidden bg-white backdrop-blur-xl shadow-sm border-b border-gray-200 sticky top-0 z-40 pt-safe">
-                <div className="px-4 py-3">
-                    <Link href="/dashboard" className="flex items-center gap-2 justify-start">
-                        <div className="w-8 h-8 bg-white rounded-xl flex items-center justify-center p-1.5 shadow-lg border border-gray-200">
-                            <img
-                                src="https://www.artsia.it/assets/images/logos/logo-artsia.svg"
-                                alt="Artsia"
-                                className="w-full h-full object-contain"
-                            />
-                        </div>
-                        <h1 className="text-lg font-bold text-gray-900">
-                            Artsia
-                        </h1>
-                    </Link>
-                </div>
-            </header>
-
-
-            {user && (
-                <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-white backdrop-blur-xl border-t border-gray-200 z-50 shadow-lg pb-safe">
-                    <div className="px-5 pt-3 pb-3">
-                        <div className="grid grid-cols-4 h-16">
-                            {/* Home */}
-                            <Link
-                                href="/dashboard"
-                                className={`flex flex-col items-center justify-center gap-1 transition-colors ${
-                                    pathname === '/dashboard' || pathname === '/dashboard/'
-                                        ? 'text-purple-600'
-                                        : 'text-gray-500'
-                                }`}
-                            >
-                                <Home className="w-6 h-6" />
-                                <span className="text-xs font-medium">Home</span>
-                            </Link>
-
-                            {/* Assenze */}
-                            <Link
-                                href="/dashboard/miei-dati"
-                                className={`flex flex-col items-center justify-center gap-1 transition-colors ${
-                                    pathname.startsWith('/dashboard/miei-dati')
-                                        ? 'text-purple-600'
-                                        : 'text-gray-500'
-                                }`}
-                            >
-                                <Calendar className="w-6 h-6" />
-                                <span className="text-xs font-medium">Assenze</span>
-                            </Link>
-
-                            {/* Notifiche */}
-                            <button
-                                ref={buttonRef}
-                                onClick={toggleDropdown}
-                                onTouchEnd={toggleDropdown}
-                                className={`relative flex flex-col items-center justify-center gap-1 transition-colors ${
-                                    isDropdownOpen ? 'text-purple-600' : 'text-gray-500'
-                                }`}
-                            >
-                                <Bell className="w-6 h-6" />
-                                {unreadCount > 0 && (
-                                    <span className="absolute top-0 right-1/4 bg-red-500 text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center">
-                            {unreadCount > 9 ? '9+' : unreadCount}
-                        </span>
-                                )}
-                                <span className="text-xs font-medium">Notifiche</span>
-                            </button>
-
-                            {/* Profilo */}
-                            <div className="flex flex-col items-center justify-center gap-1 text-gray-600">
-                                <div className="w-7 h-7 rounded-full bg-gradient-to-br from-purple-600 to-blue-600 flex items-center justify-center text-xs font-bold text-white shadow-sm">
-                                    {user ? getInitials(user.name) : 'U'}
-                                </div>
-                                <span className="text-xs font-medium truncate max-w-[60px]">
-                        {user ? user.name.split(' ')[0] : 'Utente'}
-                    </span>
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* Dropdown Notifiche Mobile */}
-                    {isDropdownOpen && (
-                        <>
-                            <div
-                                className="fixed inset-0 bg-black/50 z-40"
-                                onClick={() => setIsDropdownOpen(false)}
-                            />
-
-                            <div
-                                ref={dropdownRef}
-                                className="fixed left-4 right-4 bottom-24 bg-white shadow-2xl rounded-2xl border border-gray-200 z-50 max-h-[70vh] flex flex-col overflow-hidden"
-                            >
-                                <div className="bg-gradient-to-r from-purple-600 to-blue-600 px-4 py-4 flex items-center justify-between flex-shrink-0 rounded-t-2xl">
-                                    <h3 className="text-white font-semibold text-lg">Notifiche</h3>
-                                </div>
-
-                                <div className="flex-1 overflow-y-auto overscroll-contain">
-                                    {notifications.length === 0 ? (
-                                        <div className="px-4 py-12 text-center">
-                                            <Bell className="w-12 h-12 text-gray-300 mx-auto mb-3" />
-                                            <p className="text-gray-500 text-sm">Nessuna notifica</p>
-                                        </div>
-                                    ) : (
-                                        notifications.map((notification) => {
-                                            const style = getNotificationStyle(notification.type);
-                                            return (
-                                                <div
-                                                    key={notification._id}
-                                                    className={`px-4 py-3.5 border-b border-gray-100 active:bg-gray-100 transition-colors ${
-                                                        !notification.read ? 'bg-blue-50/50' : ''
-                                                    }`}
-                                                    onClick={() => handleNotificationClick(notification)}
-                                                >
-                                                    <div className="flex gap-3">
-                                                        <div className={`${style.bg} ${style.border} border rounded-lg p-2 flex-shrink-0 h-fit`}>
-                                                            <Bell className={`w-4 h-4 ${style.color}`} />
-                                                        </div>
-
-                                                        <div className="flex-1 min-w-0">
-                                                            <div className="flex items-start justify-between gap-2 mb-1">
-                                                                <h4 className={`text-sm ${!notification.read ? 'font-bold' : 'font-semibold'} text-gray-900 line-clamp-2`}>
-                                                                    {notification.title}
-                                                                </h4>
-                                                                {!notification.read && (
-                                                                    <div className="w-2 h-2 bg-blue-600 rounded-full flex-shrink-0 mt-1"></div>
-                                                                )}
-                                                            </div>
-                                                            <p className="text-sm text-gray-600 line-clamp-2">
-                                                                {notification.body}
-                                                            </p>
-                                                            <p className="text-xs text-gray-400 mt-1.5">
-                                                                {formatNotificationTime(notification.createdAt)}
-                                                            </p>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            );
-                                        })
-                                    )}
-                                </div>
-
-                                {notifications.length > 0 && (
-                                    <div className="bg-gray-50 px-4 py-3 text-center border-t border-gray-200 flex-shrink-0 rounded-b-2xl">
-                                        <Link
-                                            href="/dashboard/notifications"
-                                            className="text-sm text-purple-600 font-medium inline-block"
-                                            onClick={() => setIsDropdownOpen(false)}
-                                        >
-                                            Vedi tutte
-                                        </Link>
-                                    </div>
-                                )}
-                            </div>
-                        </>
-                    )}
-                </nav>
-            )}
-
-
-            {/* Banner Permessi - Solo Desktop */}
+            {/* Banner Permessi */}
             {showPermissionBanner && permission !== 'granted' && (
-                <div className="hidden md:block bg-gradient-to-r from-purple-600 to-blue-600 text-white px-6 py-3">
-                    <div className="max-w-7xl mx-auto flex items-center justify-center gap-3">
-                        <div className="flex items-center gap-3">
-                            <Bell className="w-5 h-5 flex-shrink-0" />
-                            <p className="text-sm font-medium">
+                <div className="bg-gradient-to-r from-purple-600 to-blue-600 text-white px-4 md:px-6 py-3">
+                    <div className="max-w-7xl mx-auto flex items-center justify-between gap-3">
+                        <div className="flex items-center gap-2 md:gap-3">
+                            <Bell className="w-4 h-4 md:w-5 md:h-5 flex-shrink-0" />
+                            <p className="text-xs md:text-sm font-medium">
                                 Abilita le notifiche per aggiornamenti in tempo reale
                             </p>
                         </div>
@@ -450,19 +288,85 @@ export default function Header() {
                                     requestPermission();
                                     setShowPermissionBanner(false);
                                 }}
-                                className="px-4 py-2 bg-white text-purple-600 rounded-lg text-sm font-semibold hover:bg-gray-100 transition-colors"
+                                className="px-3 md:px-4 py-1.5 md:py-2 bg-white text-purple-600 rounded-lg text-xs md:text-sm font-semibold hover:bg-gray-100 transition-colors"
                             >
                                 Attiva
                             </button>
                             <button
                                 onClick={() => setShowPermissionBanner(false)}
-                                className="p-2 hover:bg-white/10 rounded-lg transition-colors"
+                                className="p-1.5 md:p-2 hover:bg-white/10 rounded-lg transition-colors"
                             >
-                                <X className="w-4 h-4" />
+                                <X className="w-3 h-3 md:w-4 md:h-4" />
                             </button>
                         </div>
                     </div>
                 </div>
+            )}
+
+            {/* ✅ Bottom Navigation Mobile */}
+            {user && (
+                <nav
+                    className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 z-50 shadow-lg"
+                    style={{ paddingBottom: 'env(safe-area-inset-bottom, 16px)' }}
+                >
+                    <div className="px-5 pt-3 pb-2">
+                        <div className="grid grid-cols-4 gap-1">
+                            {/* Home */}
+                            <Link
+                                href="/dashboard"
+                                className={`flex flex-col items-center justify-center gap-1 py-2 rounded-xl transition-colors ${
+                                    pathname === '/dashboard' || pathname === '/dashboard/'
+                                        ? 'text-purple-600'
+                                        : 'text-gray-500 active:bg-gray-100'
+                                }`}
+                            >
+                                <Home className="w-6 h-6" />
+                                <span className="text-xs font-medium">Home</span>
+                            </Link>
+
+                            {/* Assenze */}
+                            <Link
+                                href="/dashboard/miei-dati"
+                                className={`flex flex-col items-center justify-center gap-1 py-2 rounded-xl transition-colors ${
+                                    pathname.startsWith('/dashboard/miei-dati')
+                                        ? 'text-purple-600'
+                                        : 'text-gray-500 active:bg-gray-100'
+                                }`}
+                            >
+                                <Calendar className="w-6 h-6" />
+                                <span className="text-xs font-medium">Assenze</span>
+                            </Link>
+
+                            {/* Notifiche */}
+                            <button
+                                onClick={toggleDropdown}
+                                className={`relative flex flex-col items-center justify-center gap-1 py-2 rounded-xl transition-colors ${
+                                    isDropdownOpen ? 'text-purple-600' : 'text-gray-500 active:bg-gray-100'
+                                }`}
+                            >
+                                <div className="relative">
+                                    <Bell className="w-6 h-6" />
+                                    {unreadCount > 0 && (
+                                        <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center">
+                                            {unreadCount > 9 ? '9+' : unreadCount}
+                                        </span>
+                                    )}
+                                </div>
+                                <span className="text-xs font-medium">Notifiche</span>
+                            </button>
+
+                            {/* Profilo */}
+                            <button className="flex flex-col items-center justify-center gap-1 py-2 text-gray-600 rounded-xl active:bg-gray-100 transition-colors">
+                                <div className="w-7 h-7 rounded-full bg-gradient-to-br from-purple-600 to-blue-600 flex items-center justify-center text-xs font-bold text-white shadow-sm">
+                                    {user ? getInitials(user.name) : 'U'}
+                                </div>
+                                <span className="text-xs font-medium truncate max-w-[60px]">
+                                    {user ? user.name.split(' ')[0] : 'Profilo'}
+                                </span>
+                            </button>
+                        </div>
+                    </div>
+                </nav>
             )}
         </>
     );
