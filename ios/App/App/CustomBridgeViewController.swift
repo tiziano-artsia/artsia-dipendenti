@@ -4,10 +4,9 @@ import Capacitor
 class CustomBridgeViewController: CAPBridgeViewController {
     override func viewDidLoad() {
         super.viewDidLoad()
-
-        // ✅ Abilita gesture swipe back/forward
+        
         self.webView?.allowsBackForwardNavigationGestures = true
-
+        
         print("✅ iOS: Gesture back/forward abilitate")
         print("✅ WebView gesture enabled:", self.webView?.allowsBackForwardNavigationGestures ?? false)
     }
