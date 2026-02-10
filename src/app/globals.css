@@ -5,6 +5,7 @@
 }
 
 /* ==================== Safe Area iOS ==================== */
+
 .pb-safe {
   padding-bottom: env(safe-area-inset-bottom, 0px);
 }
@@ -14,7 +15,7 @@
 }
 
 /* Desktop: rimuovi padding safe area */
-@media (min-width: 769px) {
+@media (min-width: 768px) {
   .pt-safe {
     padding-top: 0 !important;
   }
@@ -23,54 +24,8 @@
   }
 }
 
+/* ==================== Scrollbar Hide ==================== */
 
-
-/* ==================== iOS Gestures ==================== */
-
-@supports (-webkit-touch-callout: none) {
-  html, body {
-    overscroll-behavior-x: auto !important;
-    -webkit-overflow-scrolling: touch !important;
-  }
-
-  body {
-    touch-action: pan-x pan-y !important;
-  }
-
-  * {
-    -webkit-touch-callout: default;
-    -webkit-user-select: auto;
-    user-select: auto;
-  }
-
-  button,
-  a,
-  [role="button"],
-  input,
-  select,
-  textarea,
-  [onclick] {
-    -webkit-touch-callout: none !important;
-    -webkit-user-select: none !important;
-    user-select: none !important;
-  }
-}
-
-
-/* ==================== Dropdown Notifiche Mobile ==================== */
-
-@media (max-width: 768px) {
-  /* Dropdown sopra tutto */
-  [class*="fixed"][class*="bottom-24"] {
-    z-index: 110 !important;
-  }
-
-  /* Overlay backdrop */
-  [class*="fixed inset-0"][class*="bg-black"] {
-    z-index: 105 !important;
-  }
-}
-/* Nel tuo globals.css */
 @layer utilities {
   .scrollbar-hide {
     -ms-overflow-style: none;
@@ -79,5 +34,314 @@
 
   .scrollbar-hide::-webkit-scrollbar {
     display: none;
+  }
+}
+
+/* ==================== Animazioni ==================== */
+
+@keyframes slideDown {
+  from {
+    transform: translateY(-100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes scaleIn {
+  from {
+    transform: scale(0.95);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+.animate-slideDown {
+  animation: slideDown 0.3s ease-out;
+}
+
+.animate-fadeIn {
+  animation: fadeIn 0.2s ease-out;
+}
+
+.animate-scaleIn {
+  animation: scaleIn 0.2s ease-out;
+}
+
+/* ==================== iOS Touch & Gestures ==================== */
+
+@supports (-webkit-touch-callout: none) {
+  /* Smooth scrolling iOS */
+  html, body {
+    overscroll-behavior-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  body {
+    touch-action: pan-x pan-y;
+  }
+
+  /* Selezione testo di default */
+  * {
+    -webkit-touch-callout: default;
+    -webkit-user-select: auto;
+    user-select: auto;
+  }
+
+  /* Disabilita selezione su elementi interattivi */
+  button,
+  a,
+  [role="button"],
+  input[type="button"],
+  input[type="submit"],
+  input[type="reset"],
+  [onclick] {
+    -webkit-touch-callout: none;
+    -webkit-user-select: none;
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  /* Mantieni selezione su input testuali */
+  input[type="text"],
+  input[type="email"],
+  input[type="password"],
+  input[type="search"],
+  input[type="tel"],
+  input[type="url"],
+  textarea,
+  select {
+    -webkit-touch-callout: default;
+    -webkit-user-select: auto;
+    user-select: auto;
+  }
+
+  /* Fix scroll su modal/dropdown */
+  .modal-open,
+  .dropdown-open {
+    position: fixed;
+    width: 100%;
+    overflow: hidden;
+  }
+}
+
+/* ==================== Z-Index Layers ==================== */
+
+@media (max-width: 767px) {
+  /* Header sticky */
+  header {
+    z-index: 40;
+  }
+
+  /* Bottom navigation */
+  nav[class*="fixed bottom-0"] {
+    z-index: 50;
+  }
+
+  /* Dropdown overlay */
+  [class*="fixed inset-0"][class*="bg-black"] {
+    z-index: 60;
+  }
+
+  /* Dropdown content */
+  [class*="fixed"][class*="bottom-24"],
+  [class*="fixed"][class*="rounded-2xl"] {
+    z-index: 70;
+  }
+
+  /* Modals */
+  [role="dialog"],
+  .modal {
+    z-index: 80;
+  }
+
+  /* Toast/Alerts */
+  .toast,
+  [class*="toast"] {
+    z-index: 90;
+  }
+}
+
+/* ==================== Mobile Optimizations ==================== */
+
+@media (max-width: 767px) {
+  /* Smooth scroll */
+  html {
+    scroll-behavior: smooth;
+  }
+
+  /* Previeni zoom su input focus */
+  input,
+  select,
+  textarea {
+    font-size: 16px !important;
+  }
+
+  /* Touch feedback */
+  button:active,
+  a:active,
+  [role="button"]:active {
+    transform: scale(0.98);
+    transition: transform 0.1s ease;
+  }
+
+  /* Overflow scroll migliorato */
+  .overflow-x-auto,
+  .overflow-y-auto {
+    -webkit-overflow-scrolling: touch;
+    scroll-behavior: smooth;
+  }
+
+  /* Safe area per header/footer */
+  header {
+    padding-top: env(safe-area-inset-top, 0);
+  }
+
+  nav[class*="fixed bottom-0"] {
+    padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 8px);
+  }
+}
+
+/* ==================== Desktop Optimizations ==================== */
+
+@media (min-width: 768px) {
+  /* Smooth transitions */
+  * {
+    transition-duration: 200ms;
+  }
+
+  /* Hover states migliorati */
+  button:hover,
+  a:hover,
+  [role="button"]:hover {
+    transition: all 0.2s ease;
+  }
+
+  /* Custom scrollbar */
+  ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: 4px;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background: rgba(0, 0, 0, 0.3);
+  }
+}
+
+/* ==================== Utility Classes ==================== */
+
+/* Backdrop blur iOS fix */
+.backdrop-blur-ios {
+  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(12px);
+}
+
+/* Safe area variables */
+:root {
+  --sat: env(safe-area-inset-top, 0px);
+  --sab: env(safe-area-inset-bottom, 0px);
+  --sal: env(safe-area-inset-left, 0px);
+  --sar: env(safe-area-inset-right, 0px);
+}
+
+/* Touch action helpers */
+.touch-pan-x {
+  touch-action: pan-x;
+}
+
+.touch-pan-y {
+  touch-action: pan-y;
+}
+
+.touch-none {
+  touch-action: none;
+}
+
+/* Prevent text selection */
+.select-none-important {
+  -webkit-user-select: none !important;
+  user-select: none !important;
+}
+
+/* Focus visible */
+.focus-ring:focus-visible {
+  outline: 2px solid rgba(99, 102, 241, 0.5);
+  outline-offset: 2px;
+  border-radius: 0.5rem;
+}
+
+/* ==================== Print Styles ==================== */
+
+@media print {
+  header,
+  nav,
+  .no-print {
+    display: none !important;
+  }
+
+  body {
+    background: white;
+    color: black;
+  }
+
+  a {
+    text-decoration: underline;
+  }
+}
+
+/* ==================== Accessibility ==================== */
+
+/* Focus visibile per tastiera */
+*:focus-visible {
+  outline: 2px solid #7c3aed;
+  outline-offset: 2px;
+}
+
+/* Riduci movimento per utenti con preferenze */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* Alto contrasto */
+@media (prefers-contrast: high) {
+  button,
+  a {
+    border: 2px solid currentColor;
+  }
+}
+
+/* Dark mode readiness */
+@media (prefers-color-scheme: dark) {
+  :root {
+    color-scheme: dark;
   }
 }
