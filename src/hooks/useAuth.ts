@@ -51,7 +51,7 @@ export function useAuth() {
         if (loginToken) setToken(loginToken);  // ← SET TOKEN
     };
 
-    async function logout = () => {
+    async function logout(){
         try {
             await NativeBiometric.deleteCredentials({
                 server: 'artsia-app',
