@@ -115,10 +115,15 @@ export default function Header() {
         }
     };
 
-    const handleNotificationClick = (notification: any) => {
+    const handleNotificationClick = async (notification: any) => {
+        // Segna come letta PRIMA di navigare
         if (!notification.read) {
-            markAsRead(notification._id);
+            await markAsRead(notification._id);
         }
+
+        setIsDropdownOpen(false);
+
+        //  Naviga DOPO aver segnato come letta
         if (notification.relatedRequestId) {
             const user = JSON.parse(localStorage.getItem('user') || '{}');
             if (user.role === 'admin') {
@@ -127,8 +132,8 @@ export default function Header() {
                 window.location.href = `/dashboard/miei-dati`;
             }
         }
-        setIsDropdownOpen(false);
     };
+
 
     const toggleDropdown = (e: React.MouseEvent | React.TouchEvent) => {
         e.preventDefault();
