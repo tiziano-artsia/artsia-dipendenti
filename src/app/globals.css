@@ -4,47 +4,9 @@
   --font-sans: system-ui, sans-serif;
 }
 
-/* ==================== iOS Safe Area ==================== */
-
-:root {
-  --sat: env(safe-area-inset-top);
-  --sab: env(safe-area-inset-bottom);
-  --sal: env(safe-area-inset-left);
-  --sar: env(safe-area-inset-right);
-}
-
-/* Safe area utilities */
-.pt-safe {
-  padding-top: env(safe-area-inset-top, 0px);
-}
-
-.pb-safe {
-  padding-bottom: env(safe-area-inset-bottom, 0px);
-}
-
-.pl-safe {
-  padding-left: env(safe-area-inset-left, 0px);
-}
-
-.pr-safe {
-  padding-right: env(safe-area-inset-right, 0px);
-}
-
-/* ✅ FIX: Header con Dynamic Island support */
-header {
-  padding-top: env(safe-area-inset-top, 0px);
-}
-
-/* Desktop: rimuovi padding */
-@media (min-width: 769px) {
-  header {
-    padding-top: 0;
-  }
-}
 
 /* ==================== iOS Gestures ==================== */
 
-/* Abilita swipe back/forward su iOS */
 @supports (-webkit-touch-callout: none) {
   html, body {
     overscroll-behavior-x: auto !important;
@@ -55,14 +17,12 @@ header {
     touch-action: pan-x pan-y !important;
   }
 
-  /* Permetti selezione testo */
   * {
     -webkit-touch-callout: default;
     -webkit-user-select: auto;
     user-select: auto;
   }
 
-  /* Disabilita su elementi interattivi */
   button,
   a,
   [role="button"],
