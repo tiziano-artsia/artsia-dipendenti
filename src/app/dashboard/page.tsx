@@ -515,7 +515,7 @@ export default function Dashboard() {
                                     description: 'Approva richieste'
                                 }
                             ]: []),
-                           {
+                            {
                                 href: '/dashboard/documenti',
                                 label: 'Documenti',
                                 icon: Archive,
