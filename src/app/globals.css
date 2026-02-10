@@ -3,6 +3,21 @@
 @theme {
   --font-sans: system-ui, sans-serif;
 }
+/* Safe area bottom per iOS home indicator */
+.pb-safe {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+.pt-safe-mobile {
+  padding-top: env(safe-area-inset-top, 0px);
+}
+
+/* Desktop: rimuovi padding */
+@media (min-width: 769px) {
+  .pt-safe-mobile {
+    padding-top: 0 !important;
+  }
+}
 
 
 /* ==================== iOS Gestures ==================== */
