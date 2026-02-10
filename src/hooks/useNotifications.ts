@@ -1,4 +1,4 @@
-// hooks/useNotifications.ts - VERSIONE CON DEBUG COMPLETO
+// hooks/useNotifications.ts - VERSIONE AGGIORNATA CON SW LISTENER
 
 'use client';
 
@@ -12,7 +12,6 @@ import {
 import { useEffect, useCallback, useRef } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 
-// ✅ Chiavi localStorage
 const PERMISSION_STORAGE_KEY = 'artsia_notification_permission';
 const PERMISSION_REQUESTED_KEY = 'artsia_permission_requested';
 
@@ -31,7 +30,7 @@ function urlBase64ToUint8Array(base64String: string): Uint8Array {
 
 function playNotificationSound() {
     try {
-        const audio = new Audio('/notification-sound.mp3');
+        const audio = new Audio('/notification.mp3');
         audio.volume = 0.5;
         audio.play().catch(err => console.warn('⚠️ Errore riproduzione suono:', err));
     } catch (error) {
@@ -107,7 +106,6 @@ export function useNotifications() {
         console.log('📲 Standalone PWA:', isStandalone);
 
         if (isIOS) {
-            // Estrai versione iOS
             const match = navigator.userAgent.match(/OS (\d+)_(\d+)/);
             if (match) {
                 const version = `${match[1]}.${match[2]}`;
@@ -201,7 +199,6 @@ export function useNotifications() {
     const requestPermission = useCallback(async () => {
         console.group('🔔 REQUEST PERMISSION - START');
 
-        // ✅ Verifica prerequisiti
         console.log('1️⃣ Verifica prerequisiti...');
 
         if (!window.isSecureContext) {
@@ -226,12 +223,7 @@ export function useNotifications() {
         }
 
         console.log('✅ Prerequisiti OK');
-        console.log('   - Secure context:', window.isSecureContext);
-        console.log('   - Notification API:', true);
-        console.log('   - ServiceWorker API:', true);
-        console.log('   - User authenticated:', true);
 
-        // ✅ Verifica permesso salvato
         console.log('2️⃣ Verifica permesso salvato...');
         const storedPermission = getPermissionFromStorage();
         console.log('   Stored permission:', storedPermission);
@@ -281,7 +273,6 @@ export function useNotifications() {
             return false;
         }
 
-        // ✅ Richiesta permesso
         try {
             console.log('3️⃣ Richiesta permesso al browser...');
             console.log('   Permission PRIMA della richiesta:', Notification.permission);
@@ -291,26 +282,19 @@ export function useNotifications() {
             console.log('   Permission DOPO la richiesta:', result);
             console.log('   Browser Notification.permission:', Notification.permission);
 
-            // ✅ Gestisci i 3 casi
             if (result === 'granted') {
                 console.log('✅ GRANTED - Permesso concesso!');
                 savePermissionToStorage('granted');
                 setPermission('granted');
             } else if (result === 'denied') {
                 console.error('❌ DENIED - Permesso negato!');
-                console.error('   Possibili cause:');
-                console.error('   1. Hai cliccato "Blocca" o "Non consentire"');
-                console.error('   2. iOS < 16.4 (controlla versione iOS sopra)');
-                console.error('   3. Non sei su HTTPS/localhost');
-                console.error('   4. Permesso bloccato nelle impostazioni browser');
                 savePermissionToStorage('denied');
                 setPermission('denied');
                 console.groupEnd();
                 return false;
             } else if (result === 'default') {
-                console.warn('⚠️ DEFAULT - Utente ha ignorato il popup (iOS)');
+                console.warn('⚠️ DEFAULT - Utente ha ignorato il popup');
                 setPermission('default');
-                // NON salvare in localStorage
                 console.groupEnd();
                 return false;
             }
@@ -333,12 +317,12 @@ export function useNotifications() {
 
                 if (!vapidPublicKey) {
                     console.error('❌ VAPID public key mancante in .env.local');
-                    console.error('   Aggiungi: NEXT_PUBLIC_VAPID_PUBLIC_KEY=...');
                     console.groupEnd();
                     return false;
                 }
 
                 console.log('   VAPID key presente:', vapidPublicKey.substring(0, 20) + '...');
+
 
                 subscription = await registration.pushManager.subscribe({
                     userVisibleOnly: true,
@@ -373,7 +357,6 @@ export function useNotifications() {
             console.error('   Message:', error.message);
             console.error('   Stack:', error.stack);
 
-            // Fallback: verifica se il browser ha comunque granted
             if (Notification.permission === 'granted') {
                 console.log('⚠️ Errore ma permesso browser è "granted", salvo comunque');
                 savePermissionToStorage('granted');
@@ -467,14 +450,33 @@ export function useNotifications() {
         }
     }, [user, token, fetchNotifications, requestPermission, setNotifications]);
 
-    // ✅ Listener per messaggi dal Service Worker
+    // ✅ NUOVO: Listener per notifiche dal Service Worker (evento custom)
+    useEffect(() => {
+        if (!user || !token) return;
+
+        const handleSWNotification = (event: Event) => {
+            const customEvent = event as CustomEvent;
+            console.log('🔔 Notifica da SW ricevuta (custom event):', customEvent.detail);
+            fetchNotifications(false);
+            playNotificationSound();
+        };
+
+        window.addEventListener('sw-notification', handleSWNotification);
+
+        return () => {
+            window.removeEventListener('sw-notification', handleSWNotification);
+        };
+    }, [user, token, fetchNotifications]);
+
+    // ✅ Listener per messaggi dal Service Worker (MessageEvent)
     useEffect(() => {
         if (!user || !token) return;
 
         const handleMessage = (event: MessageEvent) => {
             if (event.data?.type === 'NEW_NOTIFICATION') {
-                console.log('🔔 Nuova notifica ricevuta dal SW');
-                fetchNotifications(true);
+                console.log('🔔 Nuova notifica ricevuta dal SW (MessageEvent)');
+                fetchNotifications(false);
+                playNotificationSound();
             }
         };
 

@@ -24,6 +24,11 @@ export function CapacitorInitializer() {
                 console.warn('StatusBar non disponibile:', error);
             }
 
+            // ✅ Abilita gesture iOS (swipe back/forward)
+            if (Capacitor.getPlatform() === 'ios') {
+                enableIOSGestures();
+            }
+
             // Listener app state
             App.addListener('appStateChange', ({ isActive }) => {
                 console.log('📱 App state:', isActive ? 'foreground' : 'background');
@@ -60,4 +65,45 @@ export function CapacitorInitializer() {
     }, []);
 
     return null;
+}
+
+/**
+ * Abilita gesture native iOS (swipe back/forward)
+ */
+function enableIOSGestures() {
+    try {
+        // Abilita overscroll per gesture
+        const style = document.createElement('style');
+        style.id = 'ios-gestures';
+        style.innerHTML = `
+            html, body {
+                overscroll-behavior-x: auto !important;
+                -webkit-overflow-scrolling: touch !important;
+            }
+            
+            body {
+                touch-action: pan-x pan-y !important;
+            }
+            
+            /* Permetti selezione testo generale */
+            * {
+                -webkit-touch-callout: default;
+                -webkit-user-select: auto;
+                user-select: auto;
+            }
+            
+            /* Disabilita su elementi interattivi */
+            button, a, [role="button"], input, select, textarea, [onclick] {
+                -webkit-touch-callout: none !important;
+                -webkit-user-select: none !important;
+                user-select: none !important;
+            }
+        `;
+
+        document.head.appendChild(style);
+        console.log('✅ Gesture iOS abilitate');
+
+    } catch (error) {
+        console.warn('❌ Errore abilitazione gesture iOS:', error);
+    }
 }

@@ -1,4 +1,4 @@
-// lib/push-notifications.ts
+
 import { Capacitor } from '@capacitor/core';
 import {
     PushNotifications,
@@ -32,9 +32,6 @@ export class PushNotificationService {
         }
     }
 
-    // ========================================
-    // NATIVE PUSH (iOS/Android)
-    // ========================================
 
     private static async initNativePush() {
         try {
