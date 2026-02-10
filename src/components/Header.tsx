@@ -278,86 +278,89 @@ export default function Header() {
             </header>
 
             <header className="md:hidden sticky top-0 z-40">
-                {/* ✅ Background esteso che copre Dynamic Island */}
-                <div className="absolute inset-0 -top-20 bg-white/95 backdrop-blur-xl" />
+                {/* ✅ Background blur esteso che copre Dynamic Island */}
+                <div className="absolute inset-0 -top-20 bg-white/95 backdrop-blur-xl border-b border-gray-100/50" />
 
-                {/* ✅ Contenuto con safe area */}
-                <div className="relative pt-safe">
-                    <div className="px-4 py-3 border-b border-gray-100/50 shadow-sm">
-                        <Link href="/dashboard" className="flex items-center gap-2 justify-start">
-                            <div className="w-8 h-8 bg-white rounded-xl flex items-center justify-center p-1.5 shadow-lg border border-gray-200">
-                                <img
-                                    src="https://www.artsia.it/assets/images/logos/logo-artsia.svg"
-                                    alt="Artsia"
-                                    className="w-full h-full object-contain"
-                                />
-                            </div>
-                            <h1 className="text-lg font-bold text-gray-900">
-                                Artsia
-                            </h1>
-                        </Link>
-                    </div>
+                {/* ✅ Contenuto */}
+                <div className="relative pt-safe px-4 py-3">
+                    <Link href="/dashboard" className="flex items-center gap-2 justify-start">
+                        <div className="w-8 h-8 bg-white rounded-xl flex items-center justify-center p-1.5 shadow-lg border border-gray-200">
+                            <img
+                                src="https://www.artsia.it/assets/images/logos/logo-artsia.svg"
+                                alt="Artsia"
+                                className="w-full h-full object-contain"
+                            />
+                        </div>
+                        <h1 className="text-lg font-bold text-gray-900">
+                            Artsia
+                        </h1>
+                    </Link>
                 </div>
             </header>
 
 
-            {/* ✅ Bottom Navigation Mobile */}
             {user && (
-                <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-white/98 backdrop-blur-xl border-t border-gray-200 z-50 pb-safe shadow-lg p-5">                    <div className="grid grid-cols-4 h-16">
-                        {/* Home */}
-                        <Link
-                            href="/dashboard"
-                            className={`flex flex-col items-center justify-center gap-1 transition-colors ${
-                                pathname === '/dashboard' || pathname === '/dashboard/'
-                                    ? 'text-purple-600'
-                                    : 'text-gray-500'
-                            }`}
-                        >
-                            <Home className="w-6 h-6" />
-                            <span className="text-xs font-medium">Home</span>
-                        </Link>
+                <nav className="md:hidden fixed bottom-0 left-0 right-0 z-50">
+                    {/* ✅ Background blur esteso che copre Home Indicator */}
+                    <div className="absolute inset-0 -bottom-10 bg-white/98 backdrop-blur-xl border-t border-gray-200 shadow-lg" />
 
-                        {/* Assenze */}
-                        <Link
-                            href="/dashboard/miei-dati"
-                            className={`flex flex-col items-center justify-center gap-1 transition-colors ${
-                                pathname.startsWith('/dashboard/miei-dati')
-                                    ? 'text-purple-600'
-                                    : 'text-gray-500'
-                            }`}
-                        >
-                            <Calendar className="w-6 h-6" />
-                            <span className="text-xs font-medium">Assenze</span>
-                        </Link>
+                    {/* ✅ Contenuto con safe area */}
+                    <div className="relative px-5 pt-3 pb-safe">
+                        <div className="grid grid-cols-4 h-16">
+                            {/* Home */}
+                            <Link
+                                href="/dashboard"
+                                className={`flex flex-col items-center justify-center gap-1 transition-colors ${
+                                    pathname === '/dashboard' || pathname === '/dashboard/'
+                                        ? 'text-purple-600'
+                                        : 'text-gray-500'
+                                }`}
+                            >
+                                <Home className="w-6 h-6" />
+                                <span className="text-xs font-medium">Home</span>
+                            </Link>
 
-                        {/* Notifiche */}
-                        <button
-                            ref={buttonRef}
-                            onClick={toggleDropdown}
-                            onTouchEnd={toggleDropdown}
-                            className={`relative flex flex-col items-center justify-center gap-1 transition-colors ${
-                                isDropdownOpen ? 'text-purple-600' : 'text-gray-500'
-                            }`}
-                        >
-                            <Bell className="w-6 h-6" />
-                            {unreadCount > 0 && (
-                                <span className="absolute top-1 right-1/4 bg-red-500 text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center">
-                                    {unreadCount > 9 ? '9+' : unreadCount}
-                                </span>
-                            )}
-                            <span className="text-xs font-medium">Notifiche</span>
-                        </button>
+                            {/* Assenze */}
+                            <Link
+                                href="/dashboard/miei-dati"
+                                className={`flex flex-col items-center justify-center gap-1 transition-colors ${
+                                    pathname.startsWith('/dashboard/miei-dati')
+                                        ? 'text-purple-600'
+                                        : 'text-gray-500'
+                                }`}
+                            >
+                                <Calendar className="w-6 h-6" />
+                                <span className="text-xs font-medium">Assenze</span>
+                            </Link>
 
-
-                        <div className="flex flex-col items-center justify-center gap-1 text-gray-600">
-                            <div className="w-7 h-7 rounded-full bg-gradient-to-br from-purple-600 to-blue-600 flex items-center justify-center text-xs font-bold text-white shadow-sm">
-                                {user ? getInitials(user.name) : 'U'}
-                            </div>
-                            <span className="text-xs font-medium truncate max-w-[60px]">
-                            {user ? user.name.split(' ')[0] : 'Utente'}
+                            {/* Notifiche */}
+                            <button
+                                ref={buttonRef}
+                                onClick={toggleDropdown}
+                                onTouchEnd={toggleDropdown}
+                                className={`relative flex flex-col items-center justify-center gap-1 transition-colors ${
+                                    isDropdownOpen ? 'text-purple-600' : 'text-gray-500'
+                                }`}
+                            >
+                                <Bell className="w-6 h-6" />
+                                {unreadCount > 0 && (
+                                    <span className="absolute top-0 right-1/4 bg-red-500 text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center">
+                            {unreadCount > 9 ? '9+' : unreadCount}
                         </span>
-                        </div>
+                                )}
+                                <span className="text-xs font-medium">Notifiche</span>
+                            </button>
 
+                            {/* Profilo */}
+                            <div className="flex flex-col items-center justify-center gap-1 text-gray-600">
+                                <div className="w-7 h-7 rounded-full bg-gradient-to-br from-purple-600 to-blue-600 flex items-center justify-center text-xs font-bold text-white shadow-sm">
+                                    {user ? getInitials(user.name) : 'U'}
+                                </div>
+                                <span className="text-xs font-medium truncate max-w-[60px]">
+                        {user ? user.name.split(' ')[0] : 'Utente'}
+                    </span>
+                            </div>
+                        </div>
                     </div>
 
                     {/* Dropdown Notifiche Mobile */}
