@@ -277,12 +277,8 @@ export default function Header() {
                 </div>
             </header>
 
-            <header className="md:hidden sticky top-0 z-40">
-                {/* ✅ Background blur esteso che copre Dynamic Island */}
-                <div className="absolute inset-0 -top-20 bg-white/95 backdrop-blur-xl border-b border-gray-100/50" />
-
-                {/* ✅ Contenuto */}
-                <div className="relative pt-safe px-4 py-3">
+            <header className="md:hidden bg-white backdrop-blur-xl shadow-sm border-b border-gray-200 sticky top-0 z-40 pt-safe">
+                <div className="px-4 py-3">
                     <Link href="/dashboard" className="flex items-center gap-2 justify-start">
                         <div className="w-8 h-8 bg-white rounded-xl flex items-center justify-center p-1.5 shadow-lg border border-gray-200">
                             <img
@@ -300,12 +296,8 @@ export default function Header() {
 
 
             {user && (
-                <nav className="md:hidden fixed bottom-0 left-0 right-0 z-50">
-                    {/* ✅ Background blur esteso che copre Home Indicator */}
-                    <div className="absolute inset-0 -bottom-10 bg-white/98 backdrop-blur-xl border-t border-gray-200 shadow-lg" />
-
-                    {/* ✅ Contenuto con safe area */}
-                    <div className="relative px-5 pt-3 pb-safe">
+                <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-white backdrop-blur-xl border-t border-gray-200 z-50 shadow-lg pb-safe">
+                    <div className="px-5 pt-3 pb-3">
                         <div className="grid grid-cols-4 h-16">
                             {/* Home */}
                             <Link
@@ -373,7 +365,7 @@ export default function Header() {
 
                             <div
                                 ref={dropdownRef}
-                                className="fixed left-4 right-4 bottom-20 bg-white shadow-2xl rounded-2xl border border-gray-200 z-50 max-h-[70vh] flex flex-col overflow-hidden"
+                                className="fixed left-4 right-4 bottom-24 bg-white shadow-2xl rounded-2xl border border-gray-200 z-50 max-h-[70vh] flex flex-col overflow-hidden"
                             >
                                 <div className="bg-gradient-to-r from-purple-600 to-blue-600 px-4 py-4 flex items-center justify-between flex-shrink-0 rounded-t-2xl">
                                     <h3 className="text-white font-semibold text-lg">Notifiche</h3>
@@ -440,6 +432,7 @@ export default function Header() {
                     )}
                 </nav>
             )}
+
 
             {/* Banner Permessi - Solo Desktop */}
             {showPermissionBanner && permission !== 'granted' && (
