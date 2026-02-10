@@ -324,7 +324,7 @@ export default function Header() {
                                 <span className="text-xs font-medium">Home</span>
                             </Link>
 
-                            {/* Assenze */}
+                            {/* Richieste */}
                             <Link
                                 href="/dashboard/miei-dati"
                                 className={`flex flex-col items-center justify-center gap-1 py-2 rounded-xl transition-colors ${
@@ -334,7 +334,7 @@ export default function Header() {
                                 }`}
                             >
                                 <Calendar className="w-6 h-6" />
-                                <span className="text-xs font-medium">Assenze</span>
+                                <span className="text-xs font-medium">Richieste</span>
                             </Link>
 
                             {/* Notifiche */}

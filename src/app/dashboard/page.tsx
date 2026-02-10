@@ -487,10 +487,96 @@ export default function Dashboard() {
 
                 {/* Quick Actions */}
                 <div className="bg-white/60 backdrop-blur-3xl rounded-2xl sm:rounded-3xl shadow-2xl p-5 sm:p-6 md:p-10 border border-white/70 hover:shadow-3xl transition-all duration-700">
-                    <h2 className="text-2xl sm:text-3xl md:text-4xl font-black tracking-tight mb-6 sm:mb-8 md:mb-10 bg-gradient-to-r from-zinc-800 to-slate-700 bg-clip-text text-transparent">
+                    <h2 className="text-2xl sm:text-3xl md:text-4xl font-black tracking-tight mb-4 sm:mb-8 md:mb-10 bg-gradient-to-r from-zinc-800 to-slate-700 bg-clip-text text-transparent">
                         Azioni Rapide
                     </h2>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 md:gap-6">
+
+                    {/* Mobile: Scroll Orizzontale */}
+                    <div className="sm:hidden overflow-x-auto -mx-5 px-5 pb-2 scrollbar-hide">
+                        <div className="flex gap-3 pb-2">
+                            {[
+                                ...(!isAdmin ? [{
+                                    href: '/dashboard/miei-dati',
+                                    label: 'Le mie Richieste',
+                                    icon: FileText,
+                                    color: 'from-blue-500 to-indigo-600',
+                                    description: 'Gestisci le tue assenze'
+                                }] : []),
+                                {
+                                    href: '/dashboard/calendario',
+                                    label: 'Calendario',
+                                    icon: Calendar,
+                                    color: 'from-purple-500 to-violet-600',
+                                    description: 'Visualizza le date'
+                                },
+                                ...(isAdmin ? [
+                                    {
+                                        href: '/dashboard/approvazioni',
+                                        label: 'Approvazioni',
+                                        icon: CheckCircle,
+                                        color: 'from-emerald-500 to-green-600',
+                                        description: 'Approva richieste'
+                                    }
+                                ]: []),
+                                {
+                                    href: '/dashboard/documenti',
+                                    label: 'Documenti',
+                                    icon: Archive,
+                                    color: 'from-orange-500 to-red-600',
+                                    description: 'Documenti'
+                                }
+                            ].map(({ href, label, icon: Icon, color, description }) => (
+                                <a
+                                    key={label}
+                                    href={href}
+                                    className="group relative p-5 bg-white/80 backdrop-blur-xl border border-zinc-200/50 rounded-2xl shadow-lg active:scale-95 transition-all duration-300 w-[150px] flex-shrink-0 flex flex-col items-center text-center"
+                                >
+                                    <div className={`absolute inset-0 bg-gradient-to-br ${color} opacity-0 group-active:opacity-5 transition-opacity duration-300 rounded-2xl`} />
+
+                                    <div className="relative z-10 w-full">
+                                        <div className={`w-14 h-14 bg-gradient-to-br ${color} rounded-xl flex items-center justify-center mb-3 shadow-xl mx-auto border border-white/50`}>
+                                            <Icon className="w-6 h-6 text-white drop-shadow-lg" />
+                                        </div>
+
+                                        <h3 className="text-sm font-black text-zinc-800 mb-1.5 line-clamp-2 min-h-[2.5rem]">
+                                            {label}
+                                        </h3>
+
+                                        <p className="text-xs text-zinc-600 line-clamp-2">
+                                            {description}
+                                        </p>
+                                    </div>
+                                </a>
+                            ))}
+
+                            {/* Aggiungi Dipendente Mobile */}
+                            {(user?.role === 'manager' || user?.role === 'admin') && (
+                                <div
+                                    onClick={() => setShowAddEmployeeModal(true)}
+                                    className="group relative p-5 bg-white/80 backdrop-blur-xl border border-zinc-200/50 rounded-2xl shadow-lg active:scale-95 transition-all duration-300 w-[150px] flex-shrink-0 flex flex-col items-center text-center cursor-pointer"
+                                >
+                                    <div className="absolute inset-0 bg-gradient-to-br from-emerald-500 to-green-600 opacity-0 group-active:opacity-5 transition-opacity duration-300 rounded-2xl" />
+
+                                    <div className="relative z-10 w-full">
+                                        <div className="w-14 h-14 bg-gradient-to-br from-emerald-500 to-green-600 rounded-xl flex items-center justify-center mb-3 shadow-xl mx-auto border border-white/50">
+                                            <Briefcase className="w-6 h-6 text-white drop-shadow-lg" />
+                                        </div>
+
+                                        <h3 className="text-sm font-black text-zinc-800 mb-1.5 line-clamp-2 min-h-[2.5rem]">
+                                            Aggiungi Dipendente
+                                        </h3>
+
+                                        <p className="text-xs text-zinc-600 line-clamp-2">
+                                            Inserisci un nuovo dipendente
+                                        </p>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+
+                    {/* Tablet/Desktop: Grid */}
+                    <div className="hidden sm:grid sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
                         {[
                             ...(!isAdmin ? [{
                                 href: '/dashboard/miei-dati',
@@ -523,64 +609,66 @@ export default function Dashboard() {
                                 description: 'Documenti'
                             }
                         ].map(({ href, label, icon: Icon, color, description }) => (
-
                             <a
                                 key={label}
                                 href={href}
-                                className="group relative p-5 sm:p-6 md:p-8 bg-white/80 backdrop-blur-xl border border-zinc-200/50 rounded-2xl sm:rounded-3xl hover:shadow-2xl hover:border-white/90 hover:-translate-y-1 sm:hover:-translate-y-2 transition-all duration-500 overflow-hidden flex flex-col items-center text-center active:scale-95"
+                                className="group relative p-6 md:p-8 bg-white/80 backdrop-blur-xl border border-zinc-200/50 rounded-2xl sm:rounded-3xl hover:shadow-2xl hover:border-white/90 hover:-translate-y-2 transition-all duration-500 overflow-hidden flex flex-col items-center text-center"
                             >
                                 <div className={`absolute inset-0 bg-gradient-to-br ${color} opacity-0 group-hover:opacity-5 transition-opacity duration-500`} />
 
                                 <div className="relative z-10 w-full">
-                                    <div className={`w-14 h-14 sm:w-16 sm:h-16 md:w-20 md:h-20 bg-gradient-to-br ${color} rounded-xl sm:rounded-2xl flex items-center justify-center mb-4 sm:mb-5 md:mb-6 shadow-xl group-hover:shadow-2xl group-hover:scale-110 transition-all duration-500 mx-auto border border-white/50`}>
-                                        <Icon className="w-6 h-6 sm:w-7 sm:h-7 md:w-9 md:h-9 text-white drop-shadow-lg" />
+                                    <div className={`w-16 h-16 md:w-20 md:h-20 bg-gradient-to-br ${color} rounded-2xl flex items-center justify-center mb-5 md:mb-6 shadow-xl group-hover:shadow-2xl group-hover:scale-110 transition-all duration-500 mx-auto border border-white/50`}>
+                                        <Icon className="w-7 h-7 md:w-9 md:h-9 text-white drop-shadow-lg" />
                                     </div>
 
-                                    <h3 className="text-base sm:text-lg md:text-xl font-black text-zinc-800 mb-2 sm:mb-3 group-hover:text-zinc-900 transition-colors">
+                                    <h3 className="text-lg md:text-xl font-black text-zinc-800 mb-3 group-hover:text-zinc-900 transition-colors">
                                         {label}
                                     </h3>
 
-                                    <p className="text-xs sm:text-sm text-zinc-600 font-light mb-3 sm:mb-4">
+                                    <p className="text-sm text-zinc-600 font-light mb-4">
                                         {description}
                                     </p>
 
-                                    <div className="inline-flex items-center gap-1.5 sm:gap-2 text-[10px] sm:text-xs font-mono tracking-wider uppercase opacity-75 group-hover:opacity-100 transition-opacity">
+                                    <div className="inline-flex items-center gap-2 text-xs font-mono tracking-wider uppercase opacity-75 group-hover:opacity-100 transition-opacity">
                                         <span>Apri</span>
-                                        <svg className="w-3 h-3 sm:w-4 sm:h-4 group-hover:translate-x-1 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <svg className="w-4 h-4 group-hover:translate-x-1 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                                         </svg>
                                     </div>
                                 </div>
                             </a>
                         ))}
-                        {
-                            user?.role === 'manager' || user?.role === 'admin' ? (
-                                <div
-                                    onClick={() => setShowAddEmployeeModal(true)}
-                                    className="group relative p-5 sm:p-6 md:p-8 bg-white/80 backdrop-blur-xl border border-zinc-200/50 rounded-2xl sm:rounded-3xl hover:shadow-2xl hover:border-white/90 hover:-translate-y-1 sm:hover:-translate-y-2 transition-all duration-500 overflow-hidden flex flex-col items-center text-center cursor-pointer active:scale-95"
-                                >
-                                    <div className="absolute inset-0 bg-gradient-to-br from-emerald-500 to-green-600 opacity-0 group-hover:opacity-5 transition-opacity duration-500" />
-                                    <div className="relative z-10 w-full">
-                                        <div className="w-14 h-14 sm:w-16 sm:h-16 md:w-20 md:h-20 bg-gradient-to-br from-emerald-500 to-green-600 rounded-xl sm:rounded-2xl flex items-center justify-center mb-4 sm:mb-5 md:mb-6 shadow-xl group-hover:shadow-2xl group-hover:scale-110 transition-all duration-500 mx-auto border border-white/50">
-                                            <Briefcase className="w-6 h-6 sm:w-7 sm:h-7 md:w-9 md:h-9 text-white drop-shadow-lg" />
-                                        </div>
-                                        <h3 className="text-base sm:text-lg md:text-xl font-black text-zinc-800 mb-2 sm:mb-3 group-hover:text-zinc-900 transition-colors">
-                                            Aggiungi Dipendente
-                                        </h3>
-                                        <p className="text-xs sm:text-sm text-zinc-600 font-light mb-3 sm:mb-4">
-                                            Inserisci un nuovo dipendente
-                                        </p>
-                                        <div className="inline-flex items-center gap-1.5 sm:gap-2 text-[10px] sm:text-xs font-mono tracking-wider uppercase opacity-75 group-hover:opacity-100 transition-opacity">
-                                            <span>Apri</span>
-                                            <svg className="w-3 h-3 sm:w-4 sm:h-4 group-hover:translate-x-1 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                                            </svg>
-                                        </div>
+
+                        {/* Aggiungi Dipendente Desktop */}
+                        {(user?.role === 'manager' || user?.role === 'admin') && (
+                            <div
+                                onClick={() => setShowAddEmployeeModal(true)}
+                                className="group relative p-6 md:p-8 bg-white/80 backdrop-blur-xl border border-zinc-200/50 rounded-2xl sm:rounded-3xl hover:shadow-2xl hover:border-white/90 hover:-translate-y-2 transition-all duration-500 overflow-hidden flex flex-col items-center text-center cursor-pointer"
+                            >
+                                <div className="absolute inset-0 bg-gradient-to-br from-emerald-500 to-green-600 opacity-0 group-hover:opacity-5 transition-opacity duration-500" />
+
+                                <div className="relative z-10 w-full">
+                                    <div className="w-16 h-16 md:w-20 md:h-20 bg-gradient-to-br from-emerald-500 to-green-600 rounded-2xl flex items-center justify-center mb-5 md:mb-6 shadow-xl group-hover:shadow-2xl group-hover:scale-110 transition-all duration-500 mx-auto border border-white/50">
+                                        <Briefcase className="w-7 h-7 md:w-9 md:h-9 text-white drop-shadow-lg" />
+                                    </div>
+
+                                    <h3 className="text-lg md:text-xl font-black text-zinc-800 mb-3 group-hover:text-zinc-900 transition-colors">
+                                        Aggiungi Dipendente
+                                    </h3>
+
+                                    <p className="text-sm text-zinc-600 font-light mb-4">
+                                        Inserisci un nuovo dipendente
+                                    </p>
+
+                                    <div className="inline-flex items-center gap-2 text-xs font-mono tracking-wider uppercase opacity-75 group-hover:opacity-100 transition-opacity">
+                                        <span>Apri</span>
+                                        <svg className="w-4 h-4 group-hover:translate-x-1 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                                        </svg>
                                     </div>
                                 </div>
-                            ) : null
-                        }
-
+                            </div>
+                        )}
                     </div>
                 </div>
             </div>
