@@ -4,6 +4,111 @@
   --font-sans: system-ui, sans-serif;
 }
 
+/* ==================== iOS Viewport & Safe Area Fix ==================== */
+
+/* Fix per iPhone con Dynamic Island */
+html {
+  width: 100%;
+  height: 100%;
+  height: -webkit-fill-available;
+  overflow-x: hidden;
+}
+
+body {
+  width: 100%;
+  min-height: 100vh;
+  min-height: -webkit-fill-available;
+  position: relative;
+  padding: 0;
+  margin: 0;
+  overflow-x: hidden;
+}
+
+/* ==================== CSS Variables ==================== */
+
+:root {
+  --sat: env(safe-area-inset-top, 0px);
+  --sab: env(safe-area-inset-bottom, 0px);
+  --sal: env(safe-area-inset-left, 0px);
+  --sar: env(safe-area-inset-right, 0px);
+  --header-height: calc(56px + var(--sat));
+  --bottom-nav-height: calc(64px + var(--sab));
+}
+
+@media (min-width: 768px) {
+  :root {
+    --sat: 0px;
+    --sab: 0px;
+    --header-height: 64px;
+    --bottom-nav-height: 0px;
+  }
+}
+
+/* ==================== Header con Dynamic Island Fix ==================== */
+
+header {
+  position: sticky;
+  top: 0;
+  z-index: 40;
+  background: white;
+}
+
+@media (max-width: 767px) {
+  header {
+    /* 44px minimo per Dynamic Island + safe area se maggiore */
+    padding-top: max(env(safe-area-inset-top, 0px), 44px) !important;
+  }
+}
+
+@media (min-width: 768px) {
+  header {
+    padding-top: 0 !important;
+  }
+}
+
+/* ==================== Main Content ==================== */
+
+main {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  overflow-y: auto;
+  overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
+}
+
+@media (max-width: 767px) {
+  main {
+    /* Altezza disponibile meno header e bottom nav */
+    min-height: calc(100vh - var(--header-height) - var(--bottom-nav-height));
+    padding-bottom: var(--bottom-nav-height);
+  }
+}
+
+@media (min-width: 768px) {
+  main {
+    min-height: calc(100vh - var(--header-height));
+    padding-bottom: 0;
+  }
+}
+
+/* ==================== Bottom Navigation ==================== */
+
+nav[class*="fixed bottom-0"] {
+  z-index: 50;
+}
+
+@media (max-width: 767px) {
+  nav[class*="fixed bottom-0"] {
+    padding-bottom: max(env(safe-area-inset-bottom, 0px), 16px) !important;
+  }
+}
+
+@media (min-width: 768px) {
+  nav[class*="fixed bottom-0"] {
+    display: none;
+  }
+}
 
 /* ==================== Scrollbar Hide ==================== */
 
@@ -110,14 +215,6 @@
     -webkit-user-select: auto;
     user-select: auto;
   }
-
-  /* Fix scroll su modal/dropdown */
-  .modal-open,
-  .dropdown-open {
-    position: fixed;
-    width: 100%;
-    overflow: hidden;
-  }
 }
 
 /* ==================== Z-Index Layers ==================== */
@@ -186,15 +283,6 @@
     -webkit-overflow-scrolling: touch;
     scroll-behavior: smooth;
   }
-
-  /* Safe area per header/footer */
-  header {
-    padding-top: env(safe-area-inset-top, 0);
-  }
-
-  nav[class*="fixed bottom-0"] {
-    padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 8px);
-  }
 }
 
 /* ==================== Desktop Optimizations ==================== */
@@ -234,18 +322,39 @@
 
 /* ==================== Utility Classes ==================== */
 
+/* Safe area utilities */
+.pt-safe {
+  padding-top: env(safe-area-inset-top, 0px);
+}
+
+.pb-safe {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+.mt-safe {
+  margin-top: env(safe-area-inset-top, 0px);
+}
+
+.mb-safe {
+  margin-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+@media (min-width: 768px) {
+  .pt-safe,
+  .pb-safe,
+  .mt-safe,
+  .mb-safe {
+    padding-top: 0 !important;
+    padding-bottom: 0 !important;
+    margin-top: 0 !important;
+    margin-bottom: 0 !important;
+  }
+}
+
 /* Backdrop blur iOS fix */
 .backdrop-blur-ios {
   -webkit-backdrop-filter: blur(12px);
   backdrop-filter: blur(12px);
-}
-
-/* Safe area variables */
-:root {
-  --sat: env(safe-area-inset-top, 0px);
-  --sab: env(safe-area-inset-bottom, 0px);
-  --sal: env(safe-area-inset-left, 0px);
-  --sar: env(safe-area-inset-right, 0px);
 }
 
 /* Touch action helpers */
@@ -272,25 +381,6 @@
   outline: 2px solid rgba(99, 102, 241, 0.5);
   outline-offset: 2px;
   border-radius: 0.5rem;
-}
-
-/* ==================== Print Styles ==================== */
-
-@media print {
-  header,
-  nav,
-  .no-print {
-    display: none !important;
-  }
-
-  body {
-    background: white;
-    color: black;
-  }
-
-  a {
-    text-decoration: underline;
-  }
 }
 
 /* ==================== Accessibility ==================== */
@@ -324,5 +414,24 @@
 @media (prefers-color-scheme: dark) {
   :root {
     color-scheme: dark;
+  }
+}
+
+/* ==================== Print Styles ==================== */
+
+@media print {
+  header,
+  nav,
+  .no-print {
+    display: none !important;
+  }
+
+  body {
+    background: white;
+    color: black;
+  }
+
+  a {
+    text-decoration: underline;
   }
 }

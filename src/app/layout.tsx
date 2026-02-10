@@ -8,6 +8,13 @@ export const metadata: Metadata = {
     description: 'Sistema di gestione dipendenti Artsia',
     applicationName: 'Artsia Dipendenti',
     manifest: '/manifest.json',
+    viewport: {
+        width: 'device-width',
+        initialScale: 1,
+        maximumScale: 1,
+        userScalable: false,
+        viewportFit: 'cover'
+    },
     appleWebApp: {
         capable: true,
         statusBarStyle: 'default',
@@ -26,6 +33,12 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     return (
         <html lang="it">
         <head>
+            {/* ✅ Meta viewport di backup per iOS */}
+            <meta
+                name="viewport"
+                content="viewport-fit=cover, width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
+            />
+
             {/* PWA */}
             <meta name="mobile-web-app-capable" content="yes" />
             <meta name="apple-mobile-web-app-capable" content="yes" />
@@ -37,11 +50,13 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             <link rel="apple-touch-icon" sizes="180x180" href="/logo-artsia.png" />
             <link rel="apple-touch-icon" sizes="167x167" href="/logo-artsia.png" />
 
-            {/* Splash Screens iOS (opzionale ma consigliato) */}
+            {/* Splash Screens iOS */}
             <link rel="apple-touch-startup-image" href="/logo-artsia.png" />
+
+            <meta name="format-detection" content="telephone=no" />
         </head>
 
-        <body>
+        <body className="overflow-x-hidden">
         <SWRegistration />
         <CapacitorInitializer />
         {children}

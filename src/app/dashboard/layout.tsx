@@ -1,10 +1,9 @@
-
 'use client';
 
 import { useAuth } from '@/hooks/useAuth';
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import {Loader2} from "lucide-react";
+import { Loader2 } from "lucide-react";
 import Header from "@/components/Header";
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
@@ -13,29 +12,29 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
     useEffect(() => {
         if (!loading && !user) {
-            // Reindirizza al login
-            const redirectUrl = new URL('/login', window.location.origin);
-            router.push(redirectUrl.toString());
+            router.push('/login');
         }
     }, [user, loading, router]);
 
     if (loading) {
         return (
-            <div className="min-h-screen flex items-center justify-center">
+            <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-50 to-gray-100">
                 <div className="text-center">
                     <Loader2 className="w-12 h-12 animate-spin mx-auto mb-4 text-indigo-600" />
-                    <p>Verifica autenticazione...</p>
+                    <p className="text-gray-600 text-sm">Verifica autenticazione...</p>
                 </div>
             </div>
         );
     }
 
-    if (!user) return null; // Il redirect è già in corso
+    if (!user) return null;
 
-    return    <>
-        <Header />
-        <main className="flex-1 h-auto min-h-screen overflow-y-auto">
-            {children}
-        </main>
-    </>;
+    return (
+        <div className="flex flex-col min-h-screen">
+            <Header />
+            <main className="flex-1 overflow-y-auto">
+                {children}
+            </main>
+        </div>
+    );
 }

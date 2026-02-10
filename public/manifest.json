@@ -1,57 +1,59 @@
 {
   "name": "Artsia Dipendenti Management",
-  "short_name": "Artsia Dipendenti",
+  "short_name": "Artsia",
   "description": "Sistema di gestione presenze e buste paga",
   "start_url": "/dashboard",
   "scope": "/",
   "display": "standalone",
   "background_color": "#ffffff",
   "theme_color": "#662D87",
-  "orientation": "portrait",
+  "orientation": "portrait-primary",
+  "dir": "ltr",
+  "lang": "it-IT",
   "categories": [
     "productivity",
     "business"
   ],
   "icons": [
     {
-      "src": "../icons/icon-48.webp",
-      "type": "image/png",
+      "src": "/icons/icon-48.webp",
+      "type": "image/webp",
       "sizes": "48x48",
-      "purpose": "any maskable"
+      "purpose": "any"
     },
     {
-      "src": "../icons/icon-72.webp",
-      "type": "image/png",
+      "src": "/icons/icon-72.webp",
+      "type": "image/webp",
       "sizes": "72x72",
-      "purpose": "any maskable"
+      "purpose": "any"
     },
     {
-      "src": "../icons/icon-96.webp",
-      "type": "image/png",
+      "src": "/icons/icon-96.webp",
+      "type": "image/webp",
       "sizes": "96x96",
-      "purpose": "any maskable"
+      "purpose": "any"
     },
     {
-      "src": "../icons/icon-128.webp",
-      "type": "image/png",
+      "src": "/icons/icon-128.webp",
+      "type": "image/webp",
       "sizes": "128x128",
-      "purpose": "any maskable"
+      "purpose": "any"
     },
     {
-      "src": "../icons/icon-192.webp",
-      "type": "image/png",
+      "src": "/icons/icon-192.webp",
+      "type": "image/webp",
       "sizes": "192x192",
       "purpose": "any maskable"
     },
     {
-      "src": "../icons/icon-256.webp",
-      "type": "image/png",
+      "src": "/icons/icon-256.webp",
+      "type": "image/webp",
       "sizes": "256x256",
-      "purpose": "any maskable"
+      "purpose": "any"
     },
     {
-      "src": "../icons/icon-512.webp",
-      "type": "image/png",
+      "src": "/icons/icon-512.webp",
+      "type": "image/webp",
       "sizes": "512x512",
       "purpose": "any maskable"
     }
@@ -64,8 +66,9 @@
       "url": "/dashboard",
       "icons": [
         {
-          "src": "/logo-artsia.png",
-          "sizes": "96x96"
+          "src": "/icons/icon-96.webp",
+          "sizes": "96x96",
+          "type": "image/webp"
         }
       ]
     },
@@ -76,8 +79,9 @@
       "url": "/dashboard/notifications",
       "icons": [
         {
-          "src": "/logo-artsia.png",
-          "sizes": "96x96"
+          "src": "/icons/icon-96.webp",
+          "sizes": "96x96",
+          "type": "image/webp"
         }
       ]
     },
@@ -88,10 +92,27 @@
       "url": "/dashboard/miei-dati",
       "icons": [
         {
-          "src": "/logo-artsia.png",
-          "sizes": "96x96"
+          "src": "/icons/icon-96.webp",
+          "sizes": "96x96",
+          "type": "image/webp"
         }
       ]
     }
-  ]
+  ],
+  "screenshots": [
+    {
+      "src": "/screenshots/dashboard.png",
+      "type": "image/png",
+      "sizes": "1170x2532",
+      "form_factor": "narrow",
+      "label": "Dashboard principale"
+    }
+  ],
+  "related_applications": [],
+  "prefer_related_applications": false,
+  "display_override": ["standalone", "fullscreen"],
+  "edge_side_panel": {},
+  "launch_handler": {
+    "client_mode": "focus-existing"
+  }
 }
