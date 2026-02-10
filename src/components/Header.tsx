@@ -3,7 +3,7 @@
 import { useAuth } from '@/hooks/useAuth';
 import { usePathname } from 'next/navigation';
 import Link from 'next/link';
-import { ArrowLeft, Bell, Home, Calendar, FileText, User } from 'lucide-react';
+import { ArrowLeft, Bell, Home, Calendar, X } from 'lucide-react';
 import { useNotifications } from '@/hooks/useNotifications';
 import { useAtom, useAtomValue } from 'jotai';
 import { unreadCountAtom, notificationDropdownAtom } from '@/lib/atoms/notificationAtoms';
@@ -136,6 +136,16 @@ export default function Header() {
         setIsDropdownOpen(!isDropdownOpen);
     };
 
+    // ✅ Genera iniziali per avatar
+    const getInitials = (name: string) => {
+        return name
+            .split(' ')
+            .map(n => n[0])
+            .join('')
+            .toUpperCase()
+            .slice(0, 2);
+    };
+
     return (
         <>
             {/* ✅ Header Desktop (top) */}
@@ -194,12 +204,10 @@ export default function Header() {
                                         ref={dropdownRef}
                                         className="absolute right-0 top-full mt-2 w-96 bg-white shadow-2xl rounded-2xl border border-gray-200 z-50 max-h-[32rem] flex flex-col overflow-hidden"
                                     >
-                                        {/* Header */}
                                         <div className="bg-gradient-to-r from-purple-600 to-blue-600 px-4 py-4 flex items-center justify-between flex-shrink-0 rounded-t-2xl">
                                             <h3 className="text-white font-semibold text-lg">Notifiche</h3>
                                         </div>
 
-                                        {/* Lista Notifiche */}
                                         <div className="flex-1 overflow-y-auto">
                                             {notifications.length === 0 ? (
                                                 <div className="px-4 py-12 text-center">
@@ -245,7 +253,6 @@ export default function Header() {
                                             )}
                                         </div>
 
-                                        {/* Footer */}
                                         {notifications.length > 0 && (
                                             <div className="bg-gray-50 px-4 py-3 text-center border-t border-gray-200 flex-shrink-0 rounded-b-2xl">
                                                 <Link
@@ -268,7 +275,7 @@ export default function Header() {
             {/* ✅ Header Mobile (top minimal - solo logo) */}
             <header className="md:hidden bg-white/70 backdrop-blur-md shadow-sm border-b border-gray-100/50 sticky top-0 z-40 pt-safe-mobile">
                 <div className="px-4 py-3">
-                    <Link href="/dashboard" className="flex items-center gap-2 justify-center">
+                    <Link href="/dashboard" className="flex items-center gap-2 justify-start">
                         <div className="w-8 h-8 bg-white rounded-xl flex items-center justify-center p-1.5 shadow-lg border border-gray-200">
                             <img
                                 src="https://www.artsia.it/assets/images/logos/logo-artsia.svg"
@@ -285,7 +292,7 @@ export default function Header() {
 
             {/* ✅ Bottom Navigation Mobile */}
             {user && (
-                <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 z-50 pb-safe">
+                <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-white/80 backdrop-blur-md border-t border-gray-200 z-50 pb-safe mt-5">
                     <div className="grid grid-cols-4 h-16">
                         {/* Home */}
                         <Link
@@ -324,25 +331,23 @@ export default function Header() {
                         >
                             <Bell className="w-6 h-6" />
                             {unreadCount > 0 && (
-                                <span className="absolute top-2 right-1/4 bg-red-500 text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center">
+                                <span className="absolute top-1 right-1/4 bg-red-500 text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center">
                                     {unreadCount > 9 ? '9+' : unreadCount}
                                 </span>
                             )}
                             <span className="text-xs font-medium">Notifiche</span>
                         </button>
 
-                        {/* Profilo */}
-                        <Link
-                            href="/dashboard/profile"
-                            className={`flex flex-col items-center justify-center gap-1 transition-colors ${
-                                pathname.startsWith('/dashboard/profile')
-                                    ? 'text-purple-600'
-                                    : 'text-gray-500'
-                            }`}
-                        >
-                            <User className="w-6 h-6" />
-                            <span className="text-xs font-medium">Profilo</span>
-                        </Link>
+
+                        <div className="flex flex-col items-center justify-center gap-1 text-gray-600">
+                            <div className="w-7 h-7 rounded-full bg-gradient-to-br from-purple-600 to-blue-600 flex items-center justify-center text-xs font-bold text-white shadow-sm">
+                                {user ? getInitials(user.name) : 'U'}
+                            </div>
+                            <span className="text-xs font-medium truncate max-w-[60px]">
+                            {user ? user.name.split(' ')[0] : 'Utente'}
+                        </span>
+                        </div>
+
                     </div>
 
                     {/* Dropdown Notifiche Mobile */}
@@ -447,7 +452,7 @@ export default function Header() {
                                 onClick={() => setShowPermissionBanner(false)}
                                 className="p-2 hover:bg-white/10 rounded-lg transition-colors"
                             >
-                                <Bell className="w-4 h-4" />
+                                <X className="w-4 h-4" />
                             </button>
                         </div>
                     </div>
