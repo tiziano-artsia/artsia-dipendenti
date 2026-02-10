@@ -277,27 +277,33 @@ export default function Header() {
                 </div>
             </header>
 
-            <header className="md:hidden bg-white/95 backdrop-blur-xl shadow-sm border-b border-gray-100/50 sticky top-0 z-40 ">
-                <div className="px-4 py-3">
-                    <Link href="/dashboard" className="flex items-center gap-2 justify-start">
-                        <div className="w-8 h-8 bg-white rounded-xl flex items-center justify-center p-1.5 shadow-lg border border-gray-200">
-                            <img
-                                src="https://www.artsia.it/assets/images/logos/logo-artsia.svg"
-                                alt="Artsia"
-                                className="w-full h-full object-contain"
-                            />
-                        </div>
-                        <h1 className="text-lg font-bold text-gray-900">
-                            Artsia
-                        </h1>
-                    </Link>
+            <header className="md:hidden sticky top-0 z-40">
+                {/* ✅ Background esteso che copre Dynamic Island */}
+                <div className="absolute inset-0 -top-20 bg-white/95 backdrop-blur-xl" />
+
+                {/* ✅ Contenuto con safe area */}
+                <div className="relative pt-safe">
+                    <div className="px-4 py-3 border-b border-gray-100/50 shadow-sm">
+                        <Link href="/dashboard" className="flex items-center gap-2 justify-start">
+                            <div className="w-8 h-8 bg-white rounded-xl flex items-center justify-center p-1.5 shadow-lg border border-gray-200">
+                                <img
+                                    src="https://www.artsia.it/assets/images/logos/logo-artsia.svg"
+                                    alt="Artsia"
+                                    className="w-full h-full object-contain"
+                                />
+                            </div>
+                            <h1 className="text-lg font-bold text-gray-900">
+                                Artsia
+                            </h1>
+                        </Link>
+                    </div>
                 </div>
             </header>
 
 
             {/* ✅ Bottom Navigation Mobile */}
             {user && (
-                <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-white/98 backdrop-blur-xl border-t border-gray-200 z-50  shadow-lg">                    <div className="grid grid-cols-4 h-16">
+                <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-white/98 backdrop-blur-xl border-t border-gray-200 z-50 pb-safe shadow-lg p-5">                    <div className="grid grid-cols-4 h-16">
                         {/* Home */}
                         <Link
                             href="/dashboard"
