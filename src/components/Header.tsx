@@ -26,8 +26,8 @@ export default function Header() {
     const dropdownRef = useRef<HTMLDivElement>(null);
     const buttonRef = useRef<HTMLButtonElement>(null);
 
-    const isDashboardHome = pathname === '/dashboard';
-    const showBackButton = !isDashboardHome && pathname.startsWith('/dashboard');
+    const showBackButton = pathname.startsWith('/dashboard') && pathname !== '/dashboard/';
+
 
     useEffect(() => {
         if (user && permission === 'default') {
@@ -134,7 +134,7 @@ export default function Header() {
         setIsDropdownOpen(false);
     };
 
-    // ✅ Toggle dropdown con preventDefault
+    // Toggle dropdown con preventDefault
     const toggleDropdown = (e: React.MouseEvent | React.TouchEvent) => {
         e.preventDefault();
         e.stopPropagation();
@@ -146,7 +146,7 @@ export default function Header() {
 
 
 
-            <header className="bg-white shadow-sm border-b border-gray-100 sticky top-0 z-40 mt-10">
+            <header className="bg-white shadow-sm border-b border-gray-100 sticky top-0 z-40">
                 <div className="max-w-7xl mx-auto px-4 md:px-6 py-3 md:py-4">
                     <div className="flex items-center justify-between">
 
