@@ -297,7 +297,7 @@ export default function Header() {
 
             {/* ✅ Bottom Navigation Mobile */}
             {user && (
-                <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-white/98 backdrop-blur-xl border-t border-gray-200 z-50 pb-safe shadow-lg">                    <div className="grid grid-cols-4 h-16">
+                <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-white/98 backdrop-blur-xl border-t border-gray-200 z-50  shadow-lg">                    <div className="grid grid-cols-4 h-16">
                         {/* Home */}
                         <Link
                             href="/dashboard"
