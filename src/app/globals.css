@@ -3,47 +3,74 @@
 @theme {
   --font-sans: system-ui, sans-serif;
 }
-/* Safe area bottom per iOS home indicator */
+
+/* ==================== Safe Area iOS ==================== */
 .pb-safe {
   padding-bottom: env(safe-area-inset-bottom, 0px);
 }
 
-.pt-safe-mobile {
+.pt-safe {
   padding-top: env(safe-area-inset-top, 0px);
 }
 
-/* Desktop: rimuovi padding */
+/* Desktop: rimuovi padding safe area */
 @media (min-width: 769px) {
-  .pt-safe-mobile {
+  .pt-safe {
     padding-top: 0 !important;
   }
+  .pb-safe {
+    padding-bottom: 0 !important;
+  }
 }
+
 /* ==================== Mobile Layout Fixes ==================== */
 
-/* Container principale con padding bottom per bottom nav */
 @media (max-width: 768px) {
-  /* Aggiungi spazio per bottom navigation */
-  main,
-  [class*="min-h-screen"] {
-    padding-bottom: calc(4rem + env(safe-area-inset-bottom, 0px)) !important;
-  }
-
-  /* Header più opaco quando scrolli */
+  /* ✅ Header completamente opaco con blur forte */
   header {
-    background: rgba(255, 255, 255, 0.98) !important;
-    backdrop-filter: blur(24px) saturate(180%) !important;
-    -webkit-backdrop-filter: blur(24px) saturate(180%) !important;
+    background: rgba(255, 255, 255, 1) !important; /* Opaco al 100% */
+    backdrop-filter: blur(20px) saturate(180%) !important;
+    -webkit-backdrop-filter: blur(20px) saturate(180%) !important;
+    border-bottom: 1px solid rgba(229, 231, 235, 1) !important;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05) !important;
   }
 
-  /* Bottom nav più opaco */
+  /* ✅ Bottom nav completamente opaco con blur forte */
   nav[class*="fixed bottom-0"] {
-    background: rgba(255, 255, 255, 0.98) !important;
-    backdrop-filter: blur(24px) saturate(180%) !important;
-    -webkit-backdrop-filter: blur(24px) saturate(180%) !important;
-    box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.05) !important;
+    background: rgba(255, 255, 255, 1) !important; /* Opaco al 100% */
+    backdrop-filter: blur(20px) saturate(180%) !important;
+    -webkit-backdrop-filter: blur(20px) saturate(180%) !important;
+    border-top: 1px solid rgba(229, 231, 235, 1) !important;
+    box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.08) !important;
+  }
+
+  /* ✅ Previeni overflow del contenuto sotto header */
+  body {
+    padding-top: 0 !important;
+  }
+
+  /* ✅ Main con padding corretto per header + bottom nav */
+  main {
+    /* Spazio per header (safe-area + altezza header) */
+    padding-top: calc(env(safe-area-inset-top, 0px) + 3.5rem) !important;
+    /* Spazio per bottom nav (altezza nav + safe-area) */
+    padding-bottom: calc(5.5rem + env(safe-area-inset-bottom, 0px)) !important;
+    min-height: 100vh;
+  }
+
+  /* ✅ Header con posizione sticky + z-index alto */
+  header {
+    position: sticky !important;
+    top: 0 !important;
+    z-index: 100 !important;
+    width: 100% !important;
+  }
+
+  /* ✅ Bottom nav con z-index alto */
+  nav[class*="fixed bottom-0"] {
+    z-index: 100 !important;
   }
 }
-
 
 /* ==================== iOS Gestures ==================== */
 
@@ -76,20 +103,55 @@
   }
 }
 
-/* Previeni content sotto Dynamic Island */
+/* ==================== iOS Specific Fixes ==================== */
+
 @supports (-webkit-touch-callout: none) {
-  /* È iOS */
   @media (max-width: 768px) {
+    /* ✅ Previeni scroll sotto Dynamic Island */
     body {
-      /* Previeni scroll sotto header */
       scroll-padding-top: calc(env(safe-area-inset-top, 0px) + 3.5rem);
     }
 
-    /* Header fisso con z-index alto */
-    header {
-      position: sticky;
-      top: 0;
-      z-index: 100;
+    /* ✅ Forza background solido su iOS */
+    header::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: white;
+      z-index: -1;
     }
+
+    nav[class*="fixed bottom-0"]::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: white;
+      z-index: -1;
+    }
+
+    /* ✅ Estendi background header fino a Dynamic Island */
+    header {
+      padding-top: env(safe-area-inset-top, 0px) !important;
+      margin-top: calc(-1 * env(safe-area-inset-top, 0px)) !important;
+    }
+
+    /* ✅ Estendi background bottom nav fino a home indicator */
+    nav[class*="fixed bottom-0"] {
+      padding-bottom: env(safe-area-inset-bottom, 0px) !important;
+    }
+  }
+}
+
+/* ==================== Dropdown Notifiche Mobile ==================== */
+
+@media (max-width: 768px) {
+  /* Dropdown sopra tutto */
+  [class*="fixed"][class*="bottom-24"] {
+    z-index: 110 !important;
+  }
+
+  /* Overlay backdrop */
+  [class*="fixed inset-0"][class*="bg-black"] {
+    z-index: 105 !important;
   }
 }
