@@ -306,7 +306,7 @@ export default function Header() {
             {/* Bottom Navigation Mobile - ✅ Padding fisso */}
             {user && (
                 <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 z-50 shadow-lg">
-                    <div className="px-5 pt-3 pb-5">
+                    <div className="p-2">
                         <div className="grid grid-cols-4 gap-1">
                             {/* Home */}
                             <Link
