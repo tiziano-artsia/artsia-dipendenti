@@ -754,14 +754,14 @@ export default function MieiDati() {
                                     ({getDurataLabel(form.tipo)})
                                 </span>
                             </label>
-                            <div className="flex flex-col sm:flex-row gap-4 sm:gap-6 items-stretch sm:items-center">
+                            <div className="flex flex-col sm:flex-row gap-4 sm:gap-6">
                                 <input
                                     type="number"
                                     min="1"
-                                    max={form.tipo === 'permesso' ? '8' : '30'}
+                                    max={form.tipo === 'permesso' ? '4' : ''}
                                     value={form.durata}
                                     onChange={(e) => setForm({ ...form, durata: e.target.value })}
-                                    className="flex-1 h-16 sm:h-20 px-6 sm:px-8 bg-white/80 backdrop-blur-xl border-2 border-zinc-200/50 rounded-xl sm:rounded-2xl text-3xl sm:text-4xl font-black focus:ring-4 focus:ring-emerald-500/20 focus:border-emerald-500 shadow-xl hover:shadow-2xl hover:border-emerald-300 transition-all text-center"
+                                    className="flex-1 min-h-[64px] sm:min-h-[80px] px-6 sm:px-8 bg-white/80 backdrop-blur-xl border-2 border-zinc-200/50 rounded-xl sm:rounded-2xl text-3xl sm:text-4xl font-black focus:ring-4 focus:ring-emerald-500/20 focus:border-emerald-500 shadow-xl hover:shadow-2xl hover:border-emerald-300 transition-all text-center"
                                     placeholder="1"
                                     required
                                 />
@@ -780,8 +780,8 @@ export default function MieiDati() {
                             </div>
                             <p className="text-xs sm:text-sm text-zinc-500 mt-3 sm:mt-4 font-mono tracking-wider flex items-center gap-2">
                                 <AlertCircle className="w-3 h-3 sm:w-4 sm:h-4" />
-                                {form.tipo === 'permesso' ? 'Max: 8 ore per giorno' :
-                                    form.tipo === 'malattia' ? 'Certificato medico richiesto oltre 3 giorni' :
+                                {form.tipo === 'permesso' ? 'Max: 7 ore per giorno' :
+                                    form.tipo === 'malattia' ? 'Certificato medico richiesto' :
                                         'Max: 30 giorni consecutivi'}
                             </p>
                         </div>
@@ -807,7 +807,7 @@ export default function MieiDati() {
                         <div className="flex flex-col sm:flex-row gap-4 sm:gap-6 pt-4 sm:pt-6">
                             <button
                                 type="submit"
-                                className="flex-1 h-16 sm:h-20 bg-gradient-to-r from-emerald-500 to-green-600 hover:from-emerald-600 hover:to-green-700 text-white font-black text-lg sm:text-xl md:text-2xl rounded-xl sm:rounded-2xl shadow-2xl hover:shadow-3xl hover:-translate-y-1 transition-all duration-500 flex items-center justify-center gap-3 sm:gap-4 backdrop-blur-xl border border-emerald-400/50 group active:scale-95"
+                                className="flex-1 min-h-[64px] sm:min-h-[80px] bg-gradient-to-r from-emerald-500 to-green-600 hover:from-emerald-600 hover:to-green-700 text-white font-black text-lg sm:text-xl md:text-2xl rounded-xl sm:rounded-2xl shadow-2xl hover:shadow-3xl hover:-translate-y-1 transition-all duration-500 flex items-center justify-center gap-3 sm:gap-4 backdrop-blur-xl border border-emerald-400/50 group active:scale-95"
                             >
                                 <Send className="w-5 h-5 sm:w-6 sm:h-6 group-hover:translate-x-1 transition-transform duration-300" />
                                 Invia Richiesta
@@ -815,7 +815,7 @@ export default function MieiDati() {
                             <button
                                 type="button"
                                 onClick={() => setForm({ tipo: '', dataInizio: '', durata: '', motivo: '' })}
-                                className="flex-1 h-16 sm:h-20 bg-gradient-to-r from-zinc-200 to-zinc-300 hover:from-zinc-300 hover:to-zinc-400 text-zinc-800 font-black text-base sm:text-lg md:text-xl rounded-xl sm:rounded-2xl shadow-xl hover:shadow-2xl hover:-translate-y-1 transition-all duration-500 flex items-center justify-center gap-2 sm:gap-3 backdrop-blur-xl border border-zinc-300/50 group active:scale-95"
+                                className="flex-1 min-h-[64px] sm:min-h-[80px] bg-gradient-to-r from-zinc-200 to-zinc-300 hover:from-zinc-300 hover:to-zinc-400 text-zinc-800 font-black text-base sm:text-lg md:text-xl rounded-xl sm:rounded-2xl shadow-xl hover:shadow-2xl hover:-translate-y-1 transition-all duration-500 flex items-center justify-center gap-2 sm:gap-3 backdrop-blur-xl border border-zinc-300/50 group active:scale-95"
                             >
                                 <RotateCcw className="w-4 h-4 sm:w-5 sm:h-5 group-hover:rotate-180 transition-transform duration-500" />
                                 Reset

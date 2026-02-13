@@ -492,8 +492,8 @@ export default function Dashboard() {
                     </h2>
 
                     {/* Mobile: Scroll Orizzontale */}
-                    <div className="sm:hidden overflow-x-auto -mx-5 px-5 pb-2 scrollbar-hide">
-                        <div className="flex gap-3 pb-2">
+                    <div className="sm:hidden overflow-x-auto  scrollbar-hide">
+                        <div className="flex gap-3 p-2">
                             {[
                                 ...(!isAdmin ? [{
                                     href: '/dashboard/miei-dati',
@@ -529,7 +529,7 @@ export default function Dashboard() {
                                 <a
                                     key={label}
                                     href={href}
-                                    className="group relative p-5 bg-white/80 backdrop-blur-xl border border-zinc-200/50 rounded-2xl shadow-lg active:scale-95 transition-all duration-300 w-[150px] flex-shrink-0 flex flex-col items-center text-center"
+                                    className="group relative p-5 bg-white/80 backdrop-blur-xl border border-zinc-200/50 rounded-2xl  active:scale-95 transition-all duration-300 w-[150px] flex-shrink-0 flex flex-col items-center text-center"
                                 >
                                     <div className={`absolute inset-0 bg-gradient-to-br ${color} opacity-0 group-active:opacity-5 transition-opacity duration-300 rounded-2xl`} />
 
@@ -553,7 +553,7 @@ export default function Dashboard() {
                             {(user?.role === 'manager' || user?.role === 'admin') && (
                                 <div
                                     onClick={() => setShowAddEmployeeModal(true)}
-                                    className="group relative p-5 bg-white/80 backdrop-blur-xl border border-zinc-200/50 rounded-2xl shadow-lg active:scale-95 transition-all duration-300 w-[150px] flex-shrink-0 flex flex-col items-center text-center cursor-pointer"
+                                    className="group relative p-5 bg-white/80 backdrop-blur-xl border border-zinc-200/50 rounded-2xl  active:scale-95 transition-all duration-300 w-[150px] flex-shrink-0 flex flex-col items-center text-center cursor-pointer"
                                 >
                                     <div className="absolute inset-0 bg-gradient-to-br from-emerald-500 to-green-600 opacity-0 group-active:opacity-5 transition-opacity duration-300 rounded-2xl" />
 
