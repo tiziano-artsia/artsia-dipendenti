@@ -1,20 +1,13 @@
 import './globals.css';
-import type {Metadata} from "next";
-import {CapacitorInitializer} from "@/components/CapacitorInitializer";
-import {SWRegistration} from "@/components/SWRegistration";
+import type { Metadata, Viewport } from "next";
+import { CapacitorInitializer } from "@/components/CapacitorInitializer";
+import { SWRegistration } from "@/components/SWRegistration";
 
 export const metadata: Metadata = {
     title: 'Artsia',
     description: 'Sistema di gestione dipendenti Artsia',
     applicationName: 'Artsia Dipendenti',
     manifest: '/manifest.json',
-    viewport: {
-        width: 'device-width',
-        initialScale: 1,
-        maximumScale: 1,
-        userScalable: false,
-        viewportFit: 'cover'
-    },
     appleWebApp: {
         capable: true,
         statusBarStyle: 'black-translucent',
@@ -23,21 +16,26 @@ export const metadata: Metadata = {
     formatDetection: {
         telephone: false,
     },
-    themeColor: '#662D87',
     icons: {
         apple: '/apple-touch-icon.png',
     },
+};
+
+// ✅ Separa viewport e themeColor
+export const viewport: Viewport = {
+    width: 'device-width',
+    initialScale: 1,
+    maximumScale: 1,
+    userScalable: false,
+    viewportFit: 'cover',
+    themeColor: '#662D87',
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
     return (
         <html lang="it">
         <head>
-            {/* ✅ Meta viewport di backup per iOS */}
-            <meta
-                name="viewport"
-                content="viewport-fit=cover, width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
-            />
+            {/* Rimosso meta viewport perché già gestito da export viewport */}
 
             {/* PWA */}
             <meta name="mobile-web-app-capable" content="yes" />
