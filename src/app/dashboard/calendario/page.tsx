@@ -1278,7 +1278,7 @@ export default function Calendario() {
                                                     const info = getInfoGiorno(giorno, mese, anno);
                                                     return info.isLavorativo;
                                                 })
-                                                .slice(0, 2) // Riduci a 2 su mobile
+                                                .slice(0, 4) // Riduci a 2 su mobile
                                                 .map((assenza, idx) => {
                                                     const employee = getEmployeeById(assenza.employeeId);
                                                     const nomeCompleto = employee?.name || `Dip.${assenza.employeeId}`;
@@ -1304,9 +1304,9 @@ export default function Calendario() {
                                         </div>
 
                                         {/* Badge per assenze extra */}
-                                        {assenzeGiorno.length > 2 && (
+                                        {assenzeGiorno.length > 3 && (
                                             <div className="absolute top-0.5 right-0.5 sm:top-1 sm:right-1 bg-red-500 text-white text-[9px] sm:text-xs rounded-full w-4 h-4 sm:w-5 sm:h-5 flex items-center justify-center font-bold shadow-lg z-20 border border-white">
-                                                +{assenzeGiorno.length - 2}
+                                                + {assenzeGiorno.length - 3}
                                             </div>
                                         )}
                                     </div>
@@ -1323,8 +1323,8 @@ export default function Calendario() {
 
             {/* Modale per dettagli assenze */}
             {modalAperto && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 md:p-6 bg-black/60 backdrop-blur-xl">
-                    <div className="bg-white/95 backdrop-blur-3xl rounded-2xl sm:rounded-3xl max-w-4xl w-full max-h-[90vh] sm:max-h-[85vh] overflow-hidden shadow-2xl border border-white/70">
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 md:p-6 bg-black/60 backdrop-blur-xl ">
+                    <div className="bg-white/95 backdrop-blur-3xl rounded-2xl sm:rounded-3xl max-w-4xl w-full max-h-[75vh] sm:max-h-[85vh] overflow-hidden shadow-2xl border border-white/70">
                         {/* Header modale */}
                         <div className="bg-gradient-to-r from-emerald-500 to-green-600 p-4 sm:p-6 md:p-8 flex justify-between items-start gap-3 border-b-4 border-emerald-400/50">
                             <div className="flex-1 min-w-0">
@@ -1346,7 +1346,7 @@ export default function Calendario() {
                         </div>
 
                         {/* Corpo modale con scroll */}
-                        <div className="p-4 sm:p-6 md:p-8 overflow-y-auto max-h-[calc(90vh-140px)] sm:max-h-[calc(90vh-180px)]">
+                        <div className="p-4 sm:p-6 md:p-8 overflow-y-auto max-h-[calc(90vh-140px)] sm:max-h-[calc(70vh-180px)]">
                             <div className="space-y-4 sm:space-y-6">
                                 {assenzeModale.map((assenza, idx) => {
                                     const employee = getEmployeeById(assenza.employeeId);
