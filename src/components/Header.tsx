@@ -120,26 +120,39 @@ export default function Header() {
     };
 
     const handleNotificationClick = async (notification: any) => {
+        // Chiudi il dropdown prima
+        setIsDropdownOpen(false);
+
+        // Marca come letta
         if (!notification.read) {
             await markAsRead(notification._id);
         }
 
-        setIsDropdownOpen(false);
-
-        if (notification.relatedRequestId) {
-            const user = JSON.parse(localStorage.getItem('user') || '{}');
-            window.location.href = user.role === 'admin' ? '/dashboard/approvazioni' : '/dashboard/miei-dati';
-        }
+        // ✅ Aggiungi timeout prima di navigare
+        setTimeout(() => {
+            if (notification.relatedRequestId) {
+                const user = JSON.parse(localStorage.getItem('user') || '{}');
+                window.location.href = user.role === 'admin' ? '/dashboard/approvazioni' : '/dashboard/miei-dati';
+            }
+        }, 100);
     };
 
     const toggleDropdown = (e: React.MouseEvent | React.TouchEvent) => {
         e.preventDefault();
         e.stopPropagation();
 
-        if (unreadCount > 0) {
-            setIsDropdownOpen(!isDropdownOpen);
-        } else {
-            router.push('/dashboard/notifications');
+        if (isDropdownOpen) {
+            window.location.href = '/dashboard/notifications';
+            setIsDropdownOpen(false);
+            return;
+        }
+
+      if (unreadCount > 0) {
+            setIsDropdownOpen(false);
+          window.location.href = '/dashboard/notifications';
+
+      } else {
+            window.location.href = '/dashboard/notifications';
         }
     };
 
@@ -199,6 +212,7 @@ export default function Header() {
                                 <button
                                     ref={buttonRef}
                                     onClick={toggleDropdown}
+                                    disabled={isDropdownOpen}
                                     className="relative p-2 hover:bg-gray-100 active:bg-gray-200 rounded-xl transition-colors"
                                     aria-label="Notifiche"
                                     title={unreadCount > 0 ? 'Mostra notifiche' : 'Vai a tutte le notifiche'}
@@ -258,14 +272,16 @@ export default function Header() {
                                         </div>
 
                                         <div className="bg-gray-50 px-4 py-3 text-center border-t border-gray-200 flex-shrink-0 rounded-b-2xl">
-                                            <Link
-                                                href="/dashboard/notifications"
+                                            <button
+                                                onClick={() => {
+                                                    setIsDropdownOpen(false);
+                                                }}
                                                 className="text-sm text-purple-600 hover:text-purple-700 font-medium"
-                                                onClick={() => setIsDropdownOpen(false)}
                                             >
                                                 Vedi tutte
-                                            </Link>
+                                            </button>
                                         </div>
+
                                     </div>
                                 )}
                             </div>
