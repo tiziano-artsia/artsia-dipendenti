@@ -14,7 +14,7 @@ export interface Absence {
     id: number;
     employeeId: number;
     type: 'ferie' | 'permesso' | 'smartworking';
-    dataInizio: string; // YYYY-MM-DD
+    dataInizio: string;
     durata: number;
     motivo: string;
     status: 'pending' | 'approved' | 'rejected';

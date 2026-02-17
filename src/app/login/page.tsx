@@ -43,7 +43,7 @@ export default function LoginPage() {
         }
     };
 
-    // ✅ Nome biometria per UI
+    // Nome biometria per UI
     const getBiometryName = () => {
         switch (biometryType) {
             case BiometryType.FACE_ID: return 'Face ID';
@@ -53,7 +53,7 @@ export default function LoginPage() {
         }
     };
 
-    // ✅ Login con Face ID/Touch ID
+    // Login con Face ID/Touch ID
     const handleBiometricLogin = async () => {
         setLoading(true);
         setError('');
@@ -97,7 +97,7 @@ export default function LoginPage() {
         }
     };
 
-    // ✅ Login tradizionale con email/password
+    //  Login tradizionale con email/password
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setLoading(true);
@@ -117,7 +117,7 @@ export default function LoginPage() {
                 localStorage.setItem('user', JSON.stringify(data.user));
                 login(data.user, data.token);
 
-                // ✅ Salva credenziali in modo sicuro per Face ID futuro
+                //  Salva credenziali in modo sicuro per Face ID futuro
                 if (biometricAvailable) {
                     try {
                         await NativeBiometric.setCredentials({
@@ -170,7 +170,7 @@ export default function LoginPage() {
                         </div>
                     )}
 
-                    {/* ✅ Bottone Face ID/Touch ID */}
+                    {/* Bottone Face ID/Touch ID */}
                     {biometricAvailable && (
                         <>
                             <button
