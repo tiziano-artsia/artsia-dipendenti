@@ -32,7 +32,7 @@ export async function verifyAuth(request: NextRequest): Promise<AuthUser | null>
             return null;
         }
 
-        // ✅ CONVERTI ID IN STRINGA
+        // CONVERTI ID IN STRINGA
         return {
             id: String(decoded.id), // <-- IMPORTANTE: converte a stringa
             email: decoded.email,
