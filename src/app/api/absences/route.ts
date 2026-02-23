@@ -1,6 +1,13 @@
 // src/app/api/absences/route.ts
 import { NextRequest, NextResponse } from 'next/server';
-import { getAbsences, createAbsence, updateAbsenceStatus, getEmployeesByRole } from '@/lib/db';
+import {
+    getAbsences,
+    createAbsence,
+    updateAbsenceStatus,
+    getEmployeesByRole,
+    getEmployees,
+    EmployeeModel, connectDB, getTotaleInSmart
+} from '@/lib/db';
 import { sendNotification } from '@/lib/sendNotification';
 import jwt from 'jsonwebtoken';
 
@@ -83,7 +90,6 @@ export async function POST(request: NextRequest) {
 
         const typeNorm = (body.type || '').trim().toLowerCase();
 
-        // ✅ AGGIORNATO: nuovi tipi inclusi
         const tipiValidi = new Set([
             'ferie',
             'permesso',
@@ -112,14 +118,36 @@ export async function POST(request: NextRequest) {
             );
         }
 
-        // 🔥 AUTO-APPROVA: smartworking e festività (festività sono giorni rossi del calendario)
+        // AUTO-APPROVA: smartworking e festività
         let status = body.status || 'pending';
         let approvedBy = body.approvedBy || null;
 
-        if (typeNorm === 'smartworking' || typeNorm === 'festivita') {
+        // Smartworking: solo nel mese corrente
+        if (typeNorm === 'smartworking') {
+            const oggi = new Date();
+            const dataRichiesta = new Date(body.dataInizio);
+
+            const stessoMese =
+                dataRichiesta.getFullYear() === oggi.getFullYear() &&
+                dataRichiesta.getMonth() === oggi.getMonth();
+
+            if (!stessoMese) {
+                const meseCorrente = oggi.toLocaleDateString('it-IT', { month: 'long', year: 'numeric' });
+                return NextResponse.json(
+                    {
+                        error: `Lo smartworking può essere richiesto solo per il mese corrente (${meseCorrente}).`,
+                        dataRichiesta: body.dataInizio,
+                    },
+                    { status: 400 }
+                );
+            }
+        }
+
+
+        if (typeNorm === 'festivita') {
             status = 'approved';
             approvedBy = user.id;
-            console.log(`✅ Auto-approvato: ${typeNorm}`);
+            console.log(` Auto-approvato: festivita`);
         }
 
         const newAbsence = await createAbsence({
@@ -140,7 +168,7 @@ export async function POST(request: NextRequest) {
 
         console.log('✅ Richiesta creata:', newAbsence.id, 'Status:', status);
 
-        // ✅ INVIA NOTIFICHE agli admin per tipi che richiedono approvazione
+        // INVIA NOTIFICHE agli admin per tipi che richiedono approvazione
         const tipiRichiedonoApprovazione = ['ferie', 'permesso', 'malattia', 'fuori-sede', 'congedo-parentale'];
 
         if (status === 'pending' && tipiRichiedonoApprovazione.includes(typeNorm)) {
@@ -151,7 +179,6 @@ export async function POST(request: NextRequest) {
                 console.log('👥 Admin trovati:', admins.length);
 
                 if (admins.length > 0) {
-                    // Mappa tipo → label
                     const tipoLabels: Record<string, string> = {
                         'ferie': 'Ferie',
                         'permesso': 'Permesso',
@@ -162,11 +189,9 @@ export async function POST(request: NextRequest) {
 
                     const tipoLabel = tipoLabels[typeNorm] || 'Assenza';
                     const notificationType = typeNorm === 'permesso' ? 'permit_request' : 'leave_request';
-
                     const dataFormattata = new Date(body.dataInizio).toLocaleDateString('it-IT');
                     const unitaMisura = typeNorm === 'permesso' ? 'ore' : 'giorni';
 
-                    // Invia notifica a ogni admin
                     for (const admin of admins) {
                         try {
                             await sendNotification({
@@ -192,7 +217,6 @@ export async function POST(request: NextRequest) {
             console.log('ℹ️ Notifiche non inviate - Status:', status, 'Tipo:', typeNorm);
         }
 
-        // Response con data italiana
         const responseData = {
             ...newAbsence,
             dataInizio: newAbsence.dataInizio.includes('/')

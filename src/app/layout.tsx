@@ -2,6 +2,7 @@ import './globals.css';
 import type { Metadata, Viewport } from "next";
 import { CapacitorInitializer } from "@/components/CapacitorInitializer";
 import { SWRegistration } from "@/components/SWRegistration";
+import {Toaster} from "react-hot-toast";
 
 export const metadata: Metadata = {
     title: 'Artsia',
@@ -21,7 +22,7 @@ export const metadata: Metadata = {
     },
 };
 
-// ✅ Separa viewport e themeColor
+//  Separa viewport e themeColor
 export const viewport: Viewport = {
     width: 'device-width',
     initialScale: 1,
@@ -55,7 +56,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         </head>
 
         <body className="overflow-x-hidden">
+
         <SWRegistration />
+
         <CapacitorInitializer />
         {children}
         </body>

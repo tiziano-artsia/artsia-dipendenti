@@ -412,3 +412,18 @@ export async function getEmployeesByRole(role: Role) {
     await connectDB();
     return EmployeeModel.find({ role }).lean<EmployeeDoc[]>();
 }
+
+
+
+export async function getTotaleInSmart(dataInizio: string, excludeEmployeeId: number): Promise<number> {
+    await connectDB();
+
+    const count = await AbsenceModel.countDocuments({
+        type: 'smartworking',
+        status: 'approved',
+        dataInizio: dataInizio,
+        employeeId: { $ne: excludeEmployeeId },
+    });
+
+    return count;
+}

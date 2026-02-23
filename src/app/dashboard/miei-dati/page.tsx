@@ -26,6 +26,8 @@ import {
 } from 'lucide-react';
 import type {AbsenceDoc} from "@/lib/db";
 import toast, {Toaster} from "react-hot-toast";
+import {SWRegistration} from "@/components/SWRegistration";
+import {CapacitorInitializer} from "@/components/CapacitorInitializer";
 
 // Componente Modal di Conferma
 function ConfirmModal({
@@ -278,7 +280,10 @@ export default function MieiDati() {
 
     return (
         <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-indigo-50/30 p-3 sm:p-4 md:p-8 relative overflow-hidden">
-            <Toaster position="top-center" reverseOrder={false} />
+            <Toaster
+                position="bottom-center"
+                reverseOrder={false}
+            />
 
             <ConfirmModal
                 isOpen={modalState.isOpen}

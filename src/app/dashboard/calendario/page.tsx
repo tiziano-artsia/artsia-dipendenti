@@ -15,7 +15,7 @@ import {
     XCircle,
     AlertCircle,
     User,
-    Filter,
+    Filter, ChevronDown, NotebookText, SquareMenu,
 } from 'lucide-react';
 
 import toast, { Toaster } from 'react-hot-toast';
@@ -111,6 +111,8 @@ export default function Calendario() {
     const [vistaCalendario, setVistaCalendario] = useState<VistaCalendario>('mensile');
     const [giornoCorrente, setGiornoCorrente] = useState(new Date());
     const [settimanaCorrente, setSettimanaCorrente] = useState(new Date());
+
+    const [legendaAperta, setLegendaAperta] = useState(false);
 
     const mapBackendToFrontend = (backendData: any[]): Absence[] => {
         return backendData.map((item) => ({
@@ -1040,6 +1042,80 @@ export default function Calendario() {
                         </button>
                     )}
                 </div>
+                {/* Legenda - Sotto il calendario */}
+                <div className="bg-white/60 backdrop-blur-3xl rounded-2xl sm:rounded-3xl shadow-xl border border-white/70 overflow-hidden">
+
+                    {/* Header sempre visibile — cliccabile */}
+                    <button
+                        onClick={() => setLegendaAperta(prev => !prev)}
+                        className="w-full flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-4 p-4 sm:p-6 hover:bg-white/40 transition-all"
+                    >
+                        <div className="flex items-center gap-2 sm:gap-3">
+                            <div className="w-8 h-8 sm:w-10 sm:h-10 bg-gradient-to-br from-emerald-500 to-green-600 rounded-lg sm:rounded-xl flex items-center justify-center shadow-lg shrink-0">
+                                <span className="text-lg sm:text-xl"><SquareMenu /></span>
+                            </div>
+                            <h3 className="text-lg sm:text-xl font-bold text-zinc-800">Legenda Tipi di Assenza</h3>
+                        </div>
+                        <div className={`w-8 h-8 rounded-full bg-zinc-100 flex items-center justify-center shrink-0 transition-transform duration-300 ${legendaAperta ? 'rotate-180' : ''}`}>
+                            <ChevronDown className="w-5 h-5 text-zinc-600" />
+                        </div>
+                    </button>
+
+                    {/* Contenuto collassabile */}
+                    {legendaAperta && (
+                        <div className="px-4 sm:px-6 pb-4 sm:pb-6 border-t border-white/50">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 pt-4 sm:pt-6">
+                                {['ferie', 'malattia', 'permesso', 'smartworking', 'fuori-sede', 'congedo-parentale'].map((tipo) => (
+                                    <div
+                                        key={tipo}
+                                        className={`flex items-center gap-3 px-4 py-3 rounded-xl border-2 shadow-md bg-gradient-to-r ${getTipoColor(tipo)} text-white`}
+                                    >
+                                        <span className="text-2xl shrink-0">{getTipoEmoji(tipo)}</span>
+                                        <span className="font-bold text-sm sm:text-base">{getTipoLabel(tipo)}</span>
+                                    </div>
+                                ))}
+                            </div>
+
+                            {/* Legenda Stati */}
+                            <div className="mt-6 pt-6 border-t-2 border-zinc-200/50">
+                                <h4 className="text-base sm:text-lg font-bold text-zinc-800 mb-3 sm:mb-4">Stati delle Richieste</h4>
+                                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                                    <div className="flex items-center gap-3 px-4 py-3 rounded-xl bg-emerald-100 border-2 border-emerald-300 shadow-md">
+                                        <CheckCircle className="w-5 h-5 text-emerald-600 shrink-0" />
+                                        <span className="font-bold text-sm sm:text-base text-emerald-700">Approvata</span>
+                                    </div>
+                                    <div className="flex items-center gap-3 px-4 py-3 rounded-xl bg-amber-100 border-2 border-amber-300 shadow-md">
+                                        <Clock className="w-5 h-5 text-amber-600 shrink-0" />
+                                        <span className="font-bold text-sm sm:text-base text-amber-700">In Attesa</span>
+                                    </div>
+                                    <div className="flex items-center gap-3 px-4 py-3 rounded-xl bg-rose-100 border-2 border-rose-300 shadow-md">
+                                        <XCircle className="w-5 h-5 text-rose-600 shrink-0" />
+                                        <span className="font-bold text-sm sm:text-base text-rose-700">Rifiutata</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Legenda Giorni Speciali */}
+                            <div className="mt-6 pt-6 border-t-2 border-zinc-200/50">
+                                <h4 className="text-base sm:text-lg font-bold text-zinc-800 mb-3 sm:mb-4">Giorni Speciali</h4>
+                                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                                    <div className="flex items-center gap-3 px-4 py-3 rounded-xl bg-gradient-to-br from-purple-50 to-pink-50 border-2 border-red-400 shadow-md">
+                                        <span className="text-xl shrink-0">🎉</span>
+                                        <span className="font-bold text-sm sm:text-base text-red-600">Festività</span>
+                                    </div>
+                                    <div className="flex items-center gap-3 px-4 py-3 rounded-xl bg-gray-200 border-2 border-zinc-300 shadow-md">
+                                        <Calendar className="w-5 h-5 text-zinc-600 shrink-0" />
+                                        <span className="font-bold text-sm sm:text-base text-zinc-700">Weekend</span>
+                                    </div>
+                                    <div className="flex items-center gap-3 px-4 py-3 rounded-xl bg-white border-2 border-emerald-400 shadow-md ring-2 ring-emerald-400/40">
+                                        <span className="text-xl shrink-0">📍</span>
+                                        <span className="font-bold text-sm sm:text-base text-emerald-700">Oggi</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+                </div>
 
                 {/* Selettore Vista + Navigazione - Ottimizzato per mobile */}
                 <div className="bg-white/60 backdrop-blur-3xl rounded-2xl sm:rounded-3xl shadow-xl p-4 sm:p-6 border border-white/70 space-y-4">
@@ -1075,71 +1151,6 @@ export default function Calendario() {
                         >
                             Mese
                         </button>
-                    </div>
-                    {/* Legenda - Sotto il calendario */}
-                    <div className="bg-white/60 backdrop-blur-3xl rounded-2xl sm:rounded-3xl shadow-xl p-4 sm:p-6 border border-white/70">
-                        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-4 mb-4">
-                            <div className="flex items-center gap-2 sm:gap-3">
-                                <div className="w-8 h-8 sm:w-10 sm:h-10 bg-gradient-to-br from-emerald-500 to-green-600 rounded-lg sm:rounded-xl flex items-center justify-center shadow-lg shrink-0">
-                                    <span className="text-lg sm:text-xl">📋</span>
-                                </div>
-                                <h3 className="text-lg sm:text-xl font-bold text-zinc-800">Legenda Tipi di Assenza</h3>
-                            </div>
-                        </div>
-
-                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
-                            {['ferie', 'malattia', 'permesso', 'smartworking', 'fuori-sede', 'congedo-parentale'].map((tipo) => (
-                                <div
-                                    key={tipo}
-                                    className={`flex items-center gap-3 px-4 py-3 rounded-xl border-2 shadow-md bg-gradient-to-r ${getTipoColor(tipo)} text-white`}
-                                >
-                                    <span className="text-2xl shrink-0">{getTipoEmoji(tipo)}</span>
-                                    <span className="font-bold text-sm sm:text-base">{getTipoLabel(tipo)}</span>
-                                </div>
-                            ))}
-                        </div>
-
-                        {/* Legenda Stati */}
-                        <div className="mt-6 pt-6 border-t-2 border-zinc-200/50">
-                            <h4 className="text-base sm:text-lg font-bold text-zinc-800 mb-3 sm:mb-4">Stati delle Richieste</h4>
-                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                                <div className="flex items-center gap-3 px-4 py-3 rounded-xl bg-emerald-100 border-2 border-emerald-300 shadow-md">
-                                    <CheckCircle className="w-5 h-5 text-emerald-600 shrink-0" />
-                                    <span className="font-bold text-sm sm:text-base text-emerald-700">Approvata</span>
-                                </div>
-
-                                <div className="flex items-center gap-3 px-4 py-3 rounded-xl bg-amber-100 border-2 border-amber-300 shadow-md">
-                                    <Clock className="w-5 h-5 text-amber-600 shrink-0" />
-                                    <span className="font-bold text-sm sm:text-base text-amber-700">In Attesa</span>
-                                </div>
-
-                                <div className="flex items-center gap-3 px-4 py-3 rounded-xl bg-rose-100 border-2 border-rose-300 shadow-md">
-                                    <XCircle className="w-5 h-5 text-rose-600 shrink-0" />
-                                    <span className="font-bold text-sm sm:text-base text-rose-700">Rifiutata</span>
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* Legenda Giorni Speciali */}
-                        <div className="mt-6 pt-6 border-t-2 border-zinc-200/50">
-                            <h4 className="text-base sm:text-lg font-bold text-zinc-800 mb-3 sm:mb-4">Giorni Speciali</h4>
-                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                                <div className="flex items-center gap-3 px-4 py-3 rounded-xl bg-gradient-to-br from-purple-50 to-pink-50 border-2 border-red-400 shadow-md">
-                                    <span className="text-xl shrink-0">🎉</span>
-                                    <span className="font-bold text-sm sm:text-base text-red-600">Festività</span>
-                                </div>
-
-                                <div className="flex items-center gap-3 px-4 py-3 rounded-xl bg-gray-200 border-2 border-zinc-300 shadow-md">
-                                    <Calendar className="w-5 h-5 text-zinc-600 shrink-0" />
-                                    <span className="font-bold text-sm sm:text-base text-zinc-700">Weekend</span>
-                                </div>
-
-                                <div className="flex items-center gap-3 px-4 py-3 rounded-xl bg-white border-2 border-emerald-400 shadow-md ring-2 ring-emerald-400/40">
-                                    <span className="text-xl shrink-0">📍</span>
-                                    <span className="font-bold text-sm sm:text-base text-emerald-700">Oggi</span>
-                                </div>
-                            </div>
-                        </div>
                     </div>
 
                     {/* Navigazione */}
@@ -1359,6 +1370,7 @@ export default function Calendario() {
                                             className="bg-white/80 backdrop-blur-xl rounded-xl sm:rounded-2xl p-4 sm:p-5 md:p-6 border-2 border-zinc-200/50 shadow-lg hover:shadow-xl transition-all"
                                         >
                                             <div className="flex flex-col gap-4 sm:gap-6">
+
                                                 {/* Info dipendente */}
                                                 <div className="flex items-start gap-3 sm:gap-4">
                                                     <div className="w-10 h-10 sm:w-12 sm:h-12 md:w-14 md:h-14 bg-gradient-to-br from-emerald-500 to-green-600 rounded-xl sm:rounded-2xl flex items-center justify-center shadow-xl border border-white/40 shrink-0">
@@ -1368,6 +1380,38 @@ export default function Calendario() {
                                                     <div className="flex-1 min-w-0">
                                                         <h3 className="text-lg sm:text-xl md:text-2xl font-black text-zinc-800 tracking-tight truncate">{nomeCompleto}</h3>
                                                         <p className="text-zinc-600 font-medium text-sm sm:text-base md:text-lg">Team: {team}</p>
+                                                    </div>
+                                                </div>
+                                                {/* Dal - Al */}
+                                                <div className="flex flex-wrap gap-2 sm:gap-3">
+                                                    <div
+                                                        className="px-3 sm:px-4 md:px-5 py-2 sm:py-2.5 md:py-3 bg-gradient-to-r from-blue-100 to-indigo-100 border-2 border-blue-300 rounded-xl sm:rounded-2xl font-black text-blue-800 text-sm sm:text-base md:text-lg shadow-lg inline-flex items-center gap-2 sm:gap-3">
+                                                        <Calendar className="w-4 h-4 sm:w-5 sm:h-5 shrink-0"/>
+                                                        <span>
+                            Dal{' '}
+                                                            <span className="font-black">
+                                {new Date(assenza.dataInizio).toLocaleDateString('it-IT')}
+                            </span>
+                        </span>
+                                                    </div>
+
+                                                    <div
+                                                        className="px-3 sm:px-4 md:px-5 py-2 sm:py-2.5 md:py-3 bg-gradient-to-r from-purple-100 to-violet-100 border-2 border-purple-300 rounded-xl sm:rounded-2xl font-black text-purple-800 text-sm sm:text-base md:text-lg shadow-lg inline-flex items-center gap-2 sm:gap-3">
+                                                        <Calendar className="w-4 h-4 sm:w-5 sm:h-5 shrink-0"/>
+                                                        <span>
+                                                                    Al{' '}
+                                                            <span className="font-black">
+                                                                        {(() => {
+                                                                            if (assenza.tipo === 'permesso') {
+                                                                                // Per permesso la durata è in ore → stessa giornata
+                                                                                return new Date(assenza.dataInizio).toLocaleDateString('it-IT');
+                                                                            }
+                                                                            const fine = new Date(assenza.dataInizio);
+                                                                            fine.setDate(fine.getDate() + Number(assenza.durata) - 1);
+                                                                            return fine.toLocaleDateString('it-IT');
+                                                                        })()}
+                                                                    </span>
+                                                                </span>
                                                     </div>
                                                 </div>
 
