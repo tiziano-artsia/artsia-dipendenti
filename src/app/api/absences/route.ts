@@ -131,53 +131,56 @@ export async function POST(request: NextRequest) {
             const maxData = new Date(oggi);
             maxData.setDate(oggi.getDate() + SMART_CONFIG.MAX_GIORNI_AVANTI);
 
-            // Controlla range date: da oggi a +30 giorni
-            if (dataRichiesta < oggi) {
-                return NextResponse.json(
-                    { error: 'Non puoi richiedere smartworking per date passate.' },
-                    { status: 400 }
-                );
-            }
+            const isManagerOrAdmin = user.role === 'manager';
 
-            if (dataRichiesta > maxData) {
+            if (!isManagerOrAdmin && dataRichiesta > maxData) {
                 return NextResponse.json(
                     { error: `Lo smartworking può essere richiesto al massimo entro ${SMART_CONFIG.MAX_GIORNI_AVANTI} giorni da oggi.` },
                     { status: 400 }
                 );
             }
 
-            // Controlla presenza minima
             await connectDB();
 
-            const totalePersone: number = await EmployeeModel.countDocuments({
-                role: { $ne: 'admin' }
-            });
+            // ← Controlla se il richiedente è fullRemote
+            const richiedente = await EmployeeModel.findOne({ id: Number(body.employeeId || user.id) }).lean();
+            const isFullRemote = richiedente?.fullRemote === true || (richiedente?.fullRemote as any) === "true";
 
-            const totaleInSmart: number = await getTotaleInSmart(
-                body.dataInizio,
-                Number(body.employeeId || user.id)
-            );
+            // ← Se fullRemote, skippa il controllo presenze
+            if (!isFullRemote) {
+                const totalePersone: number = await EmployeeModel.countDocuments({
+                    role: { $ne: 'admin' },
+                    fullRemote: { $ne: true }
+                });
 
-            const inPresenza: number = totalePersone - totaleInSmart - 1;
-            const minimoPresenza: number = totalePersone - SMART_CONFIG.MAX_PERSONE_IN_SMART;
-
-            console.log(`👥 Totale: ${totalePersone} | In smart: ${totaleInSmart} | In presenza dopo: ${inPresenza} | Minimo: ${minimoPresenza}`);
-
-            if (inPresenza < minimoPresenza) {
-                return NextResponse.json(
-                    {
-                        error: `Smartworking non approvabile: rimarrebbero solo ${inPresenza} persone in presenza (minimo richiesto: ${minimoPresenza}).`,
-                        inPresenza,
-                        minimoPresenza,
-                        totalePersone,
-                    },
-                    { status: 409 }
+                const totaleInSmart: number = await getTotaleInSmart(
+                    body.dataInizio,
+                    Number(body.employeeId || user.id)
                 );
+
+                const inPresenza: number = totalePersone - totaleInSmart - 1;
+                const minimoPresenza: number = totalePersone - SMART_CONFIG.MAX_PERSONE_IN_SMART;
+
+                console.log(`👥 Totale: ${totalePersone} | In smart: ${totaleInSmart} | In presenza dopo: ${inPresenza} | Minimo: ${minimoPresenza}`);
+
+                if (inPresenza < minimoPresenza) {
+                    return NextResponse.json(
+                        {
+                            error: `Smartworking non approvabile: rimarrebbero solo ${inPresenza} persone in presenza (minimo richiesto: ${minimoPresenza}).`,
+                            inPresenza,
+                            minimoPresenza,
+                            totalePersone,
+                        },
+                        { status: 409 }
+                    );
+                }
+            } else {
+                console.log(`🏠 Dipendente fullRemote: skip controllo presenze`);
             }
 
             status = 'approved';
             approvedBy = user.id;
-            console.log(' Auto-approvato: smartworking');
+            console.log('✅ Auto-approvato: smartworking');
         }
 
         if (typeNorm === 'festivita') {
@@ -302,7 +305,7 @@ export async function PATCH(request: NextRequest) {
 
         console.log('✅ Aggiornato:', { id, status: action });
 
-        // ✅ INVIA NOTIFICA AL DIPENDENTE
+        //  INVIA NOTIFICA AL DIPENDENTE
         try {
             const typeNorm = absence.type?.toLowerCase() || absence.tipo?.toLowerCase();
 

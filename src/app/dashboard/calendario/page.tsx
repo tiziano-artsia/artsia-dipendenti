@@ -38,12 +38,14 @@ interface Absence {
     tipo: 'ferie' | 'permesso' | 'smartworking' | 'malattia' | 'fuori-sede' | 'congedo-parentale';
     stato: 'pending' | 'approved' | 'rejected';
     motivo?: string;
+    dataFine?: string;
 }
 
 interface Employee {
     id: number;
     name: string;
     team: string;
+    fullRemote?: boolean
 }
 
 const nomiMesi = ['Gennaio', 'Febbraio', 'Marzo', 'Aprile', 'Maggio', 'Giugno', 'Luglio', 'Agosto', 'Settembre', 'Ottobre', 'Novembre', 'Dicembre'];
@@ -114,6 +116,10 @@ export default function Calendario() {
 
     const [legendaAperta, setLegendaAperta] = useState(false);
 
+    const parseLocalDate = (dateStr: string): Date => {
+        const [year, month, day] = dateStr.split('-').map(Number)
+        return new Date(year, month - 1, day)
+    }
     const mapBackendToFrontend = (backendData: any[]): Absence[] => {
         return backendData.map((item) => ({
             id: item.id,
@@ -126,34 +132,31 @@ export default function Calendario() {
         }));
     };
 
-    // CARICA EMPLOYEES SEMPRE (anche per non-admin per visualizzare i nomi)
     const fetchEmployees = async () => {
-        if (!token) return;
+        if (!token) return
         try {
             const res = await fetch('/api/employees', {
                 headers: { Authorization: `Bearer ${token}` },
-            });
+            })
             if (res.ok) {
-                const data = await res.json();
-                let emps: Employee[] = data.data;
-                console.log('Employees caricati:', emps.length, emps);
+                const data = await res.json()
+                let emps: Employee[] = data.data.map((e: any) => ({
+                    id: e.id ?? e._id,
+                    name: e.name,
+                    team: e.team,
+                    fullRemote: e.fullRemote ?? false, // ← AGGIUNGI QUESTO
+                }))
 
-                if (user && !emps.find((e: Employee) => Number(e.id) === Number(user.id))) {
-                    emps.push({ id: user.id, name: user.name, team: user.team || 'N/D' });
-                    console.log('Aggiunto user corrente agli employees:', user);
+                if (user && !emps.find(e => Number(e.id) === Number(user.id))) {
+                    emps.push({ id: user.id, name: user.name, team: user.team ?? 'ND', fullRemote: false })
                 }
 
-                setEmployees(emps);
-
-                // Solo admin può selezionare dipendenti
-                if (isAdmin && emps.length > 0 && !visualizzaTutti && !dipendenteSelezionato) {
-                    setDipendenteSelezionato(emps[0]);
-                }
+                setEmployees(emps)
             }
         } catch (error) {
-            console.error('Employees fetch:', error);
+            console.error('Employees fetch:', error)
         }
-    };
+    }
 
     const apriPopupNuova = (dataStr: SetStateAction<string>) => {
         setGiornoSelezionato(dataStr);
@@ -169,9 +172,17 @@ export default function Calendario() {
         if (!token || !user || !tipoRichiesta || !durata) return;
 
         try {
+            // Calcola dataFine
+            const dataFineDate = parseLocalDate(giornoSelezionato)
+            if (tipoRichiesta !== 'permesso') {
+                dataFineDate.setDate(dataFineDate.getDate() + Number(durata) - 1)
+            }
+            const dataFineISO = `${dataFineDate.getFullYear()}-${String(dataFineDate.getMonth() + 1).padStart(2, '0')}-${String(dataFineDate.getDate()).padStart(2, '0')}`
+
             const payload = {
                 employeeId: user.id,
                 dataInizio: formattaDataItaliana(giornoSelezionato),
+                dataFine: formattaDataItaliana(dataFineISO),
                 durata: durata,
                 type: tipoRichiesta,
                 motivo: motivo || '',
@@ -193,6 +204,8 @@ export default function Calendario() {
                 body: JSON.stringify(payload),
             });
 
+            const data = await res.json();
+
             if (res.ok) {
                 setPopupNuovaRichiesta(false);
                 // @ts-ignore
@@ -203,11 +216,11 @@ export default function Calendario() {
                 fetchAssenze();
                 toast.success('Richiesta inviata con successo!');
             } else {
-                const error = await res.json();
-                toast.error('Errore');
-                console.error('Backend:', error);
+                toast.error(data?.error || 'Errore durante l\'invio');
+                console.error('Backend:', data);
             }
-        } catch (error) {
+        }
+        catch (error) {
             console.error('Fetch error:', error);
         }
     };
@@ -477,7 +490,7 @@ export default function Calendario() {
             }
         > = {};
 
-        // 🎉 CALCOLA i giorni festivi del mese corrente
+        //  CALCOLA i giorni festivi del mese corrente
         const giorniFestiviDelMese: number[] = [];
         const giorniTotaliMese = getGiorniMese(mese, anno);
 
@@ -488,21 +501,21 @@ export default function Calendario() {
             }
         }
 
-        // ✅ Prima loop: crea entry per TUTTI i dipendenti
+        //  Prima loop: crea entry per TUTTI i dipendenti
         employees.forEach((emp) => {
             totaliPerDipendente[emp.name] = {
                 ferie: 0,
                 permesso: 0,
                 malattia: 0,
                 smartworking: 0,
-                festivita: giorniFestiviDelMese.length, // ✅ Assegna automaticamente i giorni festivi
+                festivita: giorniFestiviDelMese.length, //  Assegna automaticamente i giorni festivi
                 'fuori-sede': 0,
                 'congedo-parentale': 0,
                 motivi: [],
             };
         });
 
-        // ✅ Secondo loop: aggiungi le assenze dove presenti
+        //  Secondo loop: aggiungi le assenze dove presenti
         const assenzeDelMese = assenze
             .filter((a) => a.stato !== 'rejected')
             .filter((a) => {
@@ -657,6 +670,184 @@ export default function Calendario() {
         }
         return giorni;
     };
+
+    const generaSmartworkingTeam = async () => {
+        if (!token || !user || !isManager) return
+
+        const employeeCorrente = employees.find(e => Number(e.id) === Number(user.id))
+        const teamEffettivo = employeeCorrente?.team
+
+        if (!teamEffettivo) {
+            toast.error('Team del manager non trovato')
+            return
+        }
+        console.log('Eccoli', employees);
+        const GIORNI_SMART_PER_SETTIMANA = 2
+        const giorniMese = getGiorniMese(mese, anno)
+
+        // Tutti i giorni lavorativi del mese in YYYY-MM-DD
+        const tuttiGiorniLavorativi: string[] = []
+
+        // Raggruppa per settimana i giorni lavorativi
+        const settimaneMap = new Map<number, string[]>()
+
+        for (let g = 1; g <= giorniMese; g++) {
+            const date = new Date(anno, mese, g)
+            const info = getInfoGiorno(g, mese, anno)
+            if (!info.isLavorativo) continue
+
+            const dataStr = `${anno}-${String(mese + 1).padStart(2, '0')}-${String(g).padStart(2, '0')}`
+            tuttiGiorniLavorativi.push(dataStr)
+
+            const lunedi = new Date(date)
+            const dayOfWeek = date.getDay() === 0 ? 7 : date.getDay()
+            lunedi.setDate(date.getDate() - (dayOfWeek - 1))
+            const weekKey = lunedi.getTime()
+
+            if (!settimaneMap.has(weekKey)) settimaneMap.set(weekKey, [])
+            settimaneMap.get(weekKey)!.push(dataStr)
+        }
+
+        const settimane = Array.from(settimaneMap.values())
+
+        // Separa fullRemote da normali
+        const teamFullRemote = employees.filter(e =>
+            e.team?.trim().toLowerCase() === teamEffettivo.trim().toLowerCase() &&
+            (String((e as any).fullRemote) === "true")  // gestisce sia true che "true"
+        );
+
+        const teamNormali = employees.filter(e =>
+            e.team?.trim().toLowerCase() === teamEffettivo.trim().toLowerCase() &&
+            String((e as any).fullRemote) !== "true"
+        );
+
+
+        if (teamNormali.length === 0 && teamFullRemote.length === 0) {
+            toast.error(`Nessun dipendente trovato nel team "${teamEffettivo}"`)
+            return
+        }
+
+        console.log(`Dipendenti normali: ${teamNormali.map(d => d.name).join(', ')}`)
+        console.log(`Dipendenti fullRemote: ${teamFullRemote.map(d => d.name).join(', ')}`)
+
+        toast.loading(
+            `Generazione smart per il team "${teamEffettivo}"...`,
+            { id: 'gen-smart' }
+        )
+
+        let successCount = 0
+        let errorCount = 0
+
+        const inviaSmartworking = async (dipendente: Employee, giorni: string[]) => {
+            for (const dataStr of giorni) {
+                const payload = {
+                    employeeId: dipendente.id,
+                    dataInizio: dataStr,
+                    dataFine: dataStr,
+                    durata: 1,
+                    type: 'smartworking',
+                    motivo: 'Generato automaticamente',
+                    status: 'approved',
+                    requestedBy: dipendente.name,
+                    approvedBy: user!.name || user!.email,
+                    createdAt: new Date().toISOString(),
+                    updatedAt: new Date().toISOString(),
+                }
+
+                try {
+                    const res = await fetch('/api/absences', {
+                        method: 'POST',
+                        headers: {
+                            Authorization: `Bearer ${token}`,
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify(payload),
+                    })
+
+                    if (res.ok) {
+                        successCount++
+                    } else {
+                        const err = await res.json()
+                        console.warn(`Errore per ${dipendente.name} il ${dataStr}:`, JSON.stringify(err))
+                        errorCount++
+                    }
+                } catch (err) {
+                    console.error(`Fetch error per ${dipendente.name}:`, err)
+                    errorCount++
+                }
+            }
+        }
+
+        // ── DIPENDENTI NORMALI: 2 giorni casuali a settimana ──
+        for (const dipendente of teamNormali) {
+            const giorniOccupati = new Set(
+                assenze
+                    .filter(a =>
+                        a.employeeId === dipendente.id &&
+                        a.stato !== 'rejected' &&
+                        a.tipo !== 'smartworking'
+                    )
+                    .map(a => {
+                        if (a.dataInizio?.includes('/')) {
+                            const [g, m, y] = a.dataInizio.split('/')
+                            return `${y}-${m.padStart(2, '0')}-${g.padStart(2, '0')}`
+                        }
+                        return a.dataInizio
+                    })
+            )
+
+            for (const settimana of settimane) {
+                const giorniLiberi = settimana.filter(d => !giorniOccupati.has(d))
+                if (giorniLiberi.length === 0) continue
+
+                const quantiGenerare = Math.min(GIORNI_SMART_PER_SETTIMANA, giorniLiberi.length)
+
+                // Fisher-Yates shuffle
+                const shuffled = [...giorniLiberi]
+                for (let i = shuffled.length - 1; i > 0; i--) {
+                    const j = Math.floor(Math.random() * (i + 1))
+                    ;[shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]]
+                }
+
+                await inviaSmartworking(dipendente, shuffled.slice(0, quantiGenerare))
+            }
+        }
+
+        // tutti i giorni lavorativi del mese ──
+        for (const dipendente of teamFullRemote) {
+            const giorniOccupati = new Set(
+                assenze
+                    .filter(a =>
+                        a.employeeId === dipendente.id &&
+                        a.stato !== 'rejected' &&
+                        a.tipo !== 'smartworking'
+                    )
+                    .map(a => {
+                        if (a.dataInizio?.includes('/')) {
+                            const [g, m, y] = a.dataInizio.split('/')
+                            return `${y}-${m.padStart(2, '0')}-${g.padStart(2, '0')}`
+                        }
+                        return a.dataInizio
+                    })
+            )
+
+            // Tutti i giorni lavorativi liberi del mese
+            const giorniLiberi = tuttiGiorniLavorativi.filter(d => !giorniOccupati.has(d))
+            await inviaSmartworking(dipendente, giorniLiberi)
+        }
+
+        await fetchAssenze()
+        toast.dismiss('gen-smart')
+
+        if (successCount === 0) {
+            toast.error('Nessuno smart generato. Controlla i giorni disponibili.')
+        } else {
+            toast.success(
+                `✅ Generati ${successCount} smart per il team "${teamEffettivo}"` +
+                (errorCount > 0 ? ` (${errorCount} errori)` : '')
+            )
+        }
+    }
 
     const renderVistaGiornaliera = () => {
         const dataStr = `${giornoCorrente.getFullYear()}-${String(giornoCorrente.getMonth() + 1).padStart(2, '0')}-${String(giornoCorrente.getDate()).padStart(2, '0')}`;
@@ -814,11 +1005,8 @@ export default function Calendario() {
                             <div
                                 key={idx}
                                 onClick={() => {
-                                    apriModale(dataStr);
-                                    const mieAssenze = getAssenzePerData(dataStr).filter((a) => a.employeeId === user?.id);
-                                    if (mieAssenze.length === 0) {
-                                        apriPopupNuova(dataStr);
-                                    }
+                                    apriModale(dataStr)
+                                    apriPopupNuova(dataStr)
                                 }}
                                 className={`relative p-3 sm:p-4 rounded-xl sm:rounded-2xl border-2 shadow-lg cursor-pointer transition-all hover:shadow-xl hover:-translate-y-1 active:scale-95 min-h-[180px] sm:min-h-[200px] ${
                                     assenzeGiorno.length > 0
@@ -910,7 +1098,10 @@ export default function Calendario() {
 
     return (
         <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-indigo-50/30 p-3 sm:p-4 md:p-8 relative overflow-hidden">
-            <Toaster position="top-center" reverseOrder={false} />
+            <Toaster
+                position="bottom-center"
+                reverseOrder={false}
+            />
             <div className="absolute inset-0 bg-gradient-to-r from-emerald-500/[0.02] via-blue-500/[0.01] to-purple-500/[0.01] backdrop-blur-xl pointer-events-none" />
 
             <div className="max-w-7xl mx-auto relative z-10 space-y-4 sm:space-y-6 md:space-y-8">
@@ -1005,6 +1196,17 @@ export default function Calendario() {
                                     <span>Export Excel</span>
                                 </button>
                             )}
+
+                            {( isManager) && (
+                                <button
+                                    onClick={generaSmartworkingTeam}
+                                    className="flex items-center justify-center gap-2 sm:gap-3 px-4 sm:px-6 py-3 sm:py-4 h-12 sm:h-16 bg-gradient-to-r from-blue-500 to-indigo-600 text-white font-bold text-sm sm:text-base rounded-xl sm:rounded-2xl shadow-2xl hover:from-blue-600 hover:to-indigo-700 transition-all border border-blue-400/50 w-full sm:w-auto active:scale-95"
+                                >
+                                    <span>🤖</span>
+                                    <span>Genera Smart Team</span>
+                                </button>
+                            )}
+
                         </div>
                     </div>
                 </div>
@@ -1042,6 +1244,8 @@ export default function Calendario() {
                         </button>
                     )}
                 </div>
+
+
                 {/* Legenda - Sotto il calendario */}
                 <div className="bg-white/60 backdrop-blur-3xl rounded-2xl sm:rounded-3xl shadow-xl border border-white/70 overflow-hidden">
 
@@ -1115,6 +1319,7 @@ export default function Calendario() {
                             </div>
                         </div>
                     )}
+
                 </div>
 
                 {/* Selettore Vista + Navigazione - Ottimizzato per mobile */}
@@ -1255,11 +1460,8 @@ export default function Calendario() {
                                     <div
                                         key={giorno}
                                         onClick={() => {
-                                            apriModale(dataStr);
-                                            const mieAssenze = getAssenzePerData(dataStr).filter((a) => a.employeeId === user?.id);
-                                            if (mieAssenze.length === 0) {
-                                                apriPopupNuova(dataStr);
-                                            }
+                                            apriModale(dataStr)
+                                            apriPopupNuova(dataStr)
                                         }}
                                         className={`relative h-16 sm:h-32 md:h-52 p-1.5 sm:p-2 md:p-3 rounded-lg sm:rounded-2xl border-2 shadow-lg transition-all duration-300 hover:shadow-xl hover:-translate-y-0.5 sm:hover:-translate-y-1 backdrop-blur-xl flex flex-col justify-between group cursor-pointer overflow-hidden ${
                                             assenzeGiorno.length > 0
@@ -1315,7 +1517,7 @@ export default function Calendario() {
                                         </div>
 
                                         {/* Badge per assenze extra */}
-                                        {assenzeGiorno.length > 3 && (
+                                        {assenzeGiorno.length > 4 && (
                                             <div className="absolute top-0.5 right-0.5 sm:top-1 sm:right-1 bg-red-500 text-white text-[9px] sm:text-xs rounded-full w-4 h-4 sm:w-5 sm:h-5 flex items-center justify-center font-bold shadow-lg z-20 border border-white">
                                                 + {assenzeGiorno.length - 3}
                                             </div>
@@ -1382,7 +1584,9 @@ export default function Calendario() {
                                                         <p className="text-zinc-600 font-medium text-sm sm:text-base md:text-lg">Team: {team}</p>
                                                     </div>
                                                 </div>
+
                                                 {/* Dal - Al */}
+                                                { assenza.tipo !== 'smartworking' && assenza.tipo !== 'permesso' && (
                                                 <div className="flex flex-wrap gap-2 sm:gap-3">
                                                     <div
                                                         className="px-3 sm:px-4 md:px-5 py-2 sm:py-2.5 md:py-3 bg-gradient-to-r from-blue-100 to-indigo-100 border-2 border-blue-300 rounded-xl sm:rounded-2xl font-black text-blue-800 text-sm sm:text-base md:text-lg shadow-lg inline-flex items-center gap-2 sm:gap-3">
@@ -1390,7 +1594,7 @@ export default function Calendario() {
                                                         <span>
                             Dal{' '}
                                                             <span className="font-black">
-                                {new Date(assenza.dataInizio).toLocaleDateString('it-IT')}
+                                {new Date(assenza?.dataInizio).toLocaleDateString('it-IT')}
                             </span>
                         </span>
                                                     </div>
@@ -1403,18 +1607,17 @@ export default function Calendario() {
                                                             <span className="font-black">
                                                                         {(() => {
                                                                             if (assenza.tipo === 'permesso') {
-                                                                                // Per permesso la durata è in ore → stessa giornata
-                                                                                return new Date(assenza.dataInizio).toLocaleDateString('it-IT');
+                                                                                return parseLocalDate(assenza.dataInizio).toLocaleDateString('it-IT')
                                                                             }
-                                                                            const fine = new Date(assenza.dataInizio);
-                                                                            fine.setDate(fine.getDate() + Number(assenza.durata) - 1);
-                                                                            return fine.toLocaleDateString('it-IT');
+                                                                            const fine = parseLocalDate(assenza.dataInizio)
+                                                                            fine.setDate(fine.getDate() + Number(assenza.durata) - 1)
+                                                                            return fine.toLocaleDateString('it-IT')
                                                                         })()}
                                                                     </span>
                                                                 </span>
                                                     </div>
                                                 </div>
-
+                                                )}
                                                 {/* Badges tipo e stato */}
                                                 <div className="flex flex-wrap gap-2 sm:gap-3">
                                                     <div

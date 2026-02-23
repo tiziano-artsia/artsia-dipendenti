@@ -23,6 +23,7 @@ import {
 } from 'lucide-react';
 import { useState } from 'react';
 import { useUserPayslips } from '@/hooks/useUserPayslips';
+import toast, {Toaster} from "react-hot-toast";
 
 export default function Dashboard() {
     const { user, logout, token } = useAuth();
@@ -35,6 +36,29 @@ export default function Dashboard() {
     const [passwordError, setPasswordError] = useState('');
     const isAdmin = user?.role === 'admin';
     const { payslips: userPayslips, loading: loadingUserPayslips } = useUserPayslips();
+    const [fullRemote, setFullRemote] = useState<boolean>(user?.fullRemote ?? false);
+
+    const toggleFullRemote = async () => {
+        const nuovoValore = !fullRemote;
+        try {
+            const res = await fetch(`/api/employees/${user?.id}/fullremote`, {
+                method: "PATCH",
+                headers: {
+                    Authorization: `Bearer ${token}`,
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify({ fullRemote: nuovoValore }),
+            });
+            if (res.ok) {
+                setFullRemote(nuovoValore);
+                toast.success(nuovoValore ? "Full Remote attivato" : "Full Remote disattivato");
+            } else {
+                toast.error("Errore aggiornamento");
+            }
+        } catch {
+            toast.error("Errore di rete");
+        }
+    };
 
 
     const [showAddEmployeeModal, setShowAddEmployeeModal] = useState(false);
@@ -135,6 +159,10 @@ export default function Dashboard() {
 
     return (
         <div className="min-h-screen bg-gray-50 p-3 sm:p-4 md:p-8 relative overflow-hidden">
+            <Toaster
+                position="bottom-center"
+                reverseOrder={false}
+            />
             <div className="absolute inset-0 bg-gray-50 backdrop-blur-xl pointer-events-none" />
 
             <div className="max-w-7xl mx-auto relative z-10 space-y-4 sm:space-y-6 md:space-y-8">
@@ -160,6 +188,8 @@ export default function Dashboard() {
                                     </span>
                                 </p>
                             </div>
+
+
                         </div>
 
                         <div className="flex flex-col gap-2 w-full">
@@ -198,8 +228,24 @@ export default function Dashboard() {
                                     <span className="px-3 py-1 bg-white/50 backdrop-blur-xl rounded-full text-xs font-mono text-zinc-700 border border-zinc-200 uppercase tracking-wider">
                                         {user?.role}
                                     </span>
+                                    <button
+                                        onClick={toggleFullRemote}
+                                        className={`
+        px-2 sm:px-3 py-0.5 sm:py-1 rounded-full text-[10px] sm:text-xs 
+        font-mono uppercase tracking-wider border transition-all active:scale-95
+        flex items-center gap-1
+        ${fullRemote
+                                            ? "bg-emerald-100 text-emerald-700 border-emerald-300 hover:bg-emerald-200"
+                                            : "bg-zinc-100 text-zinc-500 border-zinc-200 hover:bg-zinc-200"
+                                        }
+    `}
+                                    >
+                                        <span>{fullRemote ? "🏠" : "🏢"}</span>
+                                        <span>{fullRemote ? "Full Remote" : "In Sede"}</span>
+                                    </button>
                                 </p>
                             </div>
+
                         </div>
 
                         {/* Bottoni allineati a destra verticalmente */}
@@ -421,14 +467,15 @@ export default function Dashboard() {
                                     Ultimi Documenti
                                 </h2>
                             </div>
-                            <button
+                            {/*   <button
                                 onClick={() => setShowPayslips(!showPayslips)}
                                 className="flex items-center gap-2 px-3 sm:px-4 py-2 bg-white/80 backdrop-blur-xl rounded-xl sm:rounded-2xl border border-zinc-200 hover:border-indigo-300 hover:shadow-md transition-all duration-300 text-xs sm:text-sm font-mono uppercase tracking-wider active:scale-95 w-full sm:w-auto justify-center"
                                 title={showPayslips ? "Nascondi importi" : "Mostra importi"}
                             >
                                 {showPayslips ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                                 <span>{showPayslips ? 'Nascondi' : 'Mostra'}</span>
-                            </button>
+                            </button> */}
+
                         </div>
                         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
                             {loadingUserPayslips ? (
@@ -456,8 +503,8 @@ export default function Dashboard() {
                                                     : (payslip.documentName || `Documento ${payslip.anno}`)
                                                 }
                                             </h3>
-
-                                            <Euro className="w-4 h-4 sm:w-5 sm:h-5 text-indigo-500 group-hover:scale-110 transition-transform" />
+                                            {/* <Euro className="w-4 h-4 sm:w-5 sm:h-5 text-indigo-500 group-hover:scale-110 transition-transform" />
+ */}
                                         </div>
 
                                         {payslip.netto && (
@@ -474,7 +521,7 @@ export default function Dashboard() {
                                 ))
                             )}
                             <a
-                                href="/dashboard/buste-paga"
+                                href="/dashboard/documenti"
                                 className="group p-5 sm:p-6 bg-gradient-to-br from-indigo-50 to-purple-50 border-2 border-dashed border-indigo-200 hover:border-indigo-400 rounded-xl sm:rounded-2xl hover:shadow-lg hover:-translate-y-1 transition-all duration-400 flex flex-col items-center justify-center text-center active:scale-95"
                             >
                                 <FileText className="w-10 h-10 sm:w-12 sm:h-12 text-indigo-400 mb-3 sm:mb-4 group-hover:scale-110 transition-transform" />

@@ -58,6 +58,7 @@ export type EmployeeDoc = {
     updatedAt: Date;
     pushToken?: string | null;
     badgeCount?: number;
+    fullRemote?:boolean,
 };
 
 export type AbsenceDoc = {
@@ -89,6 +90,7 @@ const employeeSchema = new Schema<EmployeeDoc>(
         email: { type: String, required: true, unique: true, index: true, lowercase: true, trim: true },
         team: { type: String, required: true, enum: ["Sviluppo", "Digital", "Admin"] },
         role: { type: String, required: true, enum: ["dipendente", "manager", "admin"] },
+        fullRemote: { type: Boolean, default: false },
         passwordHash: { type: String, required: true },
         pushToken: { type: String, default: null },
         badgeCount: { type: Number, default: 0 }
@@ -125,11 +127,6 @@ export const EmployeeModel: Model<EmployeeDoc> =
 export const AbsenceModel: Model<AbsenceDoc> =
     mongoose.models.Absence || mongoose.model<AbsenceDoc>("Absence", absenceSchema);
 
-/**
- * Demo seed (15 dipendenti + 1 admin)
- * - password admin: admin123
- * - password altri: pass123
- */
 
 
 
@@ -163,6 +160,8 @@ export async function authenticateUser(email: string, password: string) {
         email: user.email,
         team: user.team,
         role: user.role,
+        fullRemote: user.fullRemote ?? false,
+
     };
 }
 
@@ -171,7 +170,14 @@ export async function authenticateUser(email: string, password: string) {
  */
 export async function getEmployees() {
     await connectDB();
-    return EmployeeModel.find({ role: { $ne: "admin" } }).sort({ team: 1, name: 1 }).lean();
+    const employees = await EmployeeModel.find({ role: { $ne: "admin" } })
+        .sort({ team: 1, name: 1 })
+        .lean();
+
+    return employees.map(e => ({
+        ...e,
+        fullRemote: e.fullRemote === true || (e.fullRemote as any) === "true"
+    }));
 }
 
 export async function getAbsences(filter: Partial<Pick<AbsenceDoc, "employeeId" | "type" | "status">> = {}) {

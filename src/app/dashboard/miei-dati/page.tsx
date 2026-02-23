@@ -130,7 +130,7 @@ export default function MieiDati() {
         const success = await submitRequest(payload);
         if (success) {
             toast.success('Richiesta inviata! In attesa di approvazione.',{duration:3000});
-            setForm({dataFine: "", tipo: '', dataInizio: '', durata: '', motivo: '' });
+            setForm({ tipo: '', dataInizio: '', durata: '', motivo: '' });
             setActiveTab('richieste');
         } else {
             toast.error('Errore invio. Riprova.',{duration:3000});

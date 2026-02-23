@@ -5,6 +5,7 @@ export interface AuthUser {
     id: string;
     email: string;
     role: string;
+    fullRemote: boolean;
 }
 
 export async function verifyAuth(request: NextRequest): Promise<AuthUser | null> {

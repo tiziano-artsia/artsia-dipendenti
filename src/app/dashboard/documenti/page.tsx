@@ -221,7 +221,7 @@ export default function BustePaga() {
                             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400" />
                             <input
                                 type="text"
-                                placeholder="Cerca documento o dipendente..."
+                                placeholder="Cerca..."
                                 className="pl-9 pr-4 py-2 text-sm bg-transparent outline-none w-full"
                                 value={searchTerm}
                                 onChange={(e) => setSearchTerm(e.target.value)}
