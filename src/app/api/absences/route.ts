@@ -1,4 +1,3 @@
-// src/app/api/absences/route.ts
 import { NextRequest, NextResponse } from 'next/server';
 import {
     getAbsences,
@@ -10,6 +9,7 @@ import {
 } from '@/lib/db';
 import { sendNotification } from '@/lib/sendNotification';
 import jwt from 'jsonwebtoken';
+import {SMART_CONFIG} from "@/config/constant";
 
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
 
@@ -58,10 +58,10 @@ export async function GET(request: NextRequest) {
             filter.employeeId = Number(employeeIdParam);
         }
 
-        console.log('🔍 Filtro:', filter);
+        console.log('Filtro:', filter);
 
         const absences = await getAbsences(filter);
-        console.log(`✅ ${absences.length} assenze trovate`);
+        console.log(` ${absences.length} assenze trovate`);
 
         return NextResponse.json({
             success: true,
@@ -101,7 +101,6 @@ export async function POST(request: NextRequest) {
         ]);
 
         if (!tipiValidi.has(typeNorm)) {
-            console.log('❌ Tipo invalido:', body.type, '→', typeNorm);
             return NextResponse.json(
                 {
                     error: `Tipo non valido. Usa: ${Array.from(tipiValidi).join(', ')}`,
@@ -118,36 +117,73 @@ export async function POST(request: NextRequest) {
             );
         }
 
-        // AUTO-APPROVA: smartworking e festività
         let status = body.status || 'pending';
         let approvedBy = body.approvedBy || null;
 
-        // Smartworking: solo nel mese corrente
+        // SMARTWORKING
         if (typeNorm === 'smartworking') {
             const oggi = new Date();
+            oggi.setHours(0, 0, 0, 0);
+
             const dataRichiesta = new Date(body.dataInizio);
+            dataRichiesta.setHours(0, 0, 0, 0);
 
-            const stessoMese =
-                dataRichiesta.getFullYear() === oggi.getFullYear() &&
-                dataRichiesta.getMonth() === oggi.getMonth();
+            const maxData = new Date(oggi);
+            maxData.setDate(oggi.getDate() + SMART_CONFIG.MAX_GIORNI_AVANTI);
 
-            if (!stessoMese) {
-                const meseCorrente = oggi.toLocaleDateString('it-IT', { month: 'long', year: 'numeric' });
+            // Controlla range date: da oggi a +30 giorni
+            if (dataRichiesta < oggi) {
                 return NextResponse.json(
-                    {
-                        error: `Lo smartworking può essere richiesto solo per il mese corrente (${meseCorrente}).`,
-                        dataRichiesta: body.dataInizio,
-                    },
+                    { error: 'Non puoi richiedere smartworking per date passate.' },
                     { status: 400 }
                 );
             }
-        }
 
+            if (dataRichiesta > maxData) {
+                return NextResponse.json(
+                    { error: `Lo smartworking può essere richiesto al massimo entro ${SMART_CONFIG.MAX_GIORNI_AVANTI} giorni da oggi.` },
+                    { status: 400 }
+                );
+            }
+
+            // Controlla presenza minima
+            await connectDB();
+
+            const totalePersone: number = await EmployeeModel.countDocuments({
+                role: { $ne: 'admin' }
+            });
+
+            const totaleInSmart: number = await getTotaleInSmart(
+                body.dataInizio,
+                Number(body.employeeId || user.id)
+            );
+
+            const inPresenza: number = totalePersone - totaleInSmart - 1;
+            const minimoPresenza: number = totalePersone - SMART_CONFIG.MAX_PERSONE_IN_SMART;
+
+            console.log(`👥 Totale: ${totalePersone} | In smart: ${totaleInSmart} | In presenza dopo: ${inPresenza} | Minimo: ${minimoPresenza}`);
+
+            if (inPresenza < minimoPresenza) {
+                return NextResponse.json(
+                    {
+                        error: `Smartworking non approvabile: rimarrebbero solo ${inPresenza} persone in presenza (minimo richiesto: ${minimoPresenza}).`,
+                        inPresenza,
+                        minimoPresenza,
+                        totalePersone,
+                    },
+                    { status: 409 }
+                );
+            }
+
+            status = 'approved';
+            approvedBy = user.id;
+            console.log(' Auto-approvato: smartworking');
+        }
 
         if (typeNorm === 'festivita') {
             status = 'approved';
             approvedBy = user.id;
-            console.log(` Auto-approvato: festivita`);
+            console.log(' Auto-approvato: festivita');
         }
 
         const newAbsence = await createAbsence({
@@ -166,17 +202,13 @@ export async function POST(request: NextRequest) {
             tipo: typeNorm
         });
 
-        console.log('✅ Richiesta creata:', newAbsence.id, 'Status:', status);
+        console.log(' Richiesta creata:', newAbsence.id, '| Status:', status);
 
-        // INVIA NOTIFICHE agli admin per tipi che richiedono approvazione
         const tipiRichiedonoApprovazione = ['ferie', 'permesso', 'malattia', 'fuori-sede', 'congedo-parentale'];
 
         if (status === 'pending' && tipiRichiedonoApprovazione.includes(typeNorm)) {
-            console.log('📬 Invio notifiche agli admin per', typeNorm);
-
             try {
                 const admins = await getEmployeesByRole('admin');
-                console.log('👥 Admin trovati:', admins.length);
 
                 if (admins.length > 0) {
                     const tipoLabels: Record<string, string> = {
@@ -202,19 +234,17 @@ export async function POST(request: NextRequest) {
                                 relatedRequestId: String(newAbsence.id),
                                 url: `/dashboard/approvazioni`
                             });
-                            console.log(`✅ Notifica inviata ad admin ${admin.name} (ID: ${admin.id})`);
+                            console.log(` Notifica inviata ad admin ${admin.name} (ID: ${admin.id})`);
                         } catch (notifError) {
-                            console.error(`❌ Errore notifica admin ${admin.id}:`, notifError);
+                            console.error(` Errore notifica admin ${admin.id}:`, notifError);
                         }
                     }
                 } else {
-                    console.warn('⚠️ Nessun admin trovato per le notifiche');
+                    console.warn(' Nessun admin trovato per le notifiche');
                 }
             } catch (adminError) {
-                console.error('❌ Errore recupero admin:', adminError);
+                console.error(' Errore recupero admin:', adminError);
             }
-        } else {
-            console.log('ℹ️ Notifiche non inviate - Status:', status, 'Tipo:', typeNorm);
         }
 
         const responseData = {

@@ -1,4 +1,3 @@
-// src/hooks/useAbsences.ts
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
@@ -11,6 +10,12 @@ interface Absence {
     durata: number;
     motivo: string;
     status: 'pending' | 'approved' | 'rejected';
+}
+
+interface AbsenceResult {
+    success: boolean;
+    error?: string;
+    data?: any;
 }
 
 export function useAbsences() {
@@ -66,12 +71,12 @@ export function useAbsences() {
         fetchAbsences();
     }, [fetchAbsences]);
 
-    const createAbsence = async (absence: Omit<Absence, 'id' | 'status'>) => {
+    const createAbsence = async (absence: Omit<Absence, 'id' | 'status'>): Promise<AbsenceResult> => {
         const token = getToken();
-        if (!token) throw new Error('Non autenticato');
+        if (!token) return { success: false, error: 'Non autenticato' };
 
-        // 🔑 DECODE token per ottenere nome utente richiedente
         try {
+            // Decode token per ottenere il nome del richiedente
             const payload = JSON.parse(atob(token.split('.')[1]));
             const nomeUtente = payload.name || payload.nome || 'Anonimo';
 
@@ -88,17 +93,20 @@ export function useAbsences() {
             });
 
             const data = await res.json();
-            if (data.success) {
-                await fetchAbsences();
-                return data.data;
-            }
-            throw new Error(data.error || 'Errore creazione assenza');
-        } catch (decodeError) {
-            console.warn('Token decode failed:', decodeError);
 
+            if (!res.ok) {
+                // Propaga il messaggio esatto dal backend (400, 409, ecc.)
+                return { success: false, error: data.error || 'Errore creazione assenza' };
+            }
+
+            await fetchAbsences();
+            return { success: true, data: data.data };
+
+        } catch (err: any) {
+            console.warn('createAbsence error:', err);
+            return { success: false, error: 'Errore di rete. Riprova.' };
         }
     };
-
 
     const approveAbsence = async (id: number, status: 'approved' | 'rejected') => {
         const token = getToken();

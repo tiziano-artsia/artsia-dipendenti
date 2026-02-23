@@ -427,3 +427,4 @@ export async function getTotaleInSmart(dataInizio: string, excludeEmployeeId: nu
 
     return count;
 }
+

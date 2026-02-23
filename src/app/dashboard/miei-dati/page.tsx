@@ -128,12 +128,14 @@ export default function MieiDati() {
 
         const success = await submitRequest(payload);
         if (success) {
-            toast.success('Richiesta inviata! In attesa di approvazione.');
+            toast.success('Richiesta inviata! In attesa di approvazione.',{duration:3000});
             setForm({ tipo: '', dataInizio: '', durata: '', motivo: '' });
             setActiveTab('richieste');
         } else {
-            toast.error('Errore invio. Riprova.');
+            toast.error('Errore invio. Riprova.',{duration:3000});
         }
+
+
     };
 
     const handleCancelClick = (assenza: AbsenceDoc) => {
@@ -152,10 +154,10 @@ export default function MieiDati() {
         const success = await cancelRequest(modalState.absenceId);
 
         if (success) {
-            toast.success('Richiesta annullata con successo');
+            toast.success("Richiesta annullata con successo",{duration:3000});
             setModalState({ isOpen: false, absenceId: '', absenceType: '', absenceDate: '', isDeleting: false });
         } else {
-            toast.error('Errore durante l\'annullamento');
+            toast.error('Errore durante l\'annullamento',{duration:3000});
             setModalState(prev => ({ ...prev, isDeleting: false }));
         }
     };
@@ -741,88 +743,145 @@ export default function MieiDati() {
                         </h2>
 
                         <form onSubmit={handleSubmit} className="space-y-6 sm:space-y-8 md:space-y-10">
-                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 sm:gap-8 md:gap-10">
-                                <div>
-                                    <label className="block text-base sm:text-lg md:text-xl font-black tracking-tight text-zinc-800 mb-3 sm:mb-4 md:mb-5 flex items-center gap-2">
-                                        <FileText className="w-4 h-4 sm:w-5 sm:h-5" />
-                                        Tipo assenza
-                                    </label>
-                                    <select
-                                        value={form.tipo}
-                                        onChange={(e) => setForm({ ...form, tipo: e.target.value, durata: '' })}
-                                        className="w-full h-14 sm:h-16 px-4 sm:px-6 bg-white/80 backdrop-blur-xl border-2 border-zinc-200/50 rounded-xl sm:rounded-2xl text-base sm:text-lg md:text-xl font-semibold text-zinc-800 focus:ring-4 focus:ring-emerald-500/20 focus:border-emerald-500 shadow-xl hover:shadow-2xl hover:border-zinc-300 transition-all appearance-none"
-                                        required
-                                    >
-                                        <option value="">Seleziona tipo...</option>
-                                        <option value="ferie">☀️ Ferie</option>
-                                        <option value="malattia">🏥 Malattia</option>
-                                        <option value="permesso">⏰ Permesso</option>
-                                        <option value="smartworking">🏠 Smartworking</option>
-                                        <option value="fuori-sede">📍 Fuori Sede</option>
-                                        <option value="congedo-parentale">👶 Congedo Parentale</option>
-                                    </select>
-                                </div>
 
-                                <div>
-                                    <label className="block text-base sm:text-lg md:text-xl font-black tracking-tight text-zinc-800 mb-3 sm:mb-4 md:mb-5 flex items-center gap-2">
-                                        <Calendar className="w-4 h-4 sm:w-5 sm:h-5" />
-                                        Data inizio
-                                    </label>
-                                    <input
-                                        type="date"
-                                        value={form.dataInizio}
-                                        onChange={(e) => setForm({ ...form, dataInizio: e.target.value })}
-                                        min={new Date().toISOString().split('T')[0]}
-                                        className="w-full h-14 sm:h-16 px-4 sm:px-6 bg-white/80 backdrop-blur-xl border-2 border-zinc-200/50 rounded-xl sm:rounded-2xl text-base sm:text-lg md:text-xl font-semibold text-zinc-800 focus:ring-4 focus:ring-emerald-500/20 focus:border-emerald-500 shadow-xl hover:shadow-2xl hover:border-zinc-300 transition-all"
-                                        required
-                                    />
-                                </div>
-                            </div>
-
+                            {/* Tipo assenza */}
                             <div>
                                 <label className="block text-base sm:text-lg md:text-xl font-black tracking-tight text-zinc-800 mb-3 sm:mb-4 md:mb-5 flex items-center gap-2">
-                                    <Clock className="w-4 h-4 sm:w-5 sm:h-5" />
-                                    Durata
-                                    <span className={`ml-2 sm:ml-3 text-sm sm:text-base md:text-lg font-normal px-2 sm:px-3 py-0.5 sm:py-1 rounded-full ${
-                                        form.tipo === 'permesso' ? 'text-yellow-600 bg-yellow-100' :
-                                            form.tipo === 'malattia' ? 'text-red-600 bg-red-100' :
-                                                'text-blue-600 bg-blue-100'
-                                    }`}>
-                                        ({getDurataLabel(form.tipo)})
-                                    </span>
+                                    <FileText className="w-4 h-4 sm:w-5 sm:h-5" />
+                                    Tipo assenza
                                 </label>
-                                <div className="flex flex-col sm:flex-row gap-4 sm:gap-6">
-                                    <input
-                                        type="number"
-                                        min="1"
-                                        max={form.tipo === 'permesso' ? '7' : ''}
-                                        value={form.durata}
-                                        onChange={(e) => setForm({ ...form, durata: e.target.value })}
-                                        className="flex-1 min-h-[64px] sm:min-h-[80px] px-6 sm:px-8 bg-white/80 backdrop-blur-xl border-2 border-zinc-200/50 rounded-xl sm:rounded-2xl text-3xl sm:text-4xl font-black focus:ring-4 focus:ring-emerald-500/20 focus:border-emerald-500 shadow-xl hover:shadow-2xl hover:border-emerald-300 transition-all text-center"
-                                        placeholder="1"
-                                        required
-                                    />
-                                    <div className={`px-6 sm:px-8 py-4 sm:py-6 backdrop-blur-xl rounded-xl sm:rounded-2xl border shadow-lg flex items-center justify-center gap-2 sm:gap-3 ${
-                                        form.tipo === 'permesso' ? 'bg-yellow-50/80 border-yellow-200 text-yellow-800' :
-                                            form.tipo === 'malattia' ? 'bg-red-50/80 border-red-200 text-red-800' :
-                                                'bg-blue-50/80 border-blue-200 text-blue-800'
-                                    }`}>
-                                        {form.tipo === 'permesso' ? <Clock className="w-5 h-5 sm:w-6 sm:h-6" /> :
-                                            form.tipo === 'malattia' ? <Bed className="w-5 h-5 sm:w-6 sm:h-6" /> :
-                                                <Calendar className="w-5 h-5 sm:w-6 sm:h-6" />}
-                                        <span className="text-2xl sm:text-3xl font-black">
-                                            {getDurataLabel(form.tipo)}
-                                        </span>
-                                    </div>
-                                </div>
-                                <p className="text-xs sm:text-sm text-zinc-500 mt-3 sm:mt-4 font-mono tracking-wider flex items-center gap-2">
-                                    <AlertCircle className="w-3 h-3 sm:w-4 sm:h-4" />
-                                    {form.tipo === 'permesso' ? 'Max: 7 ore per giorno' :
-                                        form.tipo === 'malattia' ? 'Certificato medico richiesto' :
-                                            'Max: 30 giorni consecutivi'}
-                                </p>
+                                <select
+                                    value={form.tipo}
+                                    onChange={(e) => {
+                                        const nuovoTipo = e.target.value;
+                                        // Reset date se si passa a/da permesso
+                                        setForm({ ...form, tipo: nuovoTipo, durata: '', dataInizio: '', dataFine: '' });
+                                    }}
+                                    className="w-full h-14 sm:h-16 px-4 sm:px-6 bg-white/80 backdrop-blur-xl border-2 border-zinc-200/50 rounded-xl sm:rounded-2xl text-base sm:text-lg md:text-xl font-semibold text-zinc-800 focus:ring-4 focus:ring-emerald-500/20 focus:border-emerald-500 shadow-xl hover:shadow-2xl hover:border-zinc-300 transition-all appearance-none"
+                                    required
+                                >
+                                    <option value="">Seleziona tipo...</option>
+                                    <option value="ferie">🌴 Ferie</option>
+                                    <option value="malattia">🤒 Malattia</option>
+                                    <option value="permesso">⏰ Permesso</option>
+                                    <option value="smartworking">🏠 Smartworking</option>
+                                    <option value="fuori-sede">✈️ Fuori Sede</option>
+                                    <option value="congedo-parentale">👶 Congedo Parentale</option>
+                                </select>
                             </div>
 
+                            {/* Date: Dal - Al (tutti tranne permesso) */}
+                            {form.tipo !== 'permesso' && form.tipo !== '' && (
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 sm:gap-8">
+                                    <div>
+                                        <label className="block text-base sm:text-lg md:text-xl font-black tracking-tight text-zinc-800 mb-3 sm:mb-4 flex items-center gap-2">
+                                            <Calendar className="w-4 h-4 sm:w-5 sm:h-5" />
+                                            Dal
+                                        </label>
+                                        <input
+                                            type="date"
+                                            value={form.dataInizio}
+                                            onChange={(e) => {
+                                                const nuovaInizio = e.target.value;
+                                                // Se dataFine è precedente alla nuova dataInizio, reset
+                                                const nuovaFine = form.dataFine && form.dataFine < nuovaInizio ? '' : form.dataFine;
+                                                const giorni = nuovaInizio && nuovaFine
+                                                    ? Math.round((new Date(nuovaFine).getTime() - new Date(nuovaInizio).getTime()) / (1000 * 60 * 60 * 24)) + 1
+                                                    : '';
+                                                setForm({ ...form, dataInizio: nuovaInizio, dataFine: nuovaFine, durata: String(giorni) });
+                                            }}
+                                            min={new Date().toISOString().split('T')[0]}
+                                            max={form.tipo === 'smartworking' ? (() => {
+                                                const max = new Date();
+                                                max.setDate(max.getDate() + 30);
+                                                return max.toISOString().split('T')[0];
+                                            })() : undefined}
+                                            className="w-full h-14 sm:h-16 px-4 sm:px-6 bg-white/80 backdrop-blur-xl border-2 border-zinc-200/50 rounded-xl sm:rounded-2xl text-base sm:text-lg md:text-xl font-semibold text-zinc-800 focus:ring-4 focus:ring-emerald-500/20 focus:border-emerald-500 shadow-xl hover:shadow-2xl hover:border-zinc-300 transition-all"
+                                            required
+                                        />
+                                    </div>
+
+                                    <div>
+                                        <label className="block text-base sm:text-lg md:text-xl font-black tracking-tight text-zinc-800 mb-3 sm:mb-4 flex items-center gap-2">
+                                            <Calendar className="w-4 h-4 sm:w-5 sm:h-5" />
+                                            Al
+                                        </label>
+                                        <input
+                                            type="date"
+                                            value={form.dataFine}
+                                            onChange={(e) => {
+                                                const nuovaFine = e.target.value;
+                                                const giorni = form.dataInizio && nuovaFine
+                                                    ? Math.round((new Date(nuovaFine).getTime() - new Date(form.dataInizio).getTime()) / (1000 * 60 * 60 * 24)) + 1
+                                                    : '';
+                                                setForm({ ...form, dataFine: nuovaFine, durata: String(giorni) });
+                                            }}
+                                            min={form.dataInizio || new Date().toISOString().split('T')[0]}
+                                            max={form.tipo === 'smartworking' ? (() => {
+                                                const max = new Date();
+                                                max.setDate(max.getDate() + 30);
+                                                return max.toISOString().split('T')[0];
+                                            })() : undefined}
+                                            disabled={!form.dataInizio}
+                                            className="w-full h-14 sm:h-16 px-4 sm:px-6 bg-white/80 backdrop-blur-xl border-2 border-zinc-200/50 rounded-xl sm:rounded-2xl text-base sm:text-lg md:text-xl font-semibold text-zinc-800 focus:ring-4 focus:ring-emerald-500/20 focus:border-emerald-500 shadow-xl hover:shadow-2xl hover:border-zinc-300 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+                                            required
+                                        />
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Durata calcolata automaticamente (solo lettura, tutti tranne permesso) */}
+                            {form.tipo !== 'permesso' && form.tipo !== '' && form.durata && (
+                                <div className="px-5 py-4 bg-gradient-to-r from-emerald-50 to-green-50 border-2 border-emerald-300 rounded-xl sm:rounded-2xl flex items-center gap-3 shadow-md">
+                                    <CheckCircle className="w-5 h-5 text-emerald-600 shrink-0" />
+                                    <span className="text-base sm:text-lg font-black text-emerald-800">
+                        Durata : <span className="text-2xl">{form.durata}</span> {Number(form.durata) === 1 ? 'giorno' : 'giorni'}
+                    </span>
+                                </div>
+                            )}
+
+                            {/* Permesso: data singola + ore manuali */}
+                            {form.tipo === 'permesso' && (
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 sm:gap-8">
+                                    <div>
+                                        <label className="block text-base sm:text-lg md:text-xl font-black tracking-tight text-zinc-800 mb-3 sm:mb-4 flex items-center gap-2">
+                                            <Calendar className="w-4 h-4 sm:w-5 sm:h-5" />
+                                            Data
+                                        </label>
+                                        <input
+                                            type="date"
+                                            value={form.dataInizio}
+                                            onChange={(e) => setForm({ ...form, dataInizio: e.target.value, dataFine: e.target.value })}
+                                            min={new Date().toISOString().split('T')[0]}
+                                            className="w-full h-14 sm:h-16 px-4 sm:px-6 bg-white/80 backdrop-blur-xl border-2 border-zinc-200/50 rounded-xl sm:rounded-2xl text-base sm:text-lg md:text-xl font-semibold text-zinc-800 focus:ring-4 focus:ring-emerald-500/20 focus:border-emerald-500 shadow-xl hover:shadow-2xl hover:border-zinc-300 transition-all"
+                                            required
+                                        />
+                                    </div>
+
+                                    <div>
+                                        <label className="block text-base sm:text-lg md:text-xl font-black tracking-tight text-zinc-800 mb-3 sm:mb-4 flex items-center gap-2">
+                                            <Clock className="w-4 h-4 sm:w-5 sm:h-5" />
+                                            Ore
+                                        </label>
+                                        <input
+                                            type="number"
+                                            min="1"
+                                            max="7"
+                                            value={form.durata}
+                                            onChange={(e) => setForm({ ...form, durata: e.target.value })}
+                                            className="w-full h-14 sm:h-16 px-4 sm:px-6 bg-white/80 backdrop-blur-xl border-2 border-zinc-200/50 rounded-xl sm:rounded-2xl text-3xl font-black text-center focus:ring-4 focus:ring-emerald-500/20 focus:border-emerald-500 shadow-xl hover:shadow-2xl hover:border-zinc-300 transition-all"
+                                            placeholder="1"
+                                            required
+                                        />
+                                        <p className="text-xs sm:text-sm text-zinc-500 mt-2 font-mono tracking-wider flex items-center gap-2">
+                                            <AlertCircle className="w-3 h-3 sm:w-4 sm:h-4" />
+                                            Max: 7 ore per giorno
+                                        </p>
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Motivo */}
                             <div>
                                 <label className="block text-base sm:text-lg md:text-xl font-black tracking-tight text-zinc-800 mb-3 sm:mb-4 md:mb-5 flex items-center gap-2">
                                     <FileText className="w-4 h-4 sm:w-5 sm:h-5" />
@@ -841,17 +900,19 @@ export default function MieiDati() {
                                 </p>
                             </div>
 
+                            {/* Bottoni */}
                             <div className="flex flex-col sm:flex-row gap-4 sm:gap-6 pt-4 sm:pt-6">
                                 <button
                                     type="submit"
-                                    className="flex-1 min-h-[64px] sm:min-h-[80px] bg-gradient-to-r from-emerald-500 to-green-600 hover:from-emerald-600 hover:to-green-700 text-white font-black text-lg sm:text-xl md:text-2xl rounded-xl sm:rounded-2xl shadow-2xl hover:shadow-3xl hover:-translate-y-1 transition-all duration-500 flex items-center justify-center gap-3 sm:gap-4 backdrop-blur-xl border border-emerald-400/50 group active:scale-95"
+                                    disabled={!form.tipo || !form.dataInizio || !form.durata || Number(form.durata) <= 0}
+                                    className="flex-1 min-h-[64px] sm:min-h-[80px] bg-gradient-to-r from-emerald-500 to-green-600 hover:from-emerald-600 hover:to-green-700 disabled:from-zinc-300 disabled:to-zinc-400 disabled:cursor-not-allowed text-white font-black text-lg sm:text-xl md:text-2xl rounded-xl sm:rounded-2xl shadow-2xl hover:shadow-3xl hover:-translate-y-1 disabled:translate-y-0 transition-all duration-500 flex items-center justify-center gap-3 sm:gap-4 backdrop-blur-xl border border-emerald-400/50 group active:scale-95"
                                 >
                                     <Send className="w-5 h-5 sm:w-6 sm:h-6 group-hover:translate-x-1 transition-transform duration-300" />
                                     Invia Richiesta
                                 </button>
                                 <button
                                     type="button"
-                                    onClick={() => setForm({ tipo: '', dataInizio: '', durata: '', motivo: '' })}
+                                    onClick={() => setForm({ tipo: '', dataInizio: '', dataFine: '', durata: '', motivo: '' })}
                                     className="flex-1 min-h-[64px] sm:min-h-[80px] bg-gradient-to-r from-zinc-200 to-zinc-300 hover:from-zinc-300 hover:to-zinc-400 text-zinc-800 font-black text-base sm:text-lg md:text-xl rounded-xl sm:rounded-2xl shadow-xl hover:shadow-2xl hover:-translate-y-1 transition-all duration-500 flex items-center justify-center gap-2 sm:gap-3 backdrop-blur-xl border border-zinc-300/50 group active:scale-95"
                                 >
                                     <RotateCcw className="w-4 h-4 sm:w-5 sm:h-5 group-hover:rotate-180 transition-transform duration-500" />
@@ -861,6 +922,7 @@ export default function MieiDati() {
                         </form>
                     </div>
                 )}
+
             </div>
         </div>
     );
