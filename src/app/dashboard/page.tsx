@@ -21,7 +21,7 @@ import {
     EuroIcon,
     Lock, Archive
 } from 'lucide-react';
-import { useState } from 'react';
+import {useEffect, useState} from 'react';
 import { useUserPayslips } from '@/hooks/useUserPayslips';
 import toast, {Toaster} from "react-hot-toast";
 
@@ -36,10 +36,33 @@ export default function Dashboard() {
     const [passwordError, setPasswordError] = useState('');
     const isAdmin = user?.role === 'admin';
     const { payslips: userPayslips, loading: loadingUserPayslips } = useUserPayslips();
-    const [fullRemote, setFullRemote] = useState<boolean>(user?.fullRemote ?? false);
+    const [fullRemote, setFullRemote] = useState<boolean>(false)
+
+
+
+// Carica stato fullRemote dal DB
+    useEffect(() => {
+        if (!user?.id || !token) return
+
+        const fetchFullRemote = async () => {
+            try {
+                const res = await fetch(`/api/employees/${user.id}/fullremote`, {
+                    headers: { Authorization: `Bearer ${token}` },
+                })
+                const data = await res.json()
+                if (res.ok) setFullRemote(data.fullRemote)
+            } catch {
+                console.error("Errore fetch fullRemote")
+            }
+        }
+
+        fetchFullRemote()
+    }, [user?.id, token])
+
+
 
     const toggleFullRemote = async () => {
-        const nuovoValore = !fullRemote;
+        const nuovoValore = !fullRemote
         try {
             const res = await fetch(`/api/employees/${user?.id}/fullremote`, {
                 method: "PATCH",
@@ -48,17 +71,22 @@ export default function Dashboard() {
                     "Content-Type": "application/json",
                 },
                 body: JSON.stringify({ fullRemote: nuovoValore }),
-            });
+            })
+            const data = await res.json()
             if (res.ok) {
-                setFullRemote(nuovoValore);
-                toast.success(nuovoValore ? "Full Remote attivato" : "Full Remote disattivato");
+                setFullRemote(nuovoValore)
+                toast.success(
+                    nuovoValore
+                        ? `🏠 Full Remote attivato — Buon lavoro da Casa!`
+                        : "🏢 Impostato In Sede", {duration:5000}
+                )
             } else {
-                toast.error("Errore aggiornamento");
+                toast.error("Errore aggiornamento")
             }
         } catch {
-            toast.error("Errore di rete");
+            toast.error("Errore di rete")
         }
-    };
+    }
 
 
     const [showAddEmployeeModal, setShowAddEmployeeModal] = useState(false);
