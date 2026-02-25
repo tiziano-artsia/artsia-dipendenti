@@ -307,7 +307,6 @@ export async function PATCH(request: NextRequest) {
 
         console.log('✅ Aggiornato:', { id, status: action });
 
-        // ── NOTIFICA DIPENDENTE ───────────────────────────────
         try {
             const typeNorm = absence.type?.toLowerCase() || absence.tipo?.toLowerCase();
 

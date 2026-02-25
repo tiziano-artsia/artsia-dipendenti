@@ -190,15 +190,16 @@ export async function getAbsences(filter: Partial<Pick<AbsenceDoc, "employeeId" 
 export async function createAbsence(data: {
     employeeId: number;
     type: string;
-    dataInizio: any;
+    dataInizio: string;
+    dataFine: string;
     durata: number;
     motivo: string;
     status: string;
     requestedBy: string;
-    approvedBy: null;
+    approvedBy: any;
     createdAt: string;
     updatedAt: string;
-    data: any;
+    data: string;
     stato: string;
     tipo: string
 }) {
