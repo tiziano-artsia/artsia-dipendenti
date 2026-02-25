@@ -681,16 +681,33 @@ export default function Calendario() {
             toast.error('Team del manager non trovato')
             return
         }
-        console.log('Eccoli', employees);
+
         const GIORNI_SMART_PER_SETTIMANA = 2
         const giorniMese = getGiorniMese(mese, anno)
 
-        // Tutti i giorni lavorativi del mese in YYYY-MM-DD
+        const getISOWeek = (date: Date): { isoYear: number; isoWeek: number } => {
+            const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()))
+            const dayNum = d.getUTCDay() || 7
+            d.setUTCDate(d.getUTCDate() + 4 - dayNum)
+            const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1))
+            const isoWeek = Math.ceil(((d.getTime() - yearStart.getTime()) / 86400000 + 1) / 7)
+            return { isoYear: d.getUTCFullYear(), isoWeek }
+        }
+
+        // ── Calcola la settimana ISO dell'ultimo giorno del mese corrente ──
+        const ultimoGiornoMese = new Date(anno, mese, giorniMese)
+        const { isoYear: isoYearFine, isoWeek: isoWeekFine } = getISOWeek(ultimoGiornoMese)
+        const weekKeyFine = `${isoYearFine}-W${String(isoWeekFine).padStart(2, '0')}`
+
+        // ── Scansiona anche il mese successivo finché siamo nella stessa settimana dell'ultimo giorno ──
+        const meseSuccessivo = mese === 11 ? 0 : mese + 1
+        const annoSuccessivo = mese === 11 ? anno + 1 : anno
+        const giorniMeseSuccessivo = getGiorniMese(meseSuccessivo, annoSuccessivo)
+
         const tuttiGiorniLavorativi: string[] = []
+        const settimaneMap = new Map<string, string[]>()
 
-        // Raggruppa per settimana i giorni lavorativi
-        const settimaneMap = new Map<number, string[]>()
-
+        // Giorni del mese corrente
         for (let g = 1; g <= giorniMese; g++) {
             const date = new Date(anno, mese, g)
             const info = getInfoGiorno(g, mese, anno)
@@ -699,41 +716,49 @@ export default function Calendario() {
             const dataStr = `${anno}-${String(mese + 1).padStart(2, '0')}-${String(g).padStart(2, '0')}`
             tuttiGiorniLavorativi.push(dataStr)
 
-            const lunedi = new Date(date)
-            const dayOfWeek = date.getDay() === 0 ? 7 : date.getDay()
-            lunedi.setDate(date.getDate() - (dayOfWeek - 1))
-            const weekKey = lunedi.getTime()
+            const { isoYear, isoWeek } = getISOWeek(date)
+            const weekKey = `${isoYear}-W${String(isoWeek).padStart(2, '0')}`
+            if (!settimaneMap.has(weekKey)) settimaneMap.set(weekKey, [])
+            settimaneMap.get(weekKey)!.push(dataStr)
+        }
 
+        // Giorni del mese successivo che appartengono all'ultima settimana del mese corrente
+        for (let g = 1; g <= giorniMeseSuccessivo; g++) {
+            const date = new Date(annoSuccessivo, meseSuccessivo, g)
+            const { isoYear, isoWeek } = getISOWeek(date)
+            const weekKey = `${isoYear}-W${String(isoWeek).padStart(2, '0')}`
+
+            // Smetti appena esci dall'ultima settimana del mese corrente
+            if (weekKey !== weekKeyFine) break
+
+            const info = getInfoGiorno(g, meseSuccessivo, annoSuccessivo)
+            if (!info.isLavorativo) continue
+
+            const dataStr = `${annoSuccessivo}-${String(meseSuccessivo + 1).padStart(2, '0')}-${String(g).padStart(2, '0')}`
+
+            // ma aggiungili alla settimana condivisa
             if (!settimaneMap.has(weekKey)) settimaneMap.set(weekKey, [])
             settimaneMap.get(weekKey)!.push(dataStr)
         }
 
         const settimane = Array.from(settimaneMap.values())
 
-        // Separa fullRemote da normali
+        // ── Separa fullRemote da normali ──
         const teamFullRemote = employees.filter(e =>
             e.team?.trim().toLowerCase() === teamEffettivo.trim().toLowerCase() &&
-            (String((e as any).fullRemote) === "true")  // gestisce sia true che "true"
-        );
-
+            String((e as any).fullRemote) === 'true'
+        )
         const teamNormali = employees.filter(e =>
             e.team?.trim().toLowerCase() === teamEffettivo.trim().toLowerCase() &&
-            String((e as any).fullRemote) !== "true"
-        );
-
+            String((e as any).fullRemote) !== 'true'
+        )
 
         if (teamNormali.length === 0 && teamFullRemote.length === 0) {
             toast.error(`Nessun dipendente trovato nel team "${teamEffettivo}"`)
             return
         }
 
-        console.log(`Dipendenti normali: ${teamNormali.map(d => d.name).join(', ')}`)
-        console.log(`Dipendenti fullRemote: ${teamFullRemote.map(d => d.name).join(', ')}`)
-
-        toast.loading(
-            `Generazione smart per il team "${teamEffettivo}"...`,
-            { id: 'gen-smart' }
-        )
+        toast.loading(`Generazione smart per il team "${teamEffettivo}"...`, { id: 'gen-smart' })
 
         let successCount = 0
         let errorCount = 0
@@ -778,7 +803,6 @@ export default function Calendario() {
             }
         }
 
-        // ── DIPENDENTI NORMALI: 2 giorni casuali a settimana ──
         for (const dipendente of teamNormali) {
             const giorniOccupati = new Set(
                 assenze
@@ -802,7 +826,6 @@ export default function Calendario() {
 
                 const quantiGenerare = Math.min(GIORNI_SMART_PER_SETTIMANA, giorniLiberi.length)
 
-                // Fisher-Yates shuffle
                 const shuffled = [...giorniLiberi]
                 for (let i = shuffled.length - 1; i > 0; i--) {
                     const j = Math.floor(Math.random() * (i + 1))
@@ -813,7 +836,6 @@ export default function Calendario() {
             }
         }
 
-        // tutti i giorni lavorativi del mese ──
         for (const dipendente of teamFullRemote) {
             const giorniOccupati = new Set(
                 assenze
@@ -831,7 +853,6 @@ export default function Calendario() {
                     })
             )
 
-            // Tutti i giorni lavorativi liberi del mese
             const giorniLiberi = tuttiGiorniLavorativi.filter(d => !giorniOccupati.has(d))
             await inviaSmartworking(dipendente, giorniLiberi)
         }
@@ -843,7 +864,7 @@ export default function Calendario() {
             toast.error('Nessuno smart generato. Controlla i giorni disponibili.')
         } else {
             toast.success(
-                `✅ Generati ${successCount} smart per il team "${teamEffettivo}"` +
+                `Generati ${successCount} smart per il team "${teamEffettivo}"` +
                 (errorCount > 0 ? ` (${errorCount} errori)` : '')
             )
         }
@@ -1519,7 +1540,7 @@ export default function Calendario() {
                                         {/* Badge per assenze extra */}
                                         {assenzeGiorno.length > 4 && (
                                             <div className="absolute top-0.5 right-0.5 sm:top-1 sm:right-1 bg-red-500 text-white text-[9px] sm:text-xs rounded-full w-4 h-4 sm:w-5 sm:h-5 flex items-center justify-center font-bold shadow-lg z-20 border border-white">
-                                                + {assenzeGiorno.length - 3}
+                                                 {assenzeGiorno.length - 3}
                                             </div>
                                         )}
                                     </div>

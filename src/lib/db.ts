@@ -43,7 +43,7 @@ export async function connectDB() {
  * Types
  */
 export type Role = "dipendente" | "manager" | "admin";
-export type Team = "Sviluppo" | "Digital" | "Admin";
+export type Team = "Sviluppo" | "Digital" | "Bottega" | "Admin";
 export type AbsenceType = "ferie" | "permesso" | "smartworking" | "malattia" | "festivita" | "fuori-sede" | "congedo-parentale";
 export type AbsenceStatus = "pending" | "approved" | "rejected";
 
@@ -88,7 +88,7 @@ const employeeSchema = new Schema<EmployeeDoc>(
         id: { type: Number, required: true, unique: true, index: true },
         name: { type: String, required: true, trim: true },
         email: { type: String, required: true, unique: true, index: true, lowercase: true, trim: true },
-        team: { type: String, required: true, enum: ["Sviluppo", "Digital", "Admin"] },
+        team: { type: String, required: true, enum: ["Sviluppo", "Digital","Bottega","Admin"] },
         role: { type: String, required: true, enum: ["dipendente", "manager", "admin"] },
         fullRemote: { type: Boolean, default: false },
         passwordHash: { type: String, required: true },

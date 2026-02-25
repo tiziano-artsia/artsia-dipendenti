@@ -25,13 +25,13 @@ export async function POST(req: NextRequest) {
         }
 
         const token = authHeader.substring(7);
-        console.log('🔑 Token ricevuto:', token.substring(0, 20) + '...');
+        console.log(' Token ricevuto:', token.substring(0, 20) + '...');
 
         if (!process.env.JWT_SECRET) {
             return NextResponse.json({ error: 'Configurazione server errata' }, { status: 500 });
         }
 
-        console.log('🔐 JWT_SECRET presente:', process.env.JWT_SECRET.substring(0, 10) + '...');
+        console.log(' JWT_SECRET presente:', process.env.JWT_SECRET.substring(0, 10) + '...');
 
         let decoded: CustomJwtPayload;
         try {

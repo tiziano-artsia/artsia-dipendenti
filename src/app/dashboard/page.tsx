@@ -384,6 +384,7 @@ export default function Dashboard() {
                                         <option value="">Seleziona team</option>
                                         <option value="Sviluppo">Sviluppo</option>
                                         <option value="Digital">Digital</option>
+                                        <option value="Bottega">Bottega</option>
                                         {user?.role === 'admin' && <option value="Admin">Admin</option>}
                                     </select>
                                 </div>
