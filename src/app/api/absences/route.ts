@@ -4,12 +4,11 @@ import {
     createAbsence,
     updateAbsenceStatus,
     getEmployeesByRole,
-    getEmployees,
     EmployeeModel, connectDB, getTotaleInSmart
 } from '@/lib/db';
 import { sendNotification } from '@/lib/sendNotification';
 import jwt from 'jsonwebtoken';
-import {SMART_CONFIG} from "@/config/constant";
+import { SMART_CONFIG } from "@/config/constant";
 
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
 
@@ -24,12 +23,19 @@ function getUserFromToken(request: NextRequest): JWTPayload | null {
     try {
         const authHeader = request.headers.get('authorization');
         if (!authHeader?.startsWith('Bearer ')) return null;
-
         const token = authHeader.substring(7);
         return jwt.verify(token, JWT_SECRET) as JWTPayload;
     } catch {
         return null;
     }
+}
+
+function calcolaDataFine(dataInizio: string, durata: number, tipo: string): string {
+    if (tipo === 'permesso') return dataInizio;
+    const [y, m, d] = dataInizio.split('-').map(Number);
+    const fine = new Date(y, m - 1, d);
+    fine.setDate(fine.getDate() + durata - 1);
+    return `${fine.getFullYear()}-${String(fine.getMonth() + 1).padStart(2, '0')}-${String(fine.getDate()).padStart(2, '0')}`;
 }
 
 export async function GET(request: NextRequest) {
@@ -42,11 +48,7 @@ export async function GET(request: NextRequest) {
         const { searchParams } = request.nextUrl;
         const employeeIdParam = searchParams.get('employeeId');
 
-        console.log('📊 GET Absences:', {
-            role: user.role,
-            userId: user.id,
-            filter: employeeIdParam || 'tutti'
-        });
+        console.log('📊 GET Absences:', { role: user.role, userId: user.id, filter: employeeIdParam || 'tutti' });
 
         const filter: any = {};
         if (user.role !== 'admin') {
@@ -58,23 +60,14 @@ export async function GET(request: NextRequest) {
             filter.employeeId = Number(employeeIdParam);
         }
 
-        console.log('Filtro:', filter);
-
         const absences = await getAbsences(filter);
-        console.log(` ${absences.length} assenze trovate`);
+        console.log(`📋 ${absences.length} assenze trovate`);
 
-        return NextResponse.json({
-            success: true,
-            data: absences,
-            count: absences.length
-        });
+        return NextResponse.json({ success: true, data: absences, count: absences.length });
 
     } catch (error: any) {
         console.error('❌ GET error:', error.message || error);
-        return NextResponse.json(
-            { error: 'Errore interno server', details: error.message },
-            { status: 500 }
-        );
+        return NextResponse.json({ error: 'Errore interno server', details: error.message }, { status: 500 });
     }
 }
 
@@ -91,48 +84,66 @@ export async function POST(request: NextRequest) {
         const typeNorm = (body.type || '').trim().toLowerCase();
 
         const tipiValidi = new Set([
-            'ferie',
-            'permesso',
-            'smartworking',
-            'malattia',
-            'festivita',
-            'fuori-sede',
-            'congedo-parentale'
+            'ferie', 'permesso', 'smartworking', 'malattia',
+            'festivita', 'fuori-sede', 'congedo-parentale'
         ]);
 
         if (!tipiValidi.has(typeNorm)) {
             return NextResponse.json(
+                { error: `Tipo non valido. Usa: ${Array.from(tipiValidi).join(', ')}`, ricevuto: typeNorm },
+                { status: 400 }
+            );
+        }
+
+        // ── VALIDAZIONE dataInizio ────────────────────────────
+        if (!body.dataInizio) {
+            return NextResponse.json({ error: 'dataInizio obbligatoria' }, { status: 400 });
+        }
+
+        // ── VALIDAZIONE durata (permesso = ore, altri = giorni)
+        const durata = Number(body.durata);
+        const durataMinima = typeNorm === 'permesso' ? 0.5 : 1;
+
+        if (!body.durata || durata < durataMinima) {
+            return NextResponse.json(
                 {
-                    error: `Tipo non valido. Usa: ${Array.from(tipiValidi).join(', ')}`,
-                    ricevuto: typeNorm
+                    error: typeNorm === 'permesso'
+                        ? `Durata obbligatoria (minimo ${durataMinima} ora)`
+                        : `Durata obbligatoria (minimo ${durataMinima} giorno)`
                 },
                 { status: 400 }
             );
         }
 
-        if (!body.dataInizio || !body.durata || Number(body.durata) <= 0) {
-            return NextResponse.json(
-                { error: 'dataInizio e durata (>0) obbligatori' },
-                { status: 400 }
-            );
-        }
+        // ── NORMALIZZA dataInizio in formato ISO YYYY-MM-DD ───
+        const dataInizioISO: string = body.dataInizio.includes('/')
+            ? (() => {
+                const [d, m, y] = body.dataInizio.split('/');
+                return `${y}-${m.padStart(2, '0')}-${d.padStart(2, '0')}`;
+            })()
+            : body.dataInizio;
+
+        // ── CALCOLA dataFine ──────────────────────────────────
+        const dataFineISO = calcolaDataFine(dataInizioISO, durata, typeNorm);
+
+        console.log(`📅 dataInizio: ${dataInizioISO} | dataFine: ${dataFineISO} | durata: ${durata} | tipo: ${typeNorm}`);
 
         let status = body.status || 'pending';
         let approvedBy = body.approvedBy || null;
 
-        // SMARTWORKING
+        // ── SMARTWORKING ──────────────────────────────────────
         if (typeNorm === 'smartworking') {
             const oggi = new Date();
             oggi.setHours(0, 0, 0, 0);
 
-            const [year, month, day] = body.dataInizio.split('-').map(Number);
+            const [year, month, day] = dataInizioISO.split('-').map(Number);
             const dataRichiesta = new Date(year, month - 1, day);
             dataRichiesta.setHours(0, 0, 0, 0);
 
             const maxData = new Date(oggi);
             maxData.setDate(oggi.getDate() + SMART_CONFIG.MAX_GIORNI_AVANTI);
 
-            const isManagerOrAdmin = user.role === 'manager';
+            const isManagerOrAdmin = user.role === 'manager' || user.role === 'admin';
 
             if (!isManagerOrAdmin && dataRichiesta > maxData) {
                 return NextResponse.json(
@@ -143,11 +154,9 @@ export async function POST(request: NextRequest) {
 
             await connectDB();
 
-            // ← Controlla se il richiedente è fullRemote
             const richiedente = await EmployeeModel.findOne({ id: Number(body.employeeId || user.id) }).lean();
-            const isFullRemote = richiedente?.fullRemote === true || (richiedente?.fullRemote as any) === "true";
+            const isFullRemote = richiedente?.fullRemote === true || (richiedente?.fullRemote as any) === 'true';
 
-            // ← Se fullRemote, skippa il controllo presenze
             if (!isFullRemote) {
                 const totalePersone: number = await EmployeeModel.countDocuments({
                     role: { $ne: 'admin' },
@@ -155,7 +164,7 @@ export async function POST(request: NextRequest) {
                 });
 
                 const totaleInSmart: number = await getTotaleInSmart(
-                    body.dataInizio,
+                    dataInizioISO,
                     Number(body.employeeId || user.id)
                 );
 
@@ -176,7 +185,7 @@ export async function POST(request: NextRequest) {
                     );
                 }
             } else {
-                console.log(`🏠 Dipendente fullRemote: skip controllo presenze`);
+                console.log('🏠 Dipendente fullRemote: skip controllo presenze');
             }
 
             status = 'approved';
@@ -184,30 +193,34 @@ export async function POST(request: NextRequest) {
             console.log('✅ Auto-approvato: smartworking');
         }
 
+        // ── FESTIVITA ─────────────────────────────────────────
         if (typeNorm === 'festivita') {
             status = 'approved';
             approvedBy = user.id;
-            console.log(' Auto-approvato: festivita');
+            console.log('✅ Auto-approvato: festivita');
         }
 
+        // ── CREA ASSENZA ──────────────────────────────────────
         const newAbsence = await createAbsence({
             employeeId: Number(body.employeeId || user.id),
             type: typeNorm,
-            dataInizio: body.dataInizio,
-            durata: Number(body.durata),
+            dataInizio: dataInizioISO,
+            dataFine: dataFineISO,
+            durata,
             motivo: (body.motivo || '').trim(),
-            status: status,
+            status,
             requestedBy: body.requestedBy || user.name || user.email,
-            approvedBy: approvedBy,
+            approvedBy,
             createdAt: body.createdAt || new Date().toISOString(),
             updatedAt: body.updatedAt || new Date().toISOString(),
-            data: body.dataInizio,
+            data: dataInizioISO,
             stato: status,
             tipo: typeNorm
         });
 
-        console.log(' Richiesta creata:', newAbsence.id, '| Status:', status);
+        console.log(`✅ Richiesta creata: ${newAbsence.id} | Status: ${status} | dataFine: ${dataFineISO}`);
 
+        // ── NOTIFICHE ADMIN ───────────────────────────────────
         const tipiRichiedonoApprovazione = ['ferie', 'permesso', 'malattia', 'fuori-sede', 'congedo-parentale'];
 
         if (status === 'pending' && tipiRichiedonoApprovazione.includes(typeNorm)) {
@@ -225,7 +238,7 @@ export async function POST(request: NextRequest) {
 
                     const tipoLabel = tipoLabels[typeNorm] || 'Assenza';
                     const notificationType = typeNorm === 'permesso' ? 'permit_request' : 'leave_request';
-                    const dataFormattata = new Date(body.dataInizio).toLocaleDateString('it-IT');
+                    const dataFormattata = new Date(dataInizioISO).toLocaleDateString('it-IT');
                     const unitaMisura = typeNorm === 'permesso' ? 'ore' : 'giorni';
 
                     for (const admin of admins) {
@@ -234,38 +247,28 @@ export async function POST(request: NextRequest) {
                                 userId: String(admin.id),
                                 type: notificationType,
                                 title: `Nuova Richiesta di ${tipoLabel}`,
-                                body: `${user.name} ha richiesto ${tipoLabel} dal ${dataFormattata} (${body.durata} ${unitaMisura})`,
+                                body: `${user.name} ha richiesto ${tipoLabel} dal ${dataFormattata} (${durata} ${unitaMisura})`,
                                 relatedRequestId: String(newAbsence.id),
                                 url: `/dashboard/approvazioni`
                             });
-                            console.log(` Notifica inviata ad admin ${admin.name} (ID: ${admin.id})`);
+                            console.log(`🔔 Notifica inviata ad admin ${admin.name} (ID: ${admin.id})`);
                         } catch (notifError) {
-                            console.error(` Errore notifica admin ${admin.id}:`, notifError);
+                            console.error(`❌ Errore notifica admin ${admin.id}:`, notifError);
                         }
                     }
                 } else {
-                    console.warn(' Nessun admin trovato per le notifiche');
+                    console.warn('⚠️ Nessun admin trovato per le notifiche');
                 }
             } catch (adminError) {
-                console.error(' Errore recupero admin:', adminError);
+                console.error('❌ Errore recupero admin:', adminError);
             }
         }
 
-        const responseData = {
-            ...newAbsence,
-            dataInizio: newAbsence.dataInizio.includes('/')
-                ? newAbsence.dataInizio
-                : new Date(newAbsence.dataInizio).toLocaleDateString('it-IT')
-        };
-
-        return NextResponse.json({ success: true, data: responseData });
+        return NextResponse.json({ success: true, data: newAbsence });
 
     } catch (error: any) {
         console.error('❌ POST error:', error);
-        return NextResponse.json(
-            { error: 'Errore creazione', details: error.message },
-            { status: 500 }
-        );
+        return NextResponse.json({ error: 'Errore creazione', details: error.message }, { status: 500 });
     }
 }
 
@@ -285,7 +288,6 @@ export async function PATCH(request: NextRequest) {
             return NextResponse.json({ error: 'id e action (approve/reject) obbligatori' }, { status: 400 });
         }
 
-        // Recupera la richiesta per la notifica
         const absences = await getAbsences({});
         const absence = absences.find((a: any) => a.id === Number(id));
 
@@ -293,7 +295,6 @@ export async function PATCH(request: NextRequest) {
             return NextResponse.json({ error: 'Assenza non trovata' }, { status: 404 });
         }
 
-        // Aggiorna lo stato
         const result = await updateAbsenceStatus(
             id,
             action === 'approve' ? 'approved' : 'rejected',
@@ -306,11 +307,10 @@ export async function PATCH(request: NextRequest) {
 
         console.log('✅ Aggiornato:', { id, status: action });
 
-        //  INVIA NOTIFICA AL DIPENDENTE
+        // ── NOTIFICA DIPENDENTE ───────────────────────────────
         try {
             const typeNorm = absence.type?.toLowerCase() || absence.tipo?.toLowerCase();
 
-            // Mappa tipo → label
             const tipoLabels: Record<string, string> = {
                 'ferie': 'Ferie',
                 'permesso': 'Permesso',
@@ -324,7 +324,6 @@ export async function PATCH(request: NextRequest) {
             const tipoLabel = tipoLabels[typeNorm] || 'Assenza';
 
             let notificationType: 'leave_approved' | 'leave_rejected' | 'permit_approved' | 'permit_rejected';
-
             if (typeNorm === 'permesso') {
                 notificationType = action === 'approve' ? 'permit_approved' : 'permit_rejected';
             } else {

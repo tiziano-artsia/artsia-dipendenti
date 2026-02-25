@@ -363,6 +363,9 @@ export default function Calendario() {
             // Match esatto data inizio
             if (dataAssenza === dataStr) return true;
 
+            // Permesso: appare SOLO nel giorno di inizio, non su range
+            if (assenza.tipo === 'permesso') return false;
+
             // Supporto formato italiano gg/mm/aaaa -> ISO
             if (dataAssenza.includes('/')) {
                 const [giorno, mese, anno] = dataAssenza.split('/');
@@ -374,7 +377,6 @@ export default function Calendario() {
             try {
                 let dataInizio: Date;
 
-                // Parse dataInizio
                 if (dataAssenza.includes('/')) {
                     const [g, m, a] = dataAssenza.split('/').map(Number);
                     dataInizio = new Date(a, m - 1, g);
@@ -396,11 +398,9 @@ export default function Calendario() {
 
                 const dataFine = dataCorrente;
 
-                // Parse dataStr da verificare
                 const [anno, mese, giorno] = dataStr.split('-').map(Number);
                 const dataCheck = new Date(anno, mese - 1, giorno);
 
-                // Verifica se dataCheck è nel range [dataInizio, dataFine] ED è lavorativo
                 if (dataCheck >= dataInizio && dataCheck <= dataFine) {
                     const infoCheck = getInfoGiorno(dataCheck.getDate(), dataCheck.getMonth(), dataCheck.getFullYear());
                     if (infoCheck.isLavorativo) return true;
@@ -412,7 +412,7 @@ export default function Calendario() {
             return false;
         });
 
-        const assenzeFiltrate = assenzeGiorno.filter((a) => {
+        return assenzeGiorno.filter((a) => {
             // Filtra per tipo se filtri attivi
             if (filtriAttivi.length > 0 && !filtriAttivi.includes(a.tipo)) return false;
 
@@ -422,38 +422,24 @@ export default function Calendario() {
             // Admin vede tutto
             if (isAdmin) return true;
 
-            // ASSENZE APPROVATE: TUTTI LE VEDONO (ferie, malattia, permessi, smartworking)
+            // Assenze approvate: tutti le vedono
             if (a.stato === 'approved') return true;
 
-            // Assenze PENDING: regole di visibilità specifiche
+            // Assenze pending: regole di visibilità
             if (a.stato === 'pending') {
                 const employee = getEmployeeById(a.employeeId);
                 const isOwnAbsence = a.employeeId === user?.id;
                 const isTeamMember = employee?.team === userTeam;
 
-                // Smartworking pending: sempre visibile a tutti
+                // Smartworking pending: visibile a tutti
                 if (a.tipo === 'smartworking') return true;
 
-                // Ferie e malattia pending: solo proprie o del team se manager
-                if (['ferie', 'malattia'].includes(a.tipo)) {
-                    return isOwnAbsence || (isManager && isTeamMember);
-                }
-
-                // Permesso pending: solo propri o del team se manager
-                if (a.tipo === 'permesso') {
-                    return isOwnAbsence || (isManager && isTeamMember);
-                }
-
-                // Fuori-sede e congedo-parentale: solo proprie o del team se manager
-                if (['fuori-sede', 'congedo-parentale'].includes(a.tipo)) {
-                    return isOwnAbsence || (isManager && isTeamMember);
-                }
+                // Tutti gli altri: solo proprie o del team se manager
+                return isOwnAbsence || (isManager && isTeamMember);
             }
 
             return false;
         });
-
-        return assenzeFiltrate;
     };
 
     const getEmployeeById = (employeeId: number): Employee | null => {

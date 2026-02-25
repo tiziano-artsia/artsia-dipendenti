@@ -68,6 +68,7 @@ export type AbsenceDoc = {
     employeeId: any;
     type: AbsenceType;
     dataInizio: string; // YYYY-MM-DD
+    dataFine: string;
     durata: number; // giorni o ore
     motivo: string;
     status: AbsenceStatus;
@@ -108,6 +109,7 @@ const absenceSchema = new Schema<AbsenceDoc>(
             enum: ["ferie", "permesso", "smartworking", "malattia", "festivita", "fuori-sede", "congedo-parentale"]
         },
         dataInizio: { type: String, required: true }, // YYYY-MM-DD
+        dataFine: { type: String, required: true },
         durata: { type: Number, required: true },
         motivo: { type: String, default: "" },
         status: { type: String, required: true, enum: ["pending", "approved", "rejected"], default: "pending" },
