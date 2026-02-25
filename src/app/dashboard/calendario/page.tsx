@@ -1627,6 +1627,7 @@ export default function Calendario() {
                                                                     Al{' '}
                                                             <span className="font-black">
                                                                         {(() => {
+                                                                            // @ts-ignore
                                                                             if (assenza.tipo === 'permesso') {
                                                                                 return parseLocalDate(assenza.dataInizio).toLocaleDateString('it-IT')
                                                                             }

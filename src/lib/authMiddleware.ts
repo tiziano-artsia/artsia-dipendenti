@@ -35,7 +35,8 @@ export async function verifyAuth(request: NextRequest): Promise<AuthUser | null>
 
         // CONVERTI ID IN STRINGA
         return {
-            id: String(decoded.id), // <-- IMPORTANTE: converte a stringa
+            fullRemote: false,
+            id: String(decoded.id),
             email: decoded.email,
             role: decoded.role
         };
