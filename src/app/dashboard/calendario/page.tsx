@@ -1,8 +1,8 @@
 'use client';
 
 import * as XLSX from 'xlsx';
-import { useState, useEffect, type SetStateAction } from 'react';
-import { useAuth } from '@/hooks/useAuth';
+import {useState, useEffect, type SetStateAction} from 'react';
+import {useAuth} from '@/hooks/useAuth';
 import {
     Download,
     ChevronLeft,
@@ -18,7 +18,7 @@ import {
     Filter, ChevronDown, NotebookText, SquareMenu,
 } from 'lucide-react';
 
-import toast, { Toaster } from 'react-hot-toast';
+import toast, {Toaster} from 'react-hot-toast';
 
 interface AbsenceBackend {
     id: string;
@@ -34,11 +34,12 @@ interface Absence {
     id: number;
     employeeId: number;
     dataInizio: string;
+    dataFine?: string;
     durata: number;
     tipo: 'ferie' | 'permesso' | 'smartworking' | 'malattia' | 'fuori-sede' | 'congedo-parentale';
     stato: 'pending' | 'approved' | 'rejected';
     motivo?: string;
-    dataFine?: string;
+
 }
 
 interface Employee {
@@ -88,7 +89,7 @@ const getTipoColor = (tipo: string): string => {
 };
 
 export default function Calendario() {
-    const { user, token } = useAuth();
+    const {user, token} = useAuth();
     const isAdmin = user?.role === 'admin';
     const isManager = user?.role === 'manager';
     const userTeam = user?.team;
@@ -117,9 +118,23 @@ export default function Calendario() {
     const [legendaAperta, setLegendaAperta] = useState(false);
 
     const parseLocalDate = (dateStr: string): Date => {
-        const [year, month, day] = dateStr.split('-').map(Number)
-        return new Date(year, month - 1, day)
-    }
+        if (!dateStr) return new Date(NaN);
+
+        // Formato italiano gg/mm/aaaa
+        if (dateStr.includes('/')) {
+            const [g, m, a] = dateStr.split('/').map(Number);
+            return new Date(a, m - 1, g); // mese è 0-based
+        }
+
+        // Formato ISO aaaa-mm-gg
+        if (dateStr.includes('-')) {
+            const [a, m, g] = dateStr.split('-').map(Number);
+            return new Date(a, m - 1, g);
+        }
+
+        return new Date(NaN);
+    };
+
     const mapBackendToFrontend = (backendData: any[]): Absence[] => {
         return backendData.map((item) => ({
             id: item.id,
@@ -136,7 +151,7 @@ export default function Calendario() {
         if (!token) return
         try {
             const res = await fetch('/api/employees', {
-                headers: { Authorization: `Bearer ${token}` },
+                headers: {Authorization: `Bearer ${token}`},
             })
             if (res.ok) {
                 const data = await res.json()
@@ -148,7 +163,7 @@ export default function Calendario() {
                 }))
 
                 if (user && !emps.find(e => Number(e.id) === Number(user.id))) {
-                    emps.push({ id: user.id, name: user.name, team: user.team ?? 'ND', fullRemote: false })
+                    emps.push({id: user.id, name: user.name, team: user.team ?? 'ND', fullRemote: false})
                 }
 
                 setEmployees(emps)
@@ -219,8 +234,7 @@ export default function Calendario() {
                 toast.error(data?.error || 'Errore durante l\'invio');
                 console.error('Backend:', data);
             }
-        }
-        catch (error) {
+        } catch (error) {
             console.error('Fetch error:', error);
         }
     };
@@ -239,7 +253,7 @@ export default function Calendario() {
             }
 
             const res = await fetch(url, {
-                headers: { Authorization: `Bearer ${token}` },
+                headers: {Authorization: `Bearer ${token}`},
             });
 
             if (!res.ok) throw new Error(`HTTP ${res.status}: ${res.statusText}`);
@@ -358,22 +372,20 @@ export default function Calendario() {
 
     const getAssenzePerData = (dataStr: string): Absence[] => {
         const assenzeGiorno = assenze.filter((assenza) => {
+            const raw = assenza as unknown as Record<string, any>;
+            const tipo = assenza.tipo ?? raw.type;
             const dataAssenza = assenza.dataInizio;
 
-            // Match esatto data inizio
             if (dataAssenza === dataStr) return true;
 
-            // Permesso: appare SOLO nel giorno di inizio, non su range
-            if (assenza.tipo === 'permesso') return false;
+            if (tipo === 'permesso') return false;
 
-            // Supporto formato italiano gg/mm/aaaa -> ISO
             if (dataAssenza.includes('/')) {
                 const [giorno, mese, anno] = dataAssenza.split('/');
                 const dataItalianaISO = `${anno}-${mese.padStart(2, '0')}-${giorno.padStart(2, '0')}`;
                 if (dataItalianaISO === dataStr) return true;
             }
 
-            // Verifica se dataStr cade nel range dell'assenza
             try {
                 let dataInizio: Date;
 
@@ -385,24 +397,30 @@ export default function Calendario() {
                     dataInizio = new Date(anno, mese - 1, giorno);
                 }
 
-                // Calcola dataFine saltando weekend e festivi
                 let giorniLavorativiContati = 0;
                 let dataCorrente = new Date(dataInizio);
                 dataCorrente.setDate(dataCorrente.getDate() - 1);
 
                 while (giorniLavorativiContati < assenza.durata) {
                     dataCorrente.setDate(dataCorrente.getDate() + 1);
-                    const info = getInfoGiorno(dataCorrente.getDate(), dataCorrente.getMonth(), dataCorrente.getFullYear());
+                    const info = getInfoGiorno(
+                        dataCorrente.getDate(),
+                        dataCorrente.getMonth(),
+                        dataCorrente.getFullYear()
+                    );
                     if (info.isLavorativo) giorniLavorativiContati++;
                 }
 
                 const dataFine = dataCorrente;
-
                 const [anno, mese, giorno] = dataStr.split('-').map(Number);
                 const dataCheck = new Date(anno, mese - 1, giorno);
 
                 if (dataCheck >= dataInizio && dataCheck <= dataFine) {
-                    const infoCheck = getInfoGiorno(dataCheck.getDate(), dataCheck.getMonth(), dataCheck.getFullYear());
+                    const infoCheck = getInfoGiorno(
+                        dataCheck.getDate(),
+                        dataCheck.getMonth(),
+                        dataCheck.getFullYear()
+                    );
                     if (infoCheck.isLavorativo) return true;
                 }
             } catch (error) {
@@ -412,34 +430,26 @@ export default function Calendario() {
             return false;
         });
 
-        return assenzeGiorno.filter((a) => {
-            // Filtra per tipo se filtri attivi
-            if (filtriAttivi.length > 0 && !filtriAttivi.includes(a.tipo)) return false;
+        return assenzeGiorno
+            .filter((a) => {
+                const raw = a as unknown as Record<string, any>;
+                const tipo = a.tipo ?? raw.type;
+                const stato = a.stato ?? raw.status;
 
-            // Non mostrare mai le rifiutate
-            if (a.stato === 'rejected') return false;
+                if (filtriAttivi.length > 0 && !filtriAttivi.includes(tipo)) return false;
 
-            // Admin vede tutto
-            if (isAdmin) return true;
+                if (stato === 'rejected') return false;
 
-            // Assenze approvate: tutti le vedono
-            if (a.stato === 'approved') return true;
-
-            // Assenze pending: regole di visibilità
-            if (a.stato === 'pending') {
-                const employee = getEmployeeById(a.employeeId);
-                const isOwnAbsence = a.employeeId === user?.id;
-                const isTeamMember = employee?.team === userTeam;
-
-                // Smartworking pending: visibile a tutti
-                if (a.tipo === 'smartworking') return true;
-
-                // Tutti gli altri: solo proprie o del team se manager
-                return isOwnAbsence || (isManager && isTeamMember);
-            }
-
-            return false;
-        });
+                return true;
+            })
+            .map((a) => {
+                if (isAdmin || a.employeeId === user?.id) return a;
+                return {
+                    ...a,
+                    motivo: undefined,
+                    note: undefined,
+                } as Absence;
+            });
     };
 
     const getEmployeeById = (employeeId: number): Employee | null => {
@@ -608,20 +618,20 @@ export default function Calendario() {
         const worksheet = XLSX.utils.aoa_to_sheet(datiSheet);
 
         // Larghezza colonne
-        const colWidths = [{ wch: 5 }, { wch: 25 }, { wch: 18 }, { wch: 18 }, { wch: 18 }, { wch: 20 }];
+        const colWidths = [{wch: 5}, {wch: 25}, {wch: 18}, {wch: 18}, {wch: 18}, {wch: 20}];
 
-        if (haFestivita) colWidths.push({ wch: 20 });
-        if (haFuoriSede) colWidths.push({ wch: 20 });
-        if (haCongedoParentale) colWidths.push({ wch: 25 });
+        if (haFestivita) colWidths.push({wch: 20});
+        if (haFuoriSede) colWidths.push({wch: 20});
+        if (haCongedoParentale) colWidths.push({wch: 25});
 
-        colWidths.push({ wch: 40 });
+        colWidths.push({wch: 40});
 
         worksheet['!cols'] = colWidths;
 
         XLSX.utils.book_append_sheet(workbook, worksheet, 'Totali Mensili');
 
         // Genera buffer
-        const excelBuffer = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' });
+        const excelBuffer = XLSX.write(workbook, {bookType: 'xlsx', type: 'array'});
 
         // Crea Blob e download
         const blob = new Blob([excelBuffer], {
@@ -677,12 +687,12 @@ export default function Calendario() {
             d.setUTCDate(d.getUTCDate() + 4 - dayNum)
             const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1))
             const isoWeek = Math.ceil(((d.getTime() - yearStart.getTime()) / 86400000 + 1) / 7)
-            return { isoYear: d.getUTCFullYear(), isoWeek }
+            return {isoYear: d.getUTCFullYear(), isoWeek}
         }
 
         // ── Calcola la settimana ISO dell'ultimo giorno del mese corrente ──
         const ultimoGiornoMese = new Date(anno, mese, giorniMese)
-        const { isoYear: isoYearFine, isoWeek: isoWeekFine } = getISOWeek(ultimoGiornoMese)
+        const {isoYear: isoYearFine, isoWeek: isoWeekFine} = getISOWeek(ultimoGiornoMese)
         const weekKeyFine = `${isoYearFine}-W${String(isoWeekFine).padStart(2, '0')}`
 
         // ── Scansiona anche il mese successivo finché siamo nella stessa settimana dell'ultimo giorno ──
@@ -702,7 +712,7 @@ export default function Calendario() {
             const dataStr = `${anno}-${String(mese + 1).padStart(2, '0')}-${String(g).padStart(2, '0')}`
             tuttiGiorniLavorativi.push(dataStr)
 
-            const { isoYear, isoWeek } = getISOWeek(date)
+            const {isoYear, isoWeek} = getISOWeek(date)
             const weekKey = `${isoYear}-W${String(isoWeek).padStart(2, '0')}`
             if (!settimaneMap.has(weekKey)) settimaneMap.set(weekKey, [])
             settimaneMap.get(weekKey)!.push(dataStr)
@@ -711,7 +721,7 @@ export default function Calendario() {
         // Giorni del mese successivo che appartengono all'ultima settimana del mese corrente
         for (let g = 1; g <= giorniMeseSuccessivo; g++) {
             const date = new Date(annoSuccessivo, meseSuccessivo, g)
-            const { isoYear, isoWeek } = getISOWeek(date)
+            const {isoYear, isoWeek} = getISOWeek(date)
             const weekKey = `${isoYear}-W${String(isoWeek).padStart(2, '0')}`
 
             // Smetti appena esci dall'ultima settimana del mese corrente
@@ -744,7 +754,7 @@ export default function Calendario() {
             return
         }
 
-        toast.loading(`Generazione smart per il team "${teamEffettivo}"...`, { id: 'gen-smart' })
+        toast.loading(`Generazione smart per il team "${teamEffettivo}"...`, {id: 'gen-smart'})
 
         let successCount = 0
         let errorCount = 0
@@ -862,7 +872,8 @@ export default function Calendario() {
         const info = getInfoGiorno(giornoCorrente.getDate(), giornoCorrente.getMonth(), giornoCorrente.getFullYear());
 
         return (
-            <div className="bg-white rounded-2xl sm:rounded-3xl shadow-2xl p-3 sm:p-6 md:p-10 border border-zinc-100">                {/* Header Giorno - Responsive */}
+            <div
+                className="bg-white rounded-2xl sm:rounded-3xl shadow-2xl p-3 sm:p-6 md:p-10 border border-zinc-100">                {/* Header Giorno - Responsive */}
                 <div className="text-center mb-6 sm:mb-8">
                     <h2 className="text-xl sm:text-2xl md:text-3xl font-black text-zinc-800 leading-tight break-words px-2">
                         {nomiGiorni[giornoCorrente.getDay()]} {giornoCorrente.getDate()} {nomiMesi[giornoCorrente.getMonth()]} {giornoCorrente.getFullYear()}
@@ -874,7 +885,7 @@ export default function Calendario() {
                     )}
                     {info.isWeekend && !info.isFestivo && (
                         <p className="text-zinc-600 font-bold text-sm sm:text-base mt-2 flex items-center justify-center gap-2">
-                            <Calendar className="w-4 h-4 sm:w-5 sm:h-5" /> Weekend
+                            <Calendar className="w-4 h-4 sm:w-5 sm:h-5"/> Weekend
                         </p>
                     )}
                 </div>
@@ -882,7 +893,7 @@ export default function Calendario() {
                 {/* Empty State - Responsive */}
                 {assenzeGiorno.length === 0 ? (
                     <div className="text-center py-12 sm:py-16 md:py-20 text-zinc-500 px-4">
-                        <Calendar className="w-16 h-16 sm:w-20 sm:h-20 mx-auto mb-4 opacity-30" />
+                        <Calendar className="w-16 h-16 sm:w-20 sm:h-20 mx-auto mb-4 opacity-30"/>
                         <p className="text-lg sm:text-xl md:text-2xl font-bold">Nessuna assenza per questo giorno</p>
                     </div>
                 ) : (
@@ -898,11 +909,14 @@ export default function Calendario() {
                                     className="bg-white/80 backdrop-blur-xl rounded-xl sm:rounded-2xl p-4 sm:p-5 md:p-6 border-2 border-zinc-200/50 shadow-lg hover:shadow-xl transition-all active:scale-0.99"
                                 >
                                     {/* Header Card - Stack su mobile, affiancato su desktop */}
-                                    <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-4">
+                                    <div
+                                        className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-4">
                                         {/* Info Dipendente */}
-                                        <div className="flex items-center gap-3 sm:gap-4 flex-1 min-w-0 w-full sm:w-auto">
-                                            <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br from-emerald-500 to-green-600 rounded-lg sm:rounded-xl flex items-center justify-center shadow-lg shrink-0">
-                                                <Users className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
+                                        <div
+                                            className="flex items-center gap-3 sm:gap-4 flex-1 min-w-0 w-full sm:w-auto">
+                                            <div
+                                                className="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br from-emerald-500 to-green-600 rounded-lg sm:rounded-xl flex items-center justify-center shadow-lg shrink-0">
+                                                <Users className="w-5 h-5 sm:w-6 sm:h-6 text-white"/>
                                             </div>
                                             <div className="flex-1 min-w-0">
                                                 <h3 className="text-base sm:text-lg md:text-xl font-black text-zinc-800 truncate">{nomeCompleto}</h3>
@@ -914,15 +928,18 @@ export default function Calendario() {
                                         <div
                                             className={`px-4 sm:px-5 md:px-6 py-2 sm:py-2.5 md:py-3 rounded-xl sm:rounded-2xl font-black text-sm sm:text-base md:text-lg shadow-lg border-2 flex items-center justify-center gap-2 w-full sm:w-auto whitespace-nowrap bg-gradient-to-r ${getTipoColor(assenza.tipo)} text-white`}
                                         >
-                                            <span className="text-lg sm:text-xl md:text-2xl">{getTipoEmoji(assenza.tipo)}</span>
+                                            <span
+                                                className="text-lg sm:text-xl md:text-2xl">{getTipoEmoji(assenza.tipo)}</span>
                                             <span className="uppercase">{assenza.tipo}</span>
                                         </div>
                                     </div>
 
                                     {/* Durata */}
-                                    <div className="mt-3 sm:mt-4 flex items-center gap-2 sm:gap-3 px-3 sm:px-4 py-2 sm:py-2.5 bg-gradient-to-r from-emerald-50 to-green-50 border-2 border-emerald-200 rounded-lg sm:rounded-xl w-full sm:w-auto inline-flex">
-                                        <Clock className="w-4 h-4 sm:w-5 sm:h-5 text-emerald-600 shrink-0" />
-                                        <span className="text-sm sm:text-base font-bold text-emerald-800">Durata: </span>
+                                    <div
+                                        className="mt-3 sm:mt-4 flex items-center gap-2 sm:gap-3 px-3 sm:px-4 py-2 sm:py-2.5 bg-gradient-to-r from-emerald-50 to-green-50 border-2 border-emerald-200 rounded-lg sm:rounded-xl w-full sm:w-auto inline-flex">
+                                        <Clock className="w-4 h-4 sm:w-5 sm:h-5 text-emerald-600 shrink-0"/>
+                                        <span
+                                            className="text-sm sm:text-base font-bold text-emerald-800">Durata: </span>
                                         <span className="text-base sm:text-lg md:text-xl font-black">
                       {assenza.durata} {assenza.tipo === 'permesso' ? 'ore' : 'giorni'}
                     </span>
@@ -930,9 +947,10 @@ export default function Calendario() {
 
                                     {/* Motivo */}
                                     {assenza.motivo && (
-                                        <div className="mt-3 sm:mt-4 p-3 sm:p-4 bg-zinc-100 rounded-lg sm:rounded-xl border border-zinc-200">
+                                        <div
+                                            className="mt-3 sm:mt-4 p-3 sm:p-4 bg-zinc-100 rounded-lg sm:rounded-xl border border-zinc-200">
                                             <div className="flex items-start gap-2">
-                                                <AlertCircle className="w-4 h-4 text-zinc-600 mt-0.5 shrink-0" />
+                                                <AlertCircle className="w-4 h-4 text-zinc-600 mt-0.5 shrink-0"/>
                                                 <div className="flex-1 min-w-0">
                                                     <p className="text-xs sm:text-sm font-bold text-zinc-600 uppercase tracking-wider mb-1">Motivo</p>
                                                     <p className="text-sm sm:text-base text-zinc-800 break-words leading-relaxed">{assenza.motivo}</p>
@@ -955,19 +973,19 @@ export default function Calendario() {
                       >
                         {assenza.stato === 'pending' ? (
                             <>
-                                <Clock className="w-3 h-3 sm:w-4 sm:h-4" />
+                                <Clock className="w-3 h-3 sm:w-4 sm:h-4"/>
                                 <span className="hidden sm:inline">In attesa</span>
                                 <span className="sm:hidden">Attesa</span>
                             </>
                         ) : assenza.stato === 'approved' ? (
                             <>
-                                <CheckCircle className="w-3 h-3 sm:w-4 sm:h-4" />
+                                <CheckCircle className="w-3 h-3 sm:w-4 sm:h-4"/>
                                 <span className="hidden sm:inline">Approvata</span>
                                 <span className="sm:hidden">Approvata</span>
                             </>
                         ) : (
                             <>
-                                <XCircle className="w-4 h-4 sm:w-5 sm:h-5" />
+                                <XCircle className="w-4 h-4 sm:w-5 sm:h-5"/>
                                 <span className="hidden sm:inline">Rifiutata</span>
                                 <span className="sm:hidden">Rifiutata</span>
                             </>
@@ -990,11 +1008,13 @@ export default function Calendario() {
         const fineSettimana = new Date(giorniSettimana[6]);
 
         return (
-            <div className="bg-white/50 backdrop-blur-3xl rounded-2xl sm:rounded-3xl shadow-2xl p-4 sm:p-6 md:p-10 border border-white/60">
+            <div
+                className="bg-white/50 backdrop-blur-3xl rounded-2xl sm:rounded-3xl shadow-2xl p-4 sm:p-6 md:p-10 border border-white/60">
                 {/* Header Settimana - Responsive */}
                 <div className="text-center mb-4 sm:mb-6">
                     <h2 className="text-base sm:text-lg md:text-2xl font-black text-zinc-800 leading-tight px-2 break-words">
-                        Settimana dal {inizioSettimana.getDate()} {nomiMesi[inizioSettimana.getMonth()]} al {fineSettimana.getDate()} {nomiMesi[fineSettimana.getMonth()]}{' '}
+                        Settimana
+                        dal {inizioSettimana.getDate()} {nomiMesi[inizioSettimana.getMonth()]} al {fineSettimana.getDate()} {nomiMesi[fineSettimana.getMonth()]}{' '}
                         {fineSettimana.getFullYear()}
                     </h2>
                 </div>
@@ -1035,7 +1055,7 @@ export default function Calendario() {
                                 {info.isFestivo && <div className="absolute top-2 right-2 text-lg sm:text-xl">🎉</div>}
                                 {info.isWeekend && !info.isFestivo && (
                                     <div className="absolute top-2 right-2 bg-zinc-500/20 rounded-full p-1">
-                                        <Calendar className="w-3 h-3 sm:w-4 sm:h-4 text-zinc-600" />
+                                        <Calendar className="w-3 h-3 sm:w-4 sm:h-4 text-zinc-600"/>
                                     </div>
                                 )}
 
@@ -1052,7 +1072,8 @@ export default function Calendario() {
                                             >
                                                 <div className="flex items-center justify-between gap-1">
                                                     <p className="truncate flex-1">{nomeCorto}</p>
-                                                    <span className="text-[10px] sm:text-xs bg-white/30 px-1 rounded shrink-0">
+                                                    <span
+                                                        className="text-[10px] sm:text-xs bg-white/30 px-1 rounded shrink-0">
                             {assenza.durata}
                                                         {assenza.tipo === 'permesso' ? 'h' : 'g'}
                           </span>
@@ -1064,7 +1085,8 @@ export default function Calendario() {
 
                                     {/* Badge Altre assenze */}
                                     {assenzeGiorno.length > 3 && (
-                                        <div className="text-xs text-center font-bold text-zinc-600 bg-zinc-100/80 py-1.5 rounded-lg border border-zinc-200">
+                                        <div
+                                            className="text-xs text-center font-bold text-zinc-600 bg-zinc-100/80 py-1.5 rounded-lg border border-zinc-200">
                                             +{assenzeGiorno.length - 3} {assenzeGiorno.length === 4 ? 'altra' : 'altre'}
                                         </div>
                                     )}
@@ -1072,14 +1094,15 @@ export default function Calendario() {
                                     {/* Empty state per giorni senza assenze */}
                                     {assenzeGiorno.length === 0 && !info.isFestivo && !info.isWeekend && (
                                         <div className="text-center py-4 sm:py-6 text-zinc-400">
-                                            <CheckCircle className="w-6 h-6 sm:w-8 sm:h-8 mx-auto mb-2 opacity-30" />
+                                            <CheckCircle className="w-6 h-6 sm:w-8 sm:h-8 mx-auto mb-2 opacity-30"/>
                                             <p className="text-xs sm:text-sm font-medium">Nessuna assenza</p>
                                         </div>
                                     )}
                                 </div>
 
                                 {/* Badge Oggi */}
-                                {today && <div className="absolute bottom-2 right-2 px-2 py-1 bg-emerald-500 text-white text-[10px] sm:text-xs font-black rounded-full shadow-lg">OGGI</div>}
+                                {today && <div
+                                    className="absolute bottom-2 right-2 px-2 py-1 bg-emerald-500 text-white text-[10px] sm:text-xs font-black rounded-full shadow-lg">OGGI</div>}
                             </div>
                         );
                     })}
@@ -1090,33 +1113,42 @@ export default function Calendario() {
 
     if (loading) {
         return (
-            <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/50 to-indigo-50/30 flex items-center justify-center p-4 sm:p-8 relative">
-                <div className="absolute inset-0 bg-gradient-to-r from-white/20 to-blue-100/10 backdrop-blur-xl" />
-                <div className="bg-white/40 backdrop-blur-3xl rounded-2xl sm:rounded-3xl p-8 sm:p-12 md:p-16 shadow-2xl text-center max-w-lg mx-auto border border-white/50 relative z-10 w-full">
-                    <div className="w-16 h-16 sm:w-20 sm:h-20 md:w-24 md:h-24 bg-gradient-to-r from-emerald-400 to-green-500 rounded-2xl sm:rounded-3xl mx-auto mb-6 sm:mb-8 flex items-center justify-center shadow-2xl border border-white/30">
-                        <div className="animate-spin rounded-full h-10 h-10 sm:h-12 sm:w-12 md:h-16 md:w-16 border-4 border-white/20 border-t-white shadow-xl" />
+            <div
+                className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/50 to-indigo-50/30 flex items-center justify-center p-4 sm:p-8 relative">
+                <div className="absolute inset-0 bg-gradient-to-r from-white/20 to-blue-100/10 backdrop-blur-xl"/>
+                <div
+                    className="bg-white/40 backdrop-blur-3xl rounded-2xl sm:rounded-3xl p-8 sm:p-12 md:p-16 shadow-2xl text-center max-w-lg mx-auto border border-white/50 relative z-10 w-full">
+                    <div
+                        className="w-16 h-16 sm:w-20 sm:h-20 md:w-24 md:h-24 bg-gradient-to-r from-emerald-400 to-green-500 rounded-2xl sm:rounded-3xl mx-auto mb-6 sm:mb-8 flex items-center justify-center shadow-2xl border border-white/30">
+                        <div
+                            className="animate-spin rounded-full h-10 h-10 sm:h-12 sm:w-12 md:h-16 md:w-16 border-4 border-white/20 border-t-white shadow-xl"/>
                     </div>
-                    <h2 className="text-xl sm:text-2xl md:text-3xl font-light tracking-tight text-zinc-800 mb-3 sm:mb-4">Caricamento calendario...</h2>
+                    <h2 className="text-xl sm:text-2xl md:text-3xl font-light tracking-tight text-zinc-800 mb-3 sm:mb-4">Caricamento
+                        calendario...</h2>
                 </div>
             </div>
         );
     }
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-indigo-50/30 p-3 sm:p-4 md:p-8 relative overflow-hidden">
+        <div
+            className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-indigo-50/30 p-3 sm:p-4 md:p-8 relative overflow-hidden">
             <Toaster
                 position="bottom-center"
                 reverseOrder={false}
             />
-            <div className="absolute inset-0 bg-gradient-to-r from-emerald-500/[0.02] via-blue-500/[0.01] to-purple-500/[0.01] backdrop-blur-xl pointer-events-none" />
+            <div
+                className="absolute inset-0 bg-gradient-to-r from-emerald-500/[0.02] via-blue-500/[0.01] to-purple-500/[0.01] backdrop-blur-xl pointer-events-none"/>
 
             <div className="max-w-7xl mx-auto relative z-10 space-y-4 sm:space-y-6 md:space-y-8">
                 {/* Header - Ottimizzato per mobile */}
-                <div className="bg-white/70 backdrop-blur-3xl rounded-2xl sm:rounded-3xl shadow-2xl p-4 sm:p-6 md:p-10 border border-white/60 hover:shadow-3xl transition-all duration-700">
+                <div
+                    className="bg-white/70 backdrop-blur-3xl rounded-2xl sm:rounded-3xl shadow-2xl p-4 sm:p-6 md:p-10 border border-white/60 hover:shadow-3xl transition-all duration-700">
                     <div className="flex flex-col gap-4 sm:gap-6">
                         <div className="flex items-start gap-3 sm:gap-4">
-                            <div className="w-12 h-12 sm:w-14 sm:h-14 md:w-16 md:h-16 bg-gradient-to-br from-emerald-500 to-green-600 rounded-xl sm:rounded-2xl flex items-center justify-center shadow-xl border border-white/40 shrink-0">
-                                <Calendar className="w-6 h-6 sm:w-7 sm:h-7 md:w-8 md:h-8 text-white drop-shadow-lg" />
+                            <div
+                                className="w-12 h-12 sm:w-14 sm:h-14 md:w-16 md:h-16 bg-gradient-to-br from-emerald-500 to-green-600 rounded-xl sm:rounded-2xl flex items-center justify-center shadow-xl border border-white/40 shrink-0">
+                                <Calendar className="w-6 h-6 sm:w-7 sm:h-7 md:w-8 md:h-8 text-white drop-shadow-lg"/>
                             </div>
 
                             <div className="flex-1 min-w-0">
@@ -1127,24 +1159,28 @@ export default function Calendario() {
                                     {isAdmin ? (
                                         visualizzaTutti ? (
                                             <>
-                                                <Users className="w-4 h-4 sm:w-5 sm:h-5 text-emerald-500" />
+                                                <Users className="w-4 h-4 sm:w-5 sm:h-5 text-emerald-500"/>
                                                 <span className="font-bold text-xs sm:text-sm md:text-base">Tutti i dipendenti</span>
                                             </>
                                         ) : (
                                             <>
-                                                <User className="w-4 h-4 sm:w-5 sm:h-5" />
-                                                <span className="font-bold text-xs sm:text-sm md:text-base truncate max-w-[150px] sm:max-w-none">{dipendenteSelezionato?.name}</span>
-                                                <span className="text-xs sm:text-sm">- {dipendenteSelezionato?.team}</span>
+                                                <User className="w-4 h-4 sm:w-5 sm:h-5"/>
+                                                <span
+                                                    className="font-bold text-xs sm:text-sm md:text-base truncate max-w-[150px] sm:max-w-none">{dipendenteSelezionato?.name}</span>
+                                                <span
+                                                    className="text-xs sm:text-sm">- {dipendenteSelezionato?.team}</span>
                                             </>
                                         )
                                     ) : (
                                         <>
-                                            <User className="w-4 h-4 sm:w-5 sm:h-5" />
-                                            <span className="font-bold text-xs sm:text-sm md:text-base truncate max-w-[150px] sm:max-w-none">{user?.name}</span>
+                                            <User className="w-4 h-4 sm:w-5 sm:h-5"/>
+                                            <span
+                                                className="font-bold text-xs sm:text-sm md:text-base truncate max-w-[150px] sm:max-w-none">{user?.name}</span>
                                             <span className="text-xs sm:text-sm">- {user?.team}</span>
                                         </>
                                     )}
-                                    <span className="px-2 sm:px-3 py-0.5 sm:py-1 bg-amber-100/80 text-amber-700 text-[10px] sm:text-xs font-mono rounded-full border border-amber-200 whitespace-nowrap">
+                                    <span
+                                        className="px-2 sm:px-3 py-0.5 sm:py-1 bg-amber-100/80 text-amber-700 text-[10px] sm:text-xs font-mono rounded-full border border-amber-200 whitespace-nowrap">
                     {assenze.filter((a) => a.stato === 'pending').length} in attesa
                   </span>
                                 </p>
@@ -1167,7 +1203,8 @@ export default function Calendario() {
                                             : 'bg-white/80 text-zinc-800 border-zinc-200/50 hover:border-emerald-400 hover:bg-emerald-50 hover:text-emerald-700'
                                     }`}
                                 >
-                                    <Users className={`w-4 h-4 sm:w-5 sm:h-5 ${visualizzaTutti ? 'text-white' : 'text-emerald-500'}`} />
+                                    <Users
+                                        className={`w-4 h-4 sm:w-5 sm:h-5 ${visualizzaTutti ? 'text-white' : 'text-emerald-500'}`}/>
                                     {visualizzaTutti ? 'Tutti' : 'Singolo'}
                                 </button>
                             )}
@@ -1198,12 +1235,12 @@ export default function Calendario() {
                                     onClick={exportExcelMensile}
                                     className="flex items-center justify-center gap-2 sm:gap-3 px-4 sm:px-6 md:px-8 py-3 sm:py-4 h-12 sm:h-16 bg-gradient-to-r from-blue-500 to-indigo-600 text-white font-bold text-sm sm:text-base md:text-lg rounded-xl sm:rounded-2xl shadow-2xl hover:shadow-3xl hover:from-blue-600 hover:to-indigo-700 transition-all backdrop-blur-xl border border-blue-400/50 w-full sm:w-auto active:scale-95"
                                 >
-                                    <Download className="w-4 h-4 sm:w-5 sm:h-5" />
+                                    <Download className="w-4 h-4 sm:w-5 sm:h-5"/>
                                     <span>Export Excel</span>
                                 </button>
                             )}
 
-                            {( isManager) && (
+                            {(isManager) && (
                                 <button
                                     onClick={generaSmartworkingTeam}
                                     className="flex items-center justify-center gap-2 sm:gap-3 px-4 sm:px-6 py-3 sm:py-4 h-12 sm:h-16 bg-gradient-to-r from-blue-500 to-indigo-600 text-white font-bold text-sm sm:text-base rounded-xl sm:rounded-2xl shadow-2xl hover:from-blue-600 hover:to-indigo-700 transition-all border border-blue-400/50 w-full sm:w-auto active:scale-95"
@@ -1218,10 +1255,12 @@ export default function Calendario() {
                 </div>
 
                 {/* Filtri - Ottimizzato per mobile */}
-                <div className="bg-white/60 backdrop-blur-3xl rounded-2xl sm:rounded-3xl shadow-xl p-4 sm:p-6 border border-white/70">
-                    <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-4 mb-4 sm:mb-6">
+                <div
+                    className="bg-white/60 backdrop-blur-3xl rounded-2xl sm:rounded-3xl shadow-xl p-4 sm:p-6 border border-white/70">
+                    <div
+                        className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-4 mb-4 sm:mb-6">
                         <div className="flex items-center gap-2 sm:gap-3">
-                            <Filter className="w-5 h-5 sm:w-6 sm:h-6 text-emerald-600" />
+                            <Filter className="w-5 h-5 sm:w-6 sm:h-6 text-emerald-600"/>
                             <h3 className="text-lg sm:text-xl font-bold text-zinc-800">Filtra per tipo</h3>
                         </div>
                     </div>
@@ -1246,14 +1285,15 @@ export default function Calendario() {
                             onClick={() => setFiltriAttivi([])}
                             className="mt-3 w-full sm:w-auto px-4 sm:px-6 py-2 sm:py-3 rounded-xl sm:rounded-2xl font-bold text-sm shadow-lg transition-all border-2 bg-red-500 text-white border-red-400 hover:bg-red-600 active:scale-95"
                         >
-                            <X className="w-4 h-4 inline mr-2" /> Rimuovi filtri
+                            <X className="w-4 h-4 inline mr-2"/> Rimuovi filtri
                         </button>
                     )}
                 </div>
 
 
                 {/* Legenda - Sotto il calendario */}
-                <div className="bg-white/60 backdrop-blur-3xl rounded-2xl sm:rounded-3xl shadow-xl border border-white/70 overflow-hidden">
+                <div
+                    className="bg-white/60 backdrop-blur-3xl rounded-2xl sm:rounded-3xl shadow-xl border border-white/70 overflow-hidden">
 
                     {/* Header sempre visibile — cliccabile */}
                     <button
@@ -1261,13 +1301,15 @@ export default function Calendario() {
                         className="w-full flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-4 p-4 sm:p-6 hover:bg-white/40 transition-all"
                     >
                         <div className="flex items-center gap-2 sm:gap-3">
-                            <div className="w-8 h-8 sm:w-10 sm:h-10 bg-gradient-to-br from-emerald-500 to-green-600 rounded-lg sm:rounded-xl flex items-center justify-center shadow-lg shrink-0">
-                                <span className="text-lg sm:text-xl"><SquareMenu /></span>
+                            <div
+                                className="w-8 h-8 sm:w-10 sm:h-10 bg-gradient-to-br from-emerald-500 to-green-600 rounded-lg sm:rounded-xl flex items-center justify-center shadow-lg shrink-0">
+                                <span className="text-lg sm:text-xl"><SquareMenu/></span>
                             </div>
                             <h3 className="text-lg sm:text-xl font-bold text-zinc-800">Legenda Tipi di Assenza</h3>
                         </div>
-                        <div className={`w-8 h-8 rounded-full bg-zinc-100 flex items-center justify-center shrink-0 transition-transform duration-300 ${legendaAperta ? 'rotate-180' : ''}`}>
-                            <ChevronDown className="w-5 h-5 text-zinc-600" />
+                        <div
+                            className={`w-8 h-8 rounded-full bg-zinc-100 flex items-center justify-center shrink-0 transition-transform duration-300 ${legendaAperta ? 'rotate-180' : ''}`}>
+                            <ChevronDown className="w-5 h-5 text-zinc-600"/>
                         </div>
                     </button>
 
@@ -1288,18 +1330,23 @@ export default function Calendario() {
 
                             {/* Legenda Stati */}
                             <div className="mt-6 pt-6 border-t-2 border-zinc-200/50">
-                                <h4 className="text-base sm:text-lg font-bold text-zinc-800 mb-3 sm:mb-4">Stati delle Richieste</h4>
+                                <h4 className="text-base sm:text-lg font-bold text-zinc-800 mb-3 sm:mb-4">Stati delle
+                                    Richieste</h4>
                                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                                    <div className="flex items-center gap-3 px-4 py-3 rounded-xl bg-emerald-100 border-2 border-emerald-300 shadow-md">
-                                        <CheckCircle className="w-5 h-5 text-emerald-600 shrink-0" />
-                                        <span className="font-bold text-sm sm:text-base text-emerald-700">Approvata</span>
+                                    <div
+                                        className="flex items-center gap-3 px-4 py-3 rounded-xl bg-emerald-100 border-2 border-emerald-300 shadow-md">
+                                        <CheckCircle className="w-5 h-5 text-emerald-600 shrink-0"/>
+                                        <span
+                                            className="font-bold text-sm sm:text-base text-emerald-700">Approvata</span>
                                     </div>
-                                    <div className="flex items-center gap-3 px-4 py-3 rounded-xl bg-amber-100 border-2 border-amber-300 shadow-md">
-                                        <Clock className="w-5 h-5 text-amber-600 shrink-0" />
+                                    <div
+                                        className="flex items-center gap-3 px-4 py-3 rounded-xl bg-amber-100 border-2 border-amber-300 shadow-md">
+                                        <Clock className="w-5 h-5 text-amber-600 shrink-0"/>
                                         <span className="font-bold text-sm sm:text-base text-amber-700">In Attesa</span>
                                     </div>
-                                    <div className="flex items-center gap-3 px-4 py-3 rounded-xl bg-rose-100 border-2 border-rose-300 shadow-md">
-                                        <XCircle className="w-5 h-5 text-rose-600 shrink-0" />
+                                    <div
+                                        className="flex items-center gap-3 px-4 py-3 rounded-xl bg-rose-100 border-2 border-rose-300 shadow-md">
+                                        <XCircle className="w-5 h-5 text-rose-600 shrink-0"/>
                                         <span className="font-bold text-sm sm:text-base text-rose-700">Rifiutata</span>
                                     </div>
                                 </div>
@@ -1307,17 +1354,21 @@ export default function Calendario() {
 
                             {/* Legenda Giorni Speciali */}
                             <div className="mt-6 pt-6 border-t-2 border-zinc-200/50">
-                                <h4 className="text-base sm:text-lg font-bold text-zinc-800 mb-3 sm:mb-4">Giorni Speciali</h4>
+                                <h4 className="text-base sm:text-lg font-bold text-zinc-800 mb-3 sm:mb-4">Giorni
+                                    Speciali</h4>
                                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                                    <div className="flex items-center gap-3 px-4 py-3 rounded-xl bg-gradient-to-br from-purple-50 to-pink-50 border-2 border-red-400 shadow-md">
+                                    <div
+                                        className="flex items-center gap-3 px-4 py-3 rounded-xl bg-gradient-to-br from-purple-50 to-pink-50 border-2 border-red-400 shadow-md">
                                         <span className="text-xl shrink-0">🎉</span>
                                         <span className="font-bold text-sm sm:text-base text-red-600">Festività</span>
                                     </div>
-                                    <div className="flex items-center gap-3 px-4 py-3 rounded-xl bg-gray-200 border-2 border-zinc-300 shadow-md">
-                                        <Calendar className="w-5 h-5 text-zinc-600 shrink-0" />
+                                    <div
+                                        className="flex items-center gap-3 px-4 py-3 rounded-xl bg-gray-200 border-2 border-zinc-300 shadow-md">
+                                        <Calendar className="w-5 h-5 text-zinc-600 shrink-0"/>
                                         <span className="font-bold text-sm sm:text-base text-zinc-700">Weekend</span>
                                     </div>
-                                    <div className="flex items-center gap-3 px-4 py-3 rounded-xl bg-white border-2 border-emerald-400 shadow-md ring-2 ring-emerald-400/40">
+                                    <div
+                                        className="flex items-center gap-3 px-4 py-3 rounded-xl bg-white border-2 border-emerald-400 shadow-md ring-2 ring-emerald-400/40">
                                         <span className="text-xl shrink-0">📍</span>
                                         <span className="font-bold text-sm sm:text-base text-emerald-700">Oggi</span>
                                     </div>
@@ -1329,7 +1380,8 @@ export default function Calendario() {
                 </div>
 
                 {/* Selettore Vista + Navigazione - Ottimizzato per mobile */}
-                <div className="bg-white/60 backdrop-blur-3xl rounded-2xl sm:rounded-3xl shadow-xl p-4 sm:p-6 border border-white/70 space-y-4">
+                <div
+                    className="bg-white/60 backdrop-blur-3xl rounded-2xl sm:rounded-3xl shadow-xl p-4 sm:p-6 border border-white/70 space-y-4">
                     {/* Selettore Vista */}
                     <div className="grid grid-cols-3 gap-2 sm:gap-3">
                         <button
@@ -1387,11 +1439,12 @@ export default function Calendario() {
                             }}
                             className="p-2 sm:p-3 md:p-4 hover:bg-white/50 rounded-xl sm:rounded-2xl backdrop-blur-xl border border-zinc-200/50 hover:border-zinc-300 transition-all hover:scale-105 shadow-lg active:scale-95"
                         >
-                            <ChevronLeft className="w-5 h-5 sm:w-6 sm:h-6 md:w-7 md:h-7 text-zinc-700" />
+                            <ChevronLeft className="w-5 h-5 sm:w-6 sm:h-6 md:w-7 md:h-7 text-zinc-700"/>
                         </button>
 
                         <div className="text-center flex-1 min-w-0">
-                            <div className="text-base sm:text-xl md:text-4xl font-black bg-gradient-to-r from-zinc-800 to-slate-700 bg-clip-text text-transparent tracking-tight truncate">
+                            <div
+                                className="text-base sm:text-xl md:text-4xl font-black bg-gradient-to-r from-zinc-800 to-slate-700 bg-clip-text text-transparent tracking-tight truncate">
                                 {vistaCalendario === 'giornaliera'
                                     ? `${giornoCorrente.getDate()} ${nomiMesi[giornoCorrente.getMonth()]} ${giornoCorrente.getFullYear()}`
                                     : vistaCalendario === 'settimanale'
@@ -1423,20 +1476,23 @@ export default function Calendario() {
                             }}
                             className="p-2 sm:p-3 md:p-4 hover:bg-white/50 rounded-xl sm:rounded-2xl backdrop-blur-xl border border-zinc-200/50 hover:border-zinc-300 transition-all hover:scale-105 shadow-lg active:scale-95"
                         >
-                            <ChevronRight className="w-5 h-5 sm:w-6 sm:h-6 md:w-7 md:h-7 text-zinc-700" />
+                            <ChevronRight className="w-5 h-5 sm:w-6 sm:h-6 md:w-7 md:h-7 text-zinc-700"/>
                         </button>
                     </div>
                 </div>
 
                 {/* Calendario Mensile - Griglia responsive */}
                 {vistaCalendario === 'mensile' && (
-                    <div className="bg-white/50 backdrop-blur-3xl rounded-2xl sm:rounded-3xl shadow-2xl p-3 sm:p-6 md:p-10 border border-white/60">
+                    <div
+                        className="bg-white/50 backdrop-blur-3xl rounded-2xl sm:rounded-3xl shadow-2xl p-3 sm:p-6 md:p-10 border border-white/60">
                         {/* Intestazione giorni */}
                         <div className="grid grid-cols-7 gap-1 sm:gap-2 md:gap-4 mb-3 sm:mb-6">
                             {['L', 'M', 'M', 'G', 'V', 'S', 'D'].map((day, idx) => (
                                 <div key={idx} className="text-center py-2 sm:py-3">
-                                    <div className="text-xs sm:text-sm md:text-base font-black text-zinc-700 uppercase tracking-widest bg-zinc-100/50 px-1 sm:px-2 py-1 sm:py-2 rounded-lg sm:rounded-xl backdrop-blur-xl border border-zinc-200/50 shadow-sm">
-                                        <span className="hidden sm:inline">{['LUN', 'MAR', 'MER', 'GIO', 'VEN', 'SAB', 'DOM'][idx]}</span>
+                                    <div
+                                        className="text-xs sm:text-sm md:text-base font-black text-zinc-700 uppercase tracking-widest bg-zinc-100/50 px-1 sm:px-2 py-1 sm:py-2 rounded-lg sm:rounded-xl backdrop-blur-xl border border-zinc-200/50 shadow-sm">
+                                        <span
+                                            className="hidden sm:inline">{['LUN', 'MAR', 'MER', 'GIO', 'VEN', 'SAB', 'DOM'][idx]}</span>
                                         <span className="sm:hidden">{day}</span>
                                     </div>
                                 </div>
@@ -1446,7 +1502,7 @@ export default function Calendario() {
                         {/* Giorni del mese */}
                         <div className="grid grid-cols-7 gap-1 sm:gap-2 md:gap-4">
                             {/* Celle vuote iniziali */}
-                            {Array.from({ length: getPrimoGiornoSettimana(mese, anno) }).map((_, i) => (
+                            {Array.from({length: getPrimoGiornoSettimana(mese, anno)}).map((_, i) => (
                                 <div
                                     key={`empty-${i}`}
                                     className="h-16 sm:h-24 md:h-32 bg-zinc-50/50 rounded-lg sm:rounded-2xl border-2 border-dashed border-zinc-200/40 backdrop-blur-xl"
@@ -1454,12 +1510,12 @@ export default function Calendario() {
                             ))}
 
                             {/* Giorni effettivi */}
-                            {Array.from({ length: getGiorniMese(mese, anno) }).map((_, i) => {
+                            {Array.from({length: getGiorniMese(mese, anno)}).map((_, i) => {
                                 const giorno = i + 1;
                                 const dataStr = `${anno}-${String(mese + 1).padStart(2, '0')}-${String(giorno).padStart(2, '0')}`;
                                 const assenzeGiorno = getAssenzePerData(dataStr);
                                 const info = getInfoGiorno(giorno, mese, anno);
-                                const { isFestivo, isWeekend } = info;
+                                const {isFestivo, isWeekend} = info;
                                 const today = new Date().toISOString().split('T')[0] === dataStr;
 
                                 return (
@@ -1481,13 +1537,15 @@ export default function Calendario() {
                                     >
                                         {/* Numero giorno */}
                                         <div className="flex items-center justify-between">
-                                            <div className={`text-xs sm:text-base md:text-2xl font-black ${today ? 'text-emerald-600' : 'text-zinc-800'} ${isFestivo ? 'text-red-500' : ''}`}>
+                                            <div
+                                                className={`text-xs sm:text-base md:text-2xl font-black ${today ? 'text-emerald-600' : 'text-zinc-800'} ${isFestivo ? 'text-red-500' : ''}`}>
                                                 {giorno}
                                             </div>
 
                                             {/* Badge Festivo/Weekend */}
                                             {isFestivo && <div className="text-sm sm:text-base md:text-lg">🎉</div>}
-                                            {isWeekend && !isFestivo && <div className="hidden sm:block text-zinc-400 text-xs md:text-sm">🏖️</div>}
+                                            {isWeekend && !isFestivo && <div
+                                                className="hidden sm:block text-zinc-400 text-xs md:text-sm">🏖️</div>}
                                         </div>
 
                                         {/* Assenze - responsive */}
@@ -1511,9 +1569,12 @@ export default function Calendario() {
                                                             )} border-${assenza.tipo}-400/60 sm:text-white`}
                                                         >
                                                             {/* Tablet e Desktop: Nome + Durata */}
-                                                            <div className="hidden sm:flex items-center justify-between gap-1">
-                                                                <span className="text-[10px] md:text-[11px] truncate">{nomeCompleto}</span>
-                                                                <span className="text-[9px] md:text-[10px] bg-white/30 px-1 rounded-sm shrink-0">
+                                                            <div
+                                                                className="hidden sm:flex items-center justify-between gap-1">
+                                                                <span
+                                                                    className="text-[10px] md:text-[11px] truncate">{nomeCompleto}</span>
+                                                                <span
+                                                                    className="text-[9px] md:text-[10px] bg-white/30 px-1 rounded-sm shrink-0">
                                   {assenza.tipo === 'permesso' ? `${assenza.durata}h` : `${assenza.durata}g`}
                                 </span>
                                                             </div>
@@ -1524,8 +1585,9 @@ export default function Calendario() {
 
                                         {/* Badge per assenze extra */}
                                         {assenzeGiorno.length > 4 && (
-                                            <div className="absolute top-0.5 right-0.5 sm:top-1 sm:right-1 bg-red-500 text-white text-[9px] sm:text-xs rounded-full w-4 h-4 sm:w-5 sm:h-5 flex items-center justify-center font-bold shadow-lg z-20 border border-white">
-                                                 {assenzeGiorno.length - 3}
+                                            <div
+                                                className="absolute top-0.5 right-0.5 sm:top-1 sm:right-1 bg-red-500 text-white text-[9px] sm:text-xs rounded-full w-4 h-4 sm:w-5 sm:h-5 flex items-center justify-center font-bold shadow-lg z-20 border border-white">
+                                                {assenzeGiorno.length - 3}
                                             </div>
                                         )}
                                     </div>
@@ -1542,14 +1604,18 @@ export default function Calendario() {
 
             {/* Modale per dettagli assenze */}
             {modalAperto && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 md:p-6 bg-black/60 backdrop-blur-xl ">
-                    <div className="bg-white/95 backdrop-blur-3xl rounded-2xl sm:rounded-3xl max-w-4xl w-full max-h-[75vh] sm:max-h-[85vh] overflow-hidden shadow-2xl border border-white/70">
+                <div
+                    className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 md:p-6 bg-black/60 backdrop-blur-xl ">
+                    <div
+                        className="bg-white/95 backdrop-blur-3xl rounded-2xl sm:rounded-3xl max-w-4xl w-full max-h-[75vh] sm:max-h-[85vh] overflow-hidden shadow-2xl border border-white/70">
                         {/* Header modale */}
-                        <div className="bg-gradient-to-r from-emerald-500 to-green-600 p-4 sm:p-6 md:p-8 flex justify-between items-start gap-3 border-b-4 border-emerald-400/50">
+                        <div
+                            className="bg-gradient-to-r from-emerald-500 to-green-600 p-4 sm:p-6 md:p-8 flex justify-between items-start gap-3 border-b-4 border-emerald-400/50">
                             <div className="flex-1 min-w-0">
                                 <h2 className="text-xl sm:text-2xl md:text-4xl font-black text-white tracking-tight flex items-center gap-2 sm:gap-3 md:gap-4 flex-wrap">
-                                    <Calendar className="w-6 h-6 sm:w-8 sm:h-8 md:w-10 md:h-10 shrink-0" />
-                                    <span className="break-words">Assenze del {formattaDataItaliana(giornoSelezionato)}</span>
+                                    <Calendar className="w-6 h-6 sm:w-8 sm:h-8 md:w-10 md:h-10 shrink-0"/>
+                                    <span
+                                        className="break-words">Assenze del {formattaDataItaliana(giornoSelezionato)}</span>
                                 </h2>
                                 <p className="text-emerald-100 text-sm sm:text-base md:text-lg mt-2 font-medium">
                                     {assenzeModale.length} {assenzeModale.length === 1 ? 'richiesta' : 'richieste'} totali
@@ -1560,12 +1626,13 @@ export default function Calendario() {
                                 onClick={() => setModalAperto(false)}
                                 className="p-2 sm:p-3 hover:bg-white/20 rounded-xl sm:rounded-2xl transition-all hover:rotate-90 duration-300 backdrop-blur-xl border border-white/30 shrink-0 active:scale-95"
                             >
-                                <X className="w-6 h-6 sm:w-7 sm:h-7 md:w-8 md:h-8 text-white" />
+                                <X className="w-6 h-6 sm:w-7 sm:h-7 md:w-8 md:h-8 text-white"/>
                             </button>
                         </div>
 
                         {/* Corpo modale con scroll */}
-                        <div className="p-4 sm:p-6 md:p-8 overflow-y-auto max-h-[calc(90vh-140px)] sm:max-h-[calc(70vh-180px)]">
+                        <div
+                            className="p-4 sm:p-6 md:p-8 overflow-y-auto max-h-[calc(90vh-140px)] sm:max-h-[calc(70vh-180px)]">
                             <div className="space-y-4 sm:space-y-6">
                                 {assenzeModale.map((assenza, idx) => {
                                     const employee = getEmployeeById(assenza.employeeId);
@@ -1581,8 +1648,10 @@ export default function Calendario() {
 
                                                 {/* Info dipendente */}
                                                 <div className="flex items-start gap-3 sm:gap-4">
-                                                    <div className="w-10 h-10 sm:w-12 sm:h-12 md:w-14 md:h-14 bg-gradient-to-br from-emerald-500 to-green-600 rounded-xl sm:rounded-2xl flex items-center justify-center shadow-xl border border-white/40 shrink-0">
-                                                        <Users className="w-5 h-5 sm:w-6 sm:h-6 md:w-7 md:h-7 text-white" />
+                                                    <div
+                                                        className="w-10 h-10 sm:w-12 sm:h-12 md:w-14 md:h-14 bg-gradient-to-br from-emerald-500 to-green-600 rounded-xl sm:rounded-2xl flex items-center justify-center shadow-xl border border-white/40 shrink-0">
+                                                        <Users
+                                                            className="w-5 h-5 sm:w-6 sm:h-6 md:w-7 md:h-7 text-white"/>
                                                     </div>
 
                                                     <div className="flex-1 min-w-0">
@@ -1592,39 +1661,66 @@ export default function Calendario() {
                                                 </div>
 
                                                 {/* Dal - Al */}
-                                                { assenza.tipo !== 'smartworking' && assenza.tipo !== 'permesso' && (
-                                                <div className="flex flex-wrap gap-2 sm:gap-3">
-                                                    <div
-                                                        className="px-3 sm:px-4 md:px-5 py-2 sm:py-2.5 md:py-3 bg-gradient-to-r from-blue-100 to-indigo-100 border-2 border-blue-300 rounded-xl sm:rounded-2xl font-black text-blue-800 text-sm sm:text-base md:text-lg shadow-lg inline-flex items-center gap-2 sm:gap-3">
-                                                        <Calendar className="w-4 h-4 sm:w-5 sm:h-5 shrink-0"/>
-                                                        <span>
-                            Dal{' '}
-                                                            <span className="font-black">
-                                {new Date(assenza?.dataInizio).toLocaleDateString('it-IT')}
-                            </span>
-                        </span>
-                                                    </div>
+                                                {assenza.tipo !== 'smartworking' && assenza.tipo !== 'permesso' && (() => {
+                                                    // Parser locale — non dipende da parseLocalDate esterna
+                                                    const parsaData = (dateStr: string): Date => {
+                                                        if (!dateStr) return new Date(NaN);
+                                                        if (dateStr.includes('/')) {
+                                                            const [g, m, a] = dateStr.split('/').map(Number);
+                                                            return new Date(a, m - 1, g);
+                                                        }
+                                                        const [a, m, g] = dateStr.split('-').map(Number);
+                                                        return new Date(a, m - 1, g);
+                                                    };
 
-                                                    <div
-                                                        className="px-3 sm:px-4 md:px-5 py-2 sm:py-2.5 md:py-3 bg-gradient-to-r from-purple-100 to-violet-100 border-2 border-purple-300 rounded-xl sm:rounded-2xl font-black text-purple-800 text-sm sm:text-base md:text-lg shadow-lg inline-flex items-center gap-2 sm:gap-3">
-                                                        <Calendar className="w-4 h-4 sm:w-5 sm:h-5 shrink-0"/>
-                                                        <span>
-                                                                    Al{' '}
-                                                            <span className="font-black">
-                                                                        {(() => {
-                                                                            // @ts-ignore
-                                                                            if (assenza.tipo === 'permesso') {
-                                                                                return parseLocalDate(assenza.dataInizio).toLocaleDateString('it-IT')
-                                                                            }
-                                                                            const fine = parseLocalDate(assenza.dataInizio)
-                                                                            fine.setDate(fine.getDate() + Number(assenza.durata) - 1)
-                                                                            return fine.toLocaleDateString('it-IT')
-                                                                        })()}
-                                                                    </span>
-                                                                </span>
-                                                    </div>
-                                                </div>
-                                                )}
+                                                    const dataInizio = parsaData(assenza.dataInizio);
+
+                                                    let giorniLavorativiContati = 0;
+                                                    let dataCorrente = new Date(dataInizio);
+                                                    dataCorrente.setDate(dataCorrente.getDate() - 1);
+
+                                                    while (giorniLavorativiContati < assenza.durata) {
+                                                        dataCorrente.setDate(dataCorrente.getDate() + 1);
+                                                        const info = getInfoGiorno(
+                                                            dataCorrente.getDate(),
+                                                            dataCorrente.getMonth(),
+                                                            dataCorrente.getFullYear()
+                                                        );
+                                                        if (info.isLavorativo) giorniLavorativiContati++;
+                                                    }
+
+                                                    const dataFine = dataCorrente;
+
+                                                    return (
+                                                        <div className="flex flex-wrap gap-2 sm:gap-3">
+
+                                                            {/* DAL */}
+                                                            <div className="px-3 sm:px-4 md:px-5 py-2 sm:py-2.5 md:py-3 bg-gradient-to-r from-blue-100 to-indigo-100 border-2 border-blue-300 rounded-xl sm:rounded-2xl font-black text-blue-800 text-sm sm:text-base md:text-lg shadow-lg inline-flex items-center gap-2 sm:gap-3">
+                                                                <Calendar className="w-4 h-4 sm:w-5 sm:h-5 shrink-0"/>
+                                                                <span>
+                    Dal{' '}
+                                                                    <span className="font-black">
+                        {dataInizio.toLocaleDateString('it-IT')}
+                    </span>
+                </span>
+                                                            </div>
+
+                                                            {/* AL */}
+                                                            <div className="px-3 sm:px-4 md:px-5 py-2 sm:py-2.5 md:py-3 bg-gradient-to-r from-purple-100 to-violet-100 border-2 border-purple-300 rounded-xl sm:rounded-2xl font-black text-purple-800 text-sm sm:text-base md:text-lg shadow-lg inline-flex items-center gap-2 sm:gap-3">
+                                                                <Calendar className="w-4 h-4 sm:w-5 sm:h-5 shrink-0"/>
+                                                                <span>
+                    Al{' '}
+                                                                    <span className="font-black">
+                        {dataFine.toLocaleDateString('it-IT')}
+                    </span>
+                </span>
+                                                            </div>
+
+                                                        </div>
+                                                    );
+                                                })()}
+
+
                                                 {/* Badges tipo e stato */}
                                                 <div className="flex flex-wrap gap-2 sm:gap-3">
                                                     <div
@@ -1632,7 +1728,8 @@ export default function Calendario() {
                                                             assenza.tipo
                                                         )} text-white`}
                                                     >
-                                                        <span className="text-lg sm:text-xl md:text-2xl">{getTipoEmoji(assenza.tipo)}</span>
+                                                        <span
+                                                            className="text-lg sm:text-xl md:text-2xl">{getTipoEmoji(assenza.tipo)}</span>
                                                         <span className="truncate">{assenza.tipo.toUpperCase()}</span>
                                                     </div>
 
@@ -1647,19 +1744,19 @@ export default function Calendario() {
                                                     >
                                                         {assenza.stato === 'pending' ? (
                                                             <>
-                                                                <Clock className="w-4 h-4 sm:w-5 sm:h-5" />
+                                                                <Clock className="w-4 h-4 sm:w-5 sm:h-5"/>
                                                                 <span className="hidden sm:inline">IN ATTESA</span>
                                                                 <span className="sm:hidden">ATTESA</span>
                                                             </>
                                                         ) : assenza.stato === 'approved' ? (
                                                             <>
-                                                                <CheckCircle className="w-4 h-4 sm:w-5 sm:h-5" />
+                                                                <CheckCircle className="w-4 h-4 sm:w-5 sm:h-5"/>
                                                                 <span className="hidden sm:inline">APPROVATA</span>
                                                                 <span className="sm:hidden">OK</span>
                                                             </>
                                                         ) : (
                                                             <>
-                                                                <XCircle className="w-4 h-4 sm:w-5 sm:h-5" />
+                                                                <XCircle className="w-4 h-4 sm:w-5 sm:h-5"/>
                                                                 <span className="hidden sm:inline">RIFIUTATA</span>
                                                                 <span className="sm:hidden">NO</span>
                                                             </>
@@ -1668,8 +1765,9 @@ export default function Calendario() {
                                                 </div>
 
                                                 {/* Durata */}
-                                                <div className="px-3 sm:px-4 md:px-5 py-2 sm:py-2.5 md:py-3 bg-gradient-to-r from-emerald-100 to-green-100 border-2 border-emerald-300 rounded-xl sm:rounded-2xl font-black text-emerald-800 text-sm sm:text-base md:text-lg shadow-lg inline-flex items-center gap-2 sm:gap-3 w-full sm:w-auto">
-                                                    <Clock className="w-4 h-4 sm:w-5 sm:h-5 shrink-0" />
+                                                <div
+                                                    className="px-3 sm:px-4 md:px-5 py-2 sm:py-2.5 md:py-3 bg-gradient-to-r from-emerald-100 to-green-100 border-2 border-emerald-300 rounded-xl sm:rounded-2xl font-black text-emerald-800 text-sm sm:text-base md:text-lg shadow-lg inline-flex items-center gap-2 sm:gap-3 w-full sm:w-auto">
+                                                    <Clock className="w-4 h-4 sm:w-5 sm:h-5 shrink-0"/>
                                                     <span className="truncate">
                             {assenza.durata} {assenza.tipo === 'permesso' ? 'ore' : 'giorni'}
                           </span>
@@ -1677,9 +1775,11 @@ export default function Calendario() {
 
                                                 {/* Motivo */}
                                                 {assenza.motivo && (
-                                                    <div className="bg-zinc-100/80 border-2 border-zinc-200 rounded-xl sm:rounded-2xl p-3 sm:p-4 backdrop-blur-xl">
+                                                    <div
+                                                        className="bg-zinc-100/80 border-2 border-zinc-200 rounded-xl sm:rounded-2xl p-3 sm:p-4 backdrop-blur-xl">
                                                         <div className="flex items-start gap-2 sm:gap-3">
-                                                            <AlertCircle className="w-4 h-4 sm:w-5 sm:h-5 text-zinc-600 mt-0.5 shrink-0" />
+                                                            <AlertCircle
+                                                                className="w-4 h-4 sm:w-5 sm:h-5 text-zinc-600 mt-0.5 shrink-0"/>
                                                             <div className="flex-1 min-w-0">
                                                                 <p className="text-xs sm:text-sm font-bold text-zinc-600 uppercase tracking-wider mb-1">Motivo</p>
                                                                 <p className="text-zinc-800 font-medium text-sm sm:text-base md:text-lg break-words">{assenza.motivo}</p>
@@ -1709,11 +1809,15 @@ export default function Calendario() {
 
             {/* Popup nuova richiesta */}
             {popupNuovaRichiesta && !isAdmin && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 md:p-6 bg-black/60 backdrop-blur-xl">
-                    <div className="bg-white/95 backdrop-blur-3xl rounded-2xl sm:rounded-3xl max-w-2xl w-full max-h-[90vh] overflow-auto shadow-2xl border border-white/70">
-                        <div className="bg-gradient-to-r from-emerald-500 to-green-600 p-4 sm:p-6 md:p-8 flex justify-between items-start gap-3 border-b-4 border-emerald-400/50">
+                <div
+                    className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 md:p-6 bg-black/60 backdrop-blur-xl">
+                    <div
+                        className="bg-white/95 backdrop-blur-3xl rounded-2xl sm:rounded-3xl max-w-2xl w-full max-h-[90vh] overflow-auto shadow-2xl border border-white/70">
+                        <div
+                            className="bg-gradient-to-r from-emerald-500 to-green-600 p-4 sm:p-6 md:p-8 flex justify-between items-start gap-3 border-b-4 border-emerald-400/50">
                             <div className="flex-1 min-w-0">
-                                <h2 className="text-xl sm:text-2xl md:text-3xl font-black text-white tracking-tight">Nuova Richiesta Assenza</h2>
+                                <h2 className="text-xl sm:text-2xl md:text-3xl font-black text-white tracking-tight">Nuova
+                                    Richiesta Assenza</h2>
                                 <p className="text-emerald-100 text-sm sm:text-base mt-2">Data: {formattaDataItaliana(giornoSelezionato)}</p>
                             </div>
 
@@ -1721,7 +1825,7 @@ export default function Calendario() {
                                 onClick={() => setPopupNuovaRichiesta(false)}
                                 className="p-2 sm:p-3 hover:bg-white/20 rounded-xl transition-all hover:rotate-90 duration-300 backdrop-blur-xl border border-white/30 shrink-0 active:scale-95"
                             >
-                                <X className="w-6 h-6 sm:w-7 sm:h-7 text-white" />
+                                <X className="w-6 h-6 sm:w-7 sm:h-7 text-white"/>
                             </button>
                         </div>
 
@@ -1760,7 +1864,8 @@ export default function Calendario() {
                             </div>
 
                             <div>
-                                <label className="block text-xs sm:text-sm font-bold text-zinc-700 mb-2">Motivo (opzionale)</label>
+                                <label className="block text-xs sm:text-sm font-bold text-zinc-700 mb-2">Motivo
+                                    (opzionale)</label>
                                 <textarea
                                     value={motivo}
                                     onChange={(e) => setMotivo(e.target.value)}

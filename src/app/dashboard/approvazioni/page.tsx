@@ -45,8 +45,10 @@ export default function Approvazioni() {
 
     return (
         <>
-            <Toaster position="top-center" reverseOrder={false} />
-
+            <Toaster
+                position="bottom-center"
+                reverseOrder={false}
+            />
             <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-indigo-50/30 p-3 sm:p-4 md:p-8 relative overflow-hidden">
                 <div className="absolute inset-0 bg-gradient-to-r from-emerald-500/3 via-blue-500/2 to-indigo-500/1 backdrop-blur-xl pointer-events-none" />
 
