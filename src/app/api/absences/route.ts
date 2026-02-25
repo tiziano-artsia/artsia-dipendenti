@@ -125,7 +125,8 @@ export async function POST(request: NextRequest) {
             const oggi = new Date();
             oggi.setHours(0, 0, 0, 0);
 
-            const dataRichiesta = new Date(body.dataInizio);
+            const [year, month, day] = body.dataInizio.split('-').map(Number);
+            const dataRichiesta = new Date(year, month - 1, day);
             dataRichiesta.setHours(0, 0, 0, 0);
 
             const maxData = new Date(oggi);
