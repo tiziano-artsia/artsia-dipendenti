@@ -218,7 +218,6 @@ export async function POST(request: NextRequest) {
             tipo: typeNorm
         });
 
-        console.log(`✅ Richiesta creata: ${newAbsence.id} | Status: ${status} | dataFine: ${dataFineISO}`);
 
         // ── NOTIFICHE ADMIN ───────────────────────────────────
         const tipiRichiedonoApprovazione = ['ferie', 'permesso', 'malattia', 'fuori-sede', 'congedo-parentale'];

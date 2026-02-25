@@ -862,8 +862,7 @@ export default function Calendario() {
         const info = getInfoGiorno(giornoCorrente.getDate(), giornoCorrente.getMonth(), giornoCorrente.getFullYear());
 
         return (
-            <div className="bg-white/50 backdrop-blur-3xl rounded-2xl sm:rounded-3xl shadow-2xl p-4 sm:p-6 md:p-10 border border-white/60">
-                {/* Header Giorno - Responsive */}
+            <div className="bg-white rounded-2xl sm:rounded-3xl shadow-2xl p-3 sm:p-6 md:p-10 border border-zinc-100">                {/* Header Giorno - Responsive */}
                 <div className="text-center mb-6 sm:mb-8">
                     <h2 className="text-xl sm:text-2xl md:text-3xl font-black text-zinc-800 leading-tight break-words px-2">
                         {nomiGiorni[giornoCorrente.getDay()]} {giornoCorrente.getDate()} {nomiMesi[giornoCorrente.getMonth()]} {giornoCorrente.getFullYear()}
@@ -1470,7 +1469,7 @@ export default function Calendario() {
                                             apriModale(dataStr)
                                             apriPopupNuova(dataStr)
                                         }}
-                                        className={`relative h-16 sm:h-32 md:h-52 p-1.5 sm:p-2 md:p-3 rounded-lg sm:rounded-2xl border-2 shadow-lg transition-all duration-300 hover:shadow-xl hover:-translate-y-0.5 sm:hover:-translate-y-1 backdrop-blur-xl flex flex-col justify-between group cursor-pointer overflow-hidden ${
+                                        className={`relative h-16 sm:h-32 md:h-52 p-1.5 sm:p-2 md:p-3 rounded-lg sm:rounded-2xl border-2 shadow-lg transition-all duration-300 hover:shadow-xl hover:-translate-y-0.5 sm:hover:-translate-y-1 flex flex-col justify-between group cursor-pointer overflow-hidden  ${
                                             assenzeGiorno.length > 0
                                                 ? 'bg-gradient-to-br from-emerald-50/80 to-blue-50/60 border-emerald-300/70'
                                                 : isFestivo
