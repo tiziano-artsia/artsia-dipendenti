@@ -97,7 +97,7 @@ export default function Dashboard() {
         name: '',
         surname: '',
         team: '',
-        role: ''
+        role: 'dipendente'
     });
     const [employeeError, setEmployeeError] = useState('');
 
