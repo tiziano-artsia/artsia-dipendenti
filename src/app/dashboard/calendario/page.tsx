@@ -650,11 +650,13 @@ export default function Calendario() {
     };
 
     // FUNZIONI PER VISTA SETTIMANALE
-    const getInizioSettimana = (date: Date) => {
+    const getInizioSettimana = (date: Date): Date => {
         const d = new Date(date);
-        const day = d.getDay();
-        const diff = d.getDate() - (day === 0 ? -6 : 1);
-        return new Date(d.setDate(diff));
+        const giorno = d.getDay();
+        const diff = giorno === 0 ? -6 : 1 - giorno;
+        d.setDate(d.getDate() + diff);
+        d.setHours(0, 0, 0, 0);
+        return d;
     };
 
     const getGiorniSettimana = (startDate: Date) => {
