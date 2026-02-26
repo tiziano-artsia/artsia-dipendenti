@@ -437,3 +437,106 @@ export async function getTotaleInSmart(dataInizio: string, excludeEmployeeId: nu
     return count;
 }
 
+
+
+
+export interface NotificationDoc {
+    _id: any;
+    userId: number;      // ID del dipendente
+    type: string;        // "request_pending", "request_approved", "request_rejected"
+    title: string;
+    body: string;
+    relatedRequestId?: string | number;
+    read: boolean;
+    createdAt: Date;
+}
+
+const notificationSchema = new Schema<NotificationDoc>({
+    userId: { type: Number, required: true, index: true },
+    type: {
+        type: String,
+        required: true,
+        enum: ['request_pending', 'request_approved', 'request_rejected', 'payslip_available']
+    },
+    title: { type: String, required: true },
+    body: { type: String, required: true },
+    relatedRequestId: { type: Schema.Types.Mixed, index: true },
+    read: { type: Boolean, default: false, index: true }
+}, { timestamps: true });
+
+notificationSchema.index({ userId: 1, read: 1 });
+notificationSchema.index({ createdAt: -1 });
+
+export const NotificationModel: Model<NotificationDoc> =
+    mongoose.models.Notification || mongoose.model<NotificationDoc>("Notification", notificationSchema);
+
+
+export async function getNotificationsForUser(userId: string): Promise<NotificationDoc[]> {
+    try {
+        await connectDB();
+
+        if (!NotificationModel) {
+            console.warn('⚠️ NotificationModel non definita, ritorno vuoto');
+            return [];
+        }
+
+
+        const notifications = await NotificationModel
+            // @ts-ignore
+            .find({ userId })
+            .sort({ createdAt: -1 })
+            .limit(50)
+            .lean()
+            .exec();
+
+        return notifications?.map((doc: any) => ({
+            ...doc,
+            userId: doc.userId?.toString() || userId.toString()
+        })) || [];
+
+    } catch (error) {
+        console.error('❌ getNotificationsForUser:', error);
+        return [];
+    }
+}
+
+
+export async function createNotification(data: {
+    userId: number;
+    type: string;
+    title: string;
+    body: string;
+    relatedRequestId?: string | number;
+}): Promise<NotificationDoc> {
+    await connectDB();
+    const doc = await NotificationModel.create({
+        ...data,
+        read: false
+    });
+    return doc.toObject();
+}
+
+export async function markNotificationAsRead(notificationId: string): Promise<boolean> {
+    await connectDB();
+    const result = await NotificationModel.updateOne(
+        { _id: notificationId },
+        { $set: { read: true } }
+    );
+    return result.modifiedCount > 0;
+}
+
+export async function markAllAsRead(userId: number): Promise<boolean> {
+    await connectDB();
+    const result = await NotificationModel.updateMany(
+        { userId, read: false },
+        { $set: { read: true } }
+    );
+    return result.modifiedCount > 0;
+}
+
+export async function deleteNotification(notificationId: string): Promise<boolean> {
+    await connectDB();
+    const result = await NotificationModel.deleteOne({ _id: notificationId });
+    return result.deletedCount > 0;
+}
+

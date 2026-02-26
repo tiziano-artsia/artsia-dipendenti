@@ -28,7 +28,7 @@ function urlBase64ToUint8Array(base64String: string): Uint8Array {
 
 function playNotificationSound() {
     try {
-        const audio = new Audio('/notification.mp3');
+        const audio = new Audio('/sound/notification.mp3');
         audio.volume = 0.5;
         audio.play().catch(() => {});
     } catch {}
@@ -215,7 +215,7 @@ export function useNotifications() {
                     });
                     console.log('✅ Subscription creata');
 
-                    await authenticatedFetch('/api/push/subscribe', {
+                    await authenticatedFetch('/api/notifications/subscribe', {
                         method: 'POST',
                         body: JSON.stringify({ subscription: subscription.toJSON() })
                     });
@@ -292,6 +292,67 @@ export function useNotifications() {
             return false;
         }
     }, [user, token, authenticatedFetch, setPermission]);
+
+// ── NATIVE NOTIFICATION LISTENER ─────────────────────────────
+    useEffect(() => {
+        if (permission !== 'granted') return;
+        if (typeof window === 'undefined') return;
+        if (!('Notification' in window)) return;
+        if (!('serviceWorker' in navigator)) return;
+
+        if (Notification.permission !== 'granted') return;
+
+        let registration: ServiceWorkerRegistration;
+
+        navigator.serviceWorker.ready.then(reg => {
+            registration = reg;
+
+            const handleMessage = (event: MessageEvent) => {
+                if (event.data?.type === 'SHOW_NATIVE_NOTIFICATION') {
+                    showNativeNotification(event.data);
+                }
+            };
+
+            navigator.serviceWorker.addEventListener('message', handleMessage);
+
+            // cleanup
+            return () => {
+                navigator.serviceWorker.removeEventListener('message', handleMessage);
+            };
+        });
+
+    }, [permission]);
+
+
+// ── FUNZIONE NOTIFICA NATIVA ──────────────────────────────────
+    const showNativeNotification = async (data: any) => {
+        if (!('serviceWorker' in navigator)) return;
+
+        const registration = await navigator.serviceWorker.ready;
+
+        // Costruisci le opzioni in modo condizionale
+        const options: NotificationOptions = {
+            body: data.body || '',
+            tag: 'artsia-notification',
+            // @ts-ignore
+            vibrate: [200, 100, 200],
+            actions: [
+                { action: 'view', title: 'Vedi' },
+                { action: 'dismiss', title: 'Chiudi' }
+            ],
+            requireInteraction: false,
+            silent: false
+        };
+
+        // Usa icona e badge solo se presenti
+        if (data.icon) options.icon = data.icon;
+        if (data.badge) options.badge = data.badge;
+
+        registration.showNotification(data.title || 'Artsia', options);
+
+        playNotificationSound();
+    };
+
 
     // ── MARK AS READ ──────────────────────────────────────────
     const markAsRead = useCallback(async (notificationId: string) => {

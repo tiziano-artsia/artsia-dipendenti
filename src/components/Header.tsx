@@ -8,6 +8,7 @@ import { useNotifications } from '@/hooks/useNotifications';
 import { useAtom, useAtomValue } from 'jotai';
 import { unreadCountAtom, notificationDropdownAtom } from '@/lib/atoms/notificationAtoms';
 import { useEffect, useRef, useState } from 'react';
+import {useSSE} from "@/hooks/useSSE";
 
 export default function Header() {
     const { user } = useAuth();
@@ -170,6 +171,7 @@ export default function Header() {
         return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
     };
 
+    const { data: sseNotifications, connected, error } = useSSE(`/api/notifications/sse?userId=${user?.id || 0}`);
     return (
         <>
             {/* Top Header - ✅ Nessun style inline */}
@@ -206,62 +208,98 @@ export default function Header() {
                             </Link>
                         </div>
 
-                        {/* Campanello - Solo Desktop */}
+                        {/* Campanello - Solo Desktop con SSE */}
                         {user && (
                             <div className="relative hidden md:block">
                                 <button
                                     ref={buttonRef}
                                     onClick={toggleDropdown}
                                     disabled={isDropdownOpen}
-                                    className="relative p-2 hover:bg-gray-100 active:bg-gray-200 rounded-xl transition-colors"
+                                    className="relative p-2 hover:bg-gray-100 active:bg-gray-200 rounded-xl transition-colors group"
                                     aria-label="Notifiche"
-                                    title={unreadCount > 0 ? 'Mostra notifiche' : 'Vai a tutte le notifiche'}
+                                    title={unreadCount > 0 ? `${unreadCount} nuove notifiche` : 'Nessuna nuova notifica'}
                                 >
-                                    <Bell className="w-5 h-5 md:w-6 md:h-6 text-gray-600" />
-                                    {unreadCount > 0 && (
-                                        <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center animate-pulse">
-                                            {unreadCount > 9 ? '9+' : unreadCount}
-                                        </span>
-                                    )}
+                                    <div className="relative">
+                                        <Bell className="w-5 h-5 md:w-6 md:h-6 text-gray-600 group-hover:text-gray-800 transition-colors" />
+                                        {unreadCount > 0 && (
+                                            <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold rounded-full w-6 h-6 flex items-center justify-center shadow-lg ring-2 ring-white animate-pulse border-2 border-white">
+                        {unreadCount > 99 ? '99+' : unreadCount}
+                    </span>
+                                        )}
+                                        {/* ← SSE STATUS */}
+                                        <div className={`absolute -bottom-1 left-1/2 transform -translate-x-1/2 w-2 h-2 rounded-full border-2 border-white shadow-md ${
+                                            connected
+                                                ? 'bg-emerald-500 animate-ping'
+                                                : error
+                                                    ? 'bg-red-500'
+                                                    : 'bg-amber-500'
+                                        }`} />
+                                    </div>
                                 </button>
 
-                                {isDropdownOpen && unreadCount > 0 && (
+                                {isDropdownOpen && notifications.length > 0 && (
                                     <div
                                         ref={dropdownRef}
-                                        className="absolute right-0 top-full mt-2 w-96 bg-white shadow-2xl rounded-2xl border border-gray-200 z-50 max-h-[32rem] flex flex-col overflow-hidden animate-scaleIn"
+                                        className="absolute right-0 top-full mt-2 w-96 bg-white/95 backdrop-blur-2xl shadow-2xl rounded-3xl border border-gray-200/50 z-50 max-h-[500px] flex flex-col overflow-hidden animate-in slide-in-from-top-2 duration-200"
                                     >
-                                        <div className="bg-gradient-to-r from-purple-600 to-blue-600 px-4 py-4 flex-shrink-0 rounded-t-2xl">
-                                            <h3 className="text-white font-semibold text-lg">Notifiche</h3>
+                                        {/* Header */}
+                                        <div className="bg-gradient-to-r from-indigo-600 to-purple-600 px-5 py-4 flex-shrink-0 rounded-t-3xl border-b border-white/20">
+                                            <div className="flex items-center justify-between">
+                                                <div className="flex items-center gap-3">
+                                                    <div className="w-9 h-9 bg-white/20 backdrop-blur-sm rounded-2xl flex items-center justify-center">
+                                                        <Bell className="w-5 h-5 text-white" />
+                                                    </div>
+                                                    <div>
+                                                        <h3 className="text-white font-bold text-lg leading-tight">Notifiche</h3>
+                                                        <p className={`text-xs font-mono uppercase tracking-wider ${
+                                                            connected ? 'text-emerald-100' : 'text-amber-100'
+                                                        }`}>
+                                                            {connected ? '🟢 Live' : '🔄 Aggiornamento...'}
+                                                        </p>
+                                                    </div>
+                                                </div>
+                                                <span className={`px-3 py-1 rounded-full text-xs font-bold bg-white/20 backdrop-blur-sm ${
+                                                    unreadCount > 0
+                                                        ? 'text-red-200'
+                                                        : 'text-emerald-200'
+                                                }`}>
+                            {unreadCount > 0 ? `${unreadCount} nuove` : 'Tutte lette'}
+                        </span>
+                                            </div>
                                         </div>
 
-                                        <div className="flex-1 overflow-y-auto">
-                                            {notifications.map((notification) => {
+                                        {/* Lista */}
+                                        <div className="flex-1 overflow-y-auto max-h-[400px] p-1">
+                                            {notifications.slice(0, 8).map((notification) => {
                                                 const style = getNotificationStyle(notification.type);
                                                 return (
                                                     <div
                                                         key={notification._id}
-                                                        className={`px-4 py-3.5 border-b border-gray-100 hover:bg-gray-50 cursor-pointer transition-colors ${
-                                                            !notification.read ? 'bg-blue-50/50' : ''
+                                                        className={`p-4 border-b border-gray-100 last:border-b-0 hover:bg-gray-50/50 backdrop-blur-sm transition-all group cursor-pointer rounded-2xl mx-1 mt-1 ${
+                                                            !notification.read ? 'bg-gradient-to-r from-blue-50/70 to-indigo-50/50 shadow-sm ring-1 ring-blue-100/50' : ''
                                                         }`}
-                                                        onClick={() => handleNotificationClick(notification)}
+                                                        onClick={() => {
+                                                            handleNotificationClick(notification);
+                                                            setIsDropdownOpen(false);
+                                                        }}
                                                     >
-                                                        <div className="flex gap-3">
-                                                            <div className={`${style.bg} ${style.border} border rounded-lg p-2 flex-shrink-0 h-fit`}>
+                                                        <div className="flex items-start gap-3">
+                                                            <div className={`w-11 h-11 ${style.bg} ${style.border} rounded-xl flex items-center justify-center shadow-md flex-shrink-0`}>
                                                                 <Bell className={`w-4 h-4 ${style.color}`} />
                                                             </div>
-                                                            <div className="flex-1 min-w-0">
+                                                            <div className="flex-1 min-w-0 py-0.5">
                                                                 <div className="flex items-start justify-between gap-2 mb-1">
-                                                                    <h4 className={`text-sm ${!notification.read ? 'font-bold' : 'font-semibold'} text-gray-900 line-clamp-2`}>
+                                                                    <h4 className={`text-sm font-bold ${!notification.read ? 'text-gray-900' : 'text-gray-700'} line-clamp-2 leading-tight`}>
                                                                         {notification.title}
                                                                     </h4>
                                                                     {!notification.read && (
-                                                                        <div className="w-2 h-2 bg-blue-600 rounded-full flex-shrink-0 mt-1" />
+                                                                        <div className="w-2 h-2 bg-blue-600 rounded-full flex-shrink-0 mt-1 animate-pulse shadow-sm" />
                                                                     )}
                                                                 </div>
-                                                                <p className="text-sm text-gray-600 line-clamp-2">
+                                                                <p className="text-sm text-gray-600 line-clamp-2 leading-relaxed">
                                                                     {notification.body}
                                                                 </p>
-                                                                <p className="text-xs text-gray-400 mt-1.5">
+                                                                <p className="text-xs text-gray-400 mt-2 font-mono tracking-wider">
                                                                     {formatNotificationTime(notification.createdAt)}
                                                                 </p>
                                                             </div>
@@ -271,21 +309,31 @@ export default function Header() {
                                             })}
                                         </div>
 
-                                        <div className="bg-gray-50 px-4 py-3 text-center border-t border-gray-200 flex-shrink-0 rounded-b-2xl">
+                                        {/* Footer */}
+                                        <div className="bg-gradient-to-r from-gray-50/80 to-white/80 px-4 py-3 border-t border-gray-200/50 backdrop-blur-sm flex-shrink-0 rounded-b-3xl">
                                             <button
                                                 onClick={() => {
                                                     setIsDropdownOpen(false);
+                                                    router.push('/dashboard/notifications');
                                                 }}
-                                                className="text-sm text-purple-600 hover:text-purple-700 font-medium"
+                                                className="w-full text-sm font-semibold text-indigo-700 hover:text-indigo-800 hover:bg-indigo-100 px-4 py-2 rounded-2xl transition-all flex items-center justify-center gap-2 shadow-sm hover:shadow-md"
                                             >
-                                                Vedi tutte
+                                                <Bell className="w-4 h-4" />
+                                                Vedi tutte le notifiche
                                             </button>
                                         </div>
+                                    </div>
+                                )}
 
+                                {/* ← SSE STATUS MOBILE (opzionale) */}
+                                {user && unreadCount > 0 && (
+                                    <div className="md:hidden fixed bottom-6 right-6 z-50">
+                                        <div className="w-4 h-4 bg-red-500 border-2 border-white rounded-full shadow-lg animate-bounce" />
                                     </div>
                                 )}
                             </div>
                         )}
+
                     </div>
                 </div>
             </header>
