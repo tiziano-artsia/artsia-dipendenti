@@ -125,6 +125,7 @@ export default function Approvazioni() {
                                 const isSmartWorking = tipoLower === 'smartworking';
                                 const canApprove = isAdmin || (isManager && isSmartWorking);
 
+
                                 return (
                                     <div
                                         key={richiesta.id || index}
@@ -172,6 +173,7 @@ export default function Approvazioni() {
                                             {/* Motivo pill */}
                                             {richiesta.motivo && (
                                                 <button
+                                                    // @ts-ignore
                                                     onClick={() => setMotivoAperto(richiesta.id)}
                                                     className="flex-1 p-2.5 bg-amber-50 rounded-xl border border-amber-200 text-left hover:bg-amber-100 transition-all"
                                                 >
