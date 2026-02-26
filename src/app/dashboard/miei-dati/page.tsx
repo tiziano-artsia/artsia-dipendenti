@@ -26,8 +26,8 @@ import {
 } from 'lucide-react';
 import type {AbsenceDoc} from "@/lib/db";
 import toast, {Toaster} from "react-hot-toast";
-import {SWRegistration} from "@/components/SWRegistration";
-import {CapacitorInitializer} from "@/components/CapacitorInitializer";
+
+
 
 // Componente Modal di Conferma
 function ConfirmModal({
@@ -198,6 +198,16 @@ export default function MieiDati() {
                                     'Altro';
     };
 
+    const getTipoColor = (tipo: string): string => {
+        const t = tipo.toLowerCase().trim();
+        if (t === 'ferie') return 'from-orange-500 to-orange-600 border-orange-400';
+        if (t === 'malattia') return 'from-rose-500 to-red-600 border-red-400';
+        if (t === 'permesso') return 'from-yellow-500 to-amber-600 border-yellow-400';
+        if (t === 'smartworking') return 'from-blue-500 to-blue-600 border-blue-400';
+        if (t === 'fuori-sede') return 'from-cyan-500 to-cyan-600 border-cyan-400';
+        if (t === 'congedo-parentale') return 'from-pink-500 to-pink-600 border-pink-400';
+        return 'from-gray-500 to-gray-600 border-gray-400';
+    };
     const formattaData = (dataIso: string): string => {
         if (!dataIso) return 'N/D';
         try {
@@ -280,6 +290,9 @@ export default function MieiDati() {
             </div>
         );
     }
+
+
+
 
     return (
         <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-indigo-50/30 p-3 sm:p-4 md:p-8 relative overflow-hidden">
@@ -434,6 +447,9 @@ export default function MieiDati() {
                                 </div>
                             </div>
 
+                            {/* Utility: parser data locale */}
+                            {(() => null)()}
+
                             {/* Layout Cards per mobile */}
                             <div className="block lg:hidden space-y-4">
                                 {assenzeFiltrate.length === 0 ? (
@@ -447,130 +463,124 @@ export default function MieiDati() {
                                         <p className="text-base text-zinc-400 font-light px-4">
                                             {contaFiltriAttivi() > 0
                                                 ? 'Prova a modificare i filtri'
-                                                : 'Le tue richieste appariranno qui'
-                                            }
+                                                : 'Le tue richieste appariranno qui'}
                                         </p>
                                     </div>
                                 ) : (
-                                    assenzeFiltrate.map((assenza, index) => {
-                                        const tipoLower = (assenza.tipo || '').toLowerCase();
-                                        const isPermesso = tipoLower === 'permesso';
-                                        const TipoIcon = getTipoIcon(assenza.tipo);
-
-                                        const canCancel = (() => {
-                                            if(tipoLower === 'smartworking') return true;
-                                            if (assenza.stato !== 'pending') return false;
-
-                                            const dataString = assenza.dataInizio || assenza.data;
-                                            if (!dataString || dataString === 'N/D') return false;
-
-                                            try {
-                                                let dataRichiesta: Date;
-
-                                                if (dataString.includes('/')) {
-                                                    const [giorno, mese, anno] = dataString.split('/').map(Number);
-                                                    dataRichiesta = new Date(anno, mese - 1, giorno);
-                                                } else {
-                                                    dataRichiesta = new Date(dataString);
+                                    [...assenzeFiltrate]
+                                        .sort((a, b) => {
+                                            const parsaTs = (d: string) => {
+                                                if (!d || d === 'N/D') return 0;
+                                                if (d.includes('/')) {
+                                                    const [g, m, a] = d.split('/').map(Number);
+                                                    return new Date(a, m - 1, g).getTime();
                                                 }
+                                                const [a, m, g] = d.split('-').map(Number);
+                                                return new Date(a, m - 1, g).getTime();
+                                            };
+                                            return parsaTs(b.dataInizio || b.data || '') - parsaTs(a.dataInizio || a.data || '');
+                                        })
+                                        .map((assenza, index) => {
+                                            const tipoLower = (assenza.tipo || '').toLowerCase().trim();
+                                            const isPermesso = tipoLower === 'permesso';
+                                            const TipoIcon = getTipoIcon(assenza.tipo);
 
-                                                const oggi = new Date();
-                                                oggi.setHours(0, 0, 0, 0);
-                                                dataRichiesta.setHours(0, 0, 0, 0);
+                                            const canCancel = (() => {
+                                                const dataString = assenza.dataInizio || assenza.data;
+                                                if (!dataString || dataString === 'N/D') return false;
+                                                try {
+                                                    let dataRichiesta: Date;
+                                                    if (dataString.includes('/')) {
+                                                        const [g, m, a] = dataString.split('/').map(Number);
+                                                        dataRichiesta = new Date(a, m - 1, g);
+                                                    } else {
+                                                        const [a, m, g] = dataString.split('-').map(Number);
+                                                        dataRichiesta = new Date(a, m - 1, g);
+                                                    }
+                                                    const oggi = new Date();
+                                                    oggi.setHours(0, 0, 0, 0);
+                                                    dataRichiesta.setHours(0, 0, 0, 0);
+                                                    if (oggi > dataRichiesta) return false;
+                                                    if (tipoLower === 'smartworking') return true;
+                                                    return assenza.stato === 'pending';
+                                                } catch {
+                                                    return false;
+                                                }
+                                            })();
 
-                                                return oggi <= dataRichiesta;
-                                            } catch (error) {
-                                                return false;
-                                            }
-                                        })();
-
-                                        return (
-                                            <div
-                                                key={assenza.id || assenza._id || index}
-                                                className="bg-white/90 backdrop-blur-xl rounded-2xl p-5 shadow-lg border border-zinc-200/50 hover:shadow-xl transition-all space-y-4"
-                                            >
-                                                {/* Header Card */}
-                                                <div className="flex items-start justify-between gap-3 pb-4 border-b border-zinc-100">
-                                                    <div className="flex items-center gap-2 flex-1 min-w-0">
-                                                        <Calendar className="w-4 h-4 text-zinc-500 shrink-0" />
-                                                        <span className="text-base font-bold text-zinc-800 truncate">
-                                            {formattaData(assenza.dataInizio || assenza.data || 'N/D')}
-                                        </span>
-                                                    </div>
-                                                    <span className={`px-3 py-1.5 rounded-xl text-xs font-black shadow-lg inline-flex items-center gap-1.5 shrink-0 ${
-                                                        assenza.stato === 'approved'
-                                                            ? 'bg-gradient-to-r from-emerald-400/90 to-green-500/90 text-white'
-                                                            : assenza.stato === 'pending'
-                                                                ? 'bg-gradient-to-r from-amber-400/90 to-yellow-500/90 text-white'
-                                                                : 'bg-gradient-to-r from-rose-400/90 to-red-500/90 text-white'
-                                                    }`}>
-                                        {assenza.stato === 'pending' ? (
-                                            <><Clock className="w-3 h-3" />In attesa</>
-                                        ) : assenza.stato === 'approved' ? (
-                                            <><CheckCircle className="w-3 h-3" />Approvata</>
-                                        ) : (
-                                            <><XCircle className="w-3 h-3" />Rifiutata</>
-                                        )}
-                                    </span>
-                                                </div>
-
-                                                {/* Body Card */}
-                                                <div className="grid grid-cols-2 gap-4">
-                                                    <div>
-                                                        <span className="text-xs font-bold text-zinc-500 uppercase tracking-wider block mb-2">Tipo</span>
-                                                        <span className={`px-4 py-2 rounded-xl text-sm font-black shadow-lg inline-flex items-center gap-2 ${
-                                                            tipoLower === 'ferie'
-                                                                ? 'bg-gradient-to-r from-orange-400/90 to-orange-500/90 text-white'
-                                                                : tipoLower === 'malattia'
-                                                                    ? 'bg-gradient-to-r from-rose-400/90 to-red-500/90 text-white'
-                                                                    : tipoLower === 'smartworking'
-                                                                        ? 'bg-gradient-to-r from-blue-400/90 to-blue-500/90 text-white'
-                                                                        : tipoLower === 'permesso'
-                                                                            ? 'bg-gradient-to-r from-purple-400/90 to-purple-500/90 text-white'
-                                                                            : tipoLower === 'fuori-sede'
-                                                                                ? 'bg-gradient-to-r from-cyan-400/90 to-cyan-500/90 text-white'
-                                                                                : tipoLower === 'congedo-parentale'
-                                                                                    ? 'bg-gradient-to-r from-pink-400/90 to-pink-500/90 text-white'
-                                                                                    : 'bg-gradient-to-r from-gray-400/90 to-gray-500/90 text-white'
+                                            return (
+                                                <div
+                                                    key={assenza.id || assenza._id || index}
+                                                    className="bg-white/90 backdrop-blur-xl rounded-2xl p-5 shadow-lg border border-zinc-200/50 hover:shadow-xl transition-all space-y-4"
+                                                >
+                                                    {/* Header Card */}
+                                                    <div className="flex items-start justify-between gap-3 pb-4 border-b border-zinc-100">
+                                                        <div className="flex items-center gap-2 flex-1 min-w-0">
+                                                            <Calendar className="w-4 h-4 text-zinc-500 shrink-0" />
+                                                            <span className="text-base font-bold text-zinc-800 truncate">
+                                    {formattaData(assenza.dataInizio || assenza.data || 'N/D')}
+                                </span>
+                                                        </div>
+                                                        <span className={`px-3 py-1.5 rounded-xl text-xs font-black shadow-lg inline-flex items-center gap-1.5 shrink-0 ${
+                                                            assenza.stato === 'approved'
+                                                                ? 'bg-gradient-to-r from-emerald-400/90 to-green-500/90 text-white'
+                                                                : assenza.stato === 'pending'
+                                                                    ? 'bg-gradient-to-r from-amber-400/90 to-yellow-500/90 text-white'
+                                                                    : 'bg-gradient-to-r from-rose-400/90 to-red-500/90 text-white'
                                                         }`}>
-                                            <TipoIcon className="w-4 h-4" />
-                                                            {getTipoLabel(assenza.tipo)}
-                                        </span>
+                                {assenza.stato === 'pending' ? (
+                                    <><Clock className="w-3 h-3" />In attesa</>
+                                ) : assenza.stato === 'approved' ? (
+                                    <><CheckCircle className="w-3 h-3" />Approvata</>
+                                ) : (
+                                    <><XCircle className="w-3 h-3" />Rifiutata</>
+                                )}
+                            </span>
                                                     </div>
-                                                    <div>
-                                                        <span className="text-xs font-bold text-zinc-500 uppercase tracking-wider block mb-2">Durata</span>
-                                                        <div className="flex items-baseline gap-2">
-                                            <span className="text-3xl font-black bg-gradient-to-r from-emerald-500 to-teal-600 bg-clip-text text-transparent">
-                                                {assenza.durata || 0}
-                                            </span>
-                                                            <span className={`text-base font-black uppercase ${isPermesso ? 'text-yellow-600' : 'text-blue-600'}`}>
-                                                {isPermesso ? 'ore' : 'gg'}
-                                            </span>
+
+                                                    {/* Body Card */}
+                                                    <div className="grid grid-cols-2 gap-4">
+                                                        <div>
+                                                            <span className="text-xs font-bold text-zinc-500 uppercase tracking-wider block mb-2">Tipo</span>
+                                                            <span className={`px-4 py-2 rounded-xl text-sm font-black shadow-lg inline-flex items-center gap-2 bg-gradient-to-r ${getTipoColor(assenza.tipo)} text-white`}>
+                                    <TipoIcon className="w-4 h-4" />
+                                                                {getTipoLabel(assenza.tipo)}
+                                </span>
+                                                        </div>
+                                                        <div>
+                                                            <span className="text-xs font-bold text-zinc-500 uppercase tracking-wider block mb-2">Durata</span>
+                                                            <div className="flex items-baseline gap-2">
+                                    <span className="text-3xl font-black bg-gradient-to-r from-emerald-500 to-teal-600 bg-clip-text text-transparent">
+                                        {assenza.durata || 0}
+                                    </span>
+                                                                <span className={`text-base font-black uppercase ${isPermesso ? 'text-yellow-600' : 'text-blue-600'}`}>
+                                        {isPermesso ? 'ore' : 'gg'}
+                                    </span>
+                                                            </div>
                                                         </div>
                                                     </div>
+
+                                                    {/* Motivo */}
+                                                    {assenza.motivo && (
+                                                        <div>
+                                                            <span className="text-xs font-bold text-zinc-500 uppercase tracking-wider block mb-2">Motivo</span>
+                                                            <p className="text-sm text-zinc-700 line-clamp-2">{assenza.motivo}</p>
+                                                        </div>
+                                                    )}
+
+                                                    {/* Actions */}
+                                                    {canCancel && (
+                                                        <button
+                                                            onClick={() => handleCancelClick(assenza)}
+                                                            className="w-full px-4 py-3 bg-gradient-to-r from-red-500 to-rose-600 hover:from-red-600 hover:to-rose-700 text-white font-bold text-sm rounded-xl shadow-lg hover:shadow-xl transition-all flex items-center justify-center gap-2 active:scale-95"
+                                                        >
+                                                            <Trash2 className="w-4 h-4" />
+                                                            Annulla Richiesta
+                                                        </button>
+                                                    )}
                                                 </div>
-
-                                                {/* Motivo */}
-                                                {assenza.motivo && (
-                                                    <div>
-                                                        <span className="text-xs font-bold text-zinc-500 uppercase tracking-wider block mb-2">Motivo</span>
-                                                        <p className="text-sm text-zinc-700 line-clamp-2">{assenza.motivo}</p>
-                                                    </div>
-                                                )}
-
-                                                {/* Actions */}
-                                                {canCancel && (
-                                                    <button
-                                                        onClick={() => handleCancelClick(assenza)}
-                                                        className="w-full px-4 py-3 bg-gradient-to-r from-red-500 to-rose-600 hover:from-red-600 hover:to-rose-700 text-white font-bold text-sm rounded-xl shadow-lg hover:shadow-xl transition-all flex items-center justify-center gap-2 active:scale-95"
-                                                    >
-                                                        <Trash2 className="w-4 h-4" />
-                                                        Annulla Richiesta
-                                                    </button>
-                                                )}
-                                            </div>
-                                        );
-                                    })
+                                            );
+                                        })
                                 )}
                             </div>
 
@@ -600,136 +610,125 @@ export default function MieiDati() {
                                                 <p className="text-xl text-zinc-400 font-light">
                                                     {contaFiltriAttivi() > 0
                                                         ? 'Prova a modificare i filtri per vedere più risultati'
-                                                        : 'Le tue richieste appariranno qui in ordine cronologico'
-                                                    }
+                                                        : 'Le tue richieste appariranno qui in ordine cronologico'}
                                                 </p>
                                             </td>
                                         </tr>
                                     ) : (
-                                        assenzeFiltrate.map((assenza, index) => {
-                                            const tipoLower = (assenza.tipo || '').toLowerCase();
-                                            const isPermesso = tipoLower === 'permesso';
-                                            const TipoIcon = getTipoIcon(assenza.tipo);
-
-                                            const canCancel = (() => {
-                                                if(tipoLower === 'smartworking') return true;
-                                                if (assenza.stato !== 'pending') return false;
-
-                                                const dataString = assenza.dataInizio || assenza.data;
-                                                if (!dataString || dataString === 'N/D') return false;
-
-                                                try {
-                                                    let dataRichiesta: Date;
-
-                                                    if (dataString.includes('/')) {
-                                                        const [giorno, mese, anno] = dataString.split('/').map(Number);
-                                                        dataRichiesta = new Date(anno, mese - 1, giorno);
-                                                    } else {
-                                                        dataRichiesta = new Date(dataString);
+                                        [...assenzeFiltrate]
+                                            .sort((a, b) => {
+                                                const parsaTs = (d: string) => {
+                                                    if (!d || d === 'N/D') return 0;
+                                                    if (d.includes('/')) {
+                                                        const [g, m, a] = d.split('/').map(Number);
+                                                        return new Date(a, m - 1, g).getTime();
                                                     }
+                                                    const [a, m, g] = d.split('-').map(Number);
+                                                    return new Date(a, m - 1, g).getTime();
+                                                };
+                                                return parsaTs(b.dataInizio || b.data || '') - parsaTs(a.dataInizio || a.data || '');
+                                            })
+                                            .map((assenza, index) => {
+                                                const tipoLower = (assenza.tipo || '').toLowerCase().trim();
+                                                const isPermesso = tipoLower === 'permesso';
+                                                const TipoIcon = getTipoIcon(assenza.tipo);
 
-                                                    const oggi = new Date();
-                                                    oggi.setHours(0, 0, 0, 0);
-                                                    dataRichiesta.setHours(0, 0, 0, 0);
+                                                const canCancel = (() => {
+                                                    const dataString = assenza.dataInizio || assenza.data;
+                                                    if (!dataString || dataString === 'N/D') return false;
+                                                    try {
+                                                        let dataRichiesta: Date;
+                                                        if (dataString.includes('/')) {
+                                                            const [g, m, a] = dataString.split('/').map(Number);
+                                                            dataRichiesta = new Date(a, m - 1, g);
+                                                        } else {
+                                                            const [a, m, g] = dataString.split('-').map(Number);
+                                                            dataRichiesta = new Date(a, m - 1, g);
+                                                        }
+                                                        const oggi = new Date();
+                                                        oggi.setHours(0, 0, 0, 0);
+                                                        dataRichiesta.setHours(0, 0, 0, 0);
+                                                        if (oggi > dataRichiesta) return false;
+                                                        if (tipoLower === 'smartworking') return true;
+                                                        return assenza.stato === 'pending';
+                                                    } catch {
+                                                        return false;
+                                                    }
+                                                })();
 
-                                                    return oggi <= dataRichiesta;
-                                                } catch {
-                                                    return false;
-                                                }
-                                            })();
-
-                                            return (
-                                                <tr key={assenza.id || assenza._id || index} className="hover:bg-gradient-to-r hover:from-blue-50/80 hover:to-indigo-50/80 backdrop-blur-xl transition-all duration-300 group">
-                                                    <td className="py-6 px-6 text-base font-semibold text-zinc-800">
-                                                        <div className="flex items-center gap-3">
-                                                            <Calendar className="w-5 h-5 text-zinc-500" />
-                                                            {formattaData(assenza.dataInizio || assenza.data || 'N/D')}
-                                                        </div>
-                                                    </td>
-
-                                                    <td className="py-6 px-6">
-                                        <span className={`px-4 py-2 rounded-xl text-sm font-black shadow-xl inline-flex items-center gap-2 ${
-                                            tipoLower === 'ferie'
-                                                ? 'bg-gradient-to-r from-orange-400/90 to-orange-500/90 text-white'
-                                                : tipoLower === 'malattia'
-                                                    ? 'bg-gradient-to-r from-rose-400/90 to-red-500/90 text-white'
-                                                    : tipoLower === 'smartworking'
-                                                        ? 'bg-gradient-to-r from-blue-400/90 to-blue-500/90 text-white'
-                                                        : tipoLower === 'permesso'
-                                                            ? 'bg-gradient-to-r from-purple-400/90 to-purple-500/90 text-white'
-                                                            : tipoLower === 'fuori-sede'
-                                                                ? 'bg-gradient-to-r from-cyan-400/90 to-cyan-500/90 text-white'
-                                                                : tipoLower === 'congedo-parentale'
-                                                                    ? 'bg-gradient-to-r from-pink-400/90 to-pink-500/90 text-white'
-                                                                    : 'bg-gradient-to-r from-gray-400/90 to-gray-500/90 text-white'
-                                        }`}>
-                                            <TipoIcon className="w-4 h-4" />
-                                            {getTipoLabel(assenza.tipo)}
-                                        </span>
-                                                    </td>
-
-                                                    <td className="py-6 px-6">
-                                                        <div className="flex items-baseline gap-2">
-                                                            <div className="text-3xl font-black bg-gradient-to-r from-emerald-500 to-teal-600 bg-clip-text text-transparent">
-                                                                {assenza.durata || 0}
+                                                return (
+                                                    <tr
+                                                        key={assenza.id || assenza._id || index}
+                                                        className="hover:bg-gradient-to-r hover:from-blue-50/80 hover:to-indigo-50/80 backdrop-blur-xl transition-all duration-300 group"
+                                                    >
+                                                        <td className="py-6 px-6 text-base font-semibold text-zinc-800">
+                                                            <div className="flex items-center gap-3">
+                                                                <Calendar className="w-5 h-5 text-zinc-500" />
+                                                                {formattaData(assenza.dataInizio || assenza.data || 'N/D')}
                                                             </div>
-                                                            <div className={`text-lg font-black uppercase ${isPermesso ? 'text-yellow-600' : 'text-blue-600'}`}>
-                                                                {isPermesso ? 'ore' : 'gg'}
+                                                        </td>
+
+                                                        <td className="py-6 px-6">
+                                    <span className={`px-4 py-2 rounded-xl text-sm font-black shadow-lg inline-flex items-center gap-2 bg-gradient-to-r ${getTipoColor(assenza.tipo)} text-white`}>
+                                        <TipoIcon className="w-4 h-4" />
+                                        {getTipoLabel(assenza.tipo)}
+                                    </span>
+                                                        </td>
+
+                                                        <td className="py-6 px-6">
+                                                            <div className="flex items-baseline gap-2">
+                                                                <div className="text-3xl font-black bg-gradient-to-r from-emerald-500 to-teal-600 bg-clip-text text-transparent">
+                                                                    {assenza.durata || 0}
+                                                                </div>
+                                                                <div className={`text-lg font-black uppercase ${isPermesso ? 'text-yellow-600' : 'text-blue-600'}`}>
+                                                                    {isPermesso ? 'ore' : 'gg'}
+                                                                </div>
                                                             </div>
-                                                        </div>
-                                                    </td>
+                                                        </td>
 
-                                                    <td className="py-6 px-6">
-                                        <span className={`px-4 py-2 rounded-xl text-sm font-black shadow-xl inline-flex items-center gap-2 ${
-                                            assenza.stato === 'approved'
-                                                ? 'bg-gradient-to-r from-emerald-400/90 to-green-500/90 text-white'
-                                                : assenza.stato === 'pending'
-                                                    ? 'bg-gradient-to-r from-amber-400/90 to-yellow-500/90 text-white'
-                                                    : 'bg-gradient-to-r from-rose-400/90 to-red-500/90 text-white'
-                                        }`}>
-                                            {assenza.stato === 'pending' ? (
-                                                <>
-                                                    <Clock className="w-4 h-4" />
-                                                    In attesa
-                                                </>
-                                            ) : assenza.stato === 'approved' ? (
-                                                <>
-                                                    <CheckCircle className="w-4 h-4" />
-                                                    Approvata
-                                                </>
-                                            ) : (
-                                                <>
-                                                    <XCircle className="w-4 h-4" />
-                                                    Rifiutata
-                                                </>
-                                            )}
-                                        </span>
-                                                    </td>
+                                                        <td className="py-6 px-6">
+                                    <span className={`px-4 py-2 rounded-xl text-sm font-black shadow-xl inline-flex items-center gap-2 ${
+                                        assenza.stato === 'approved'
+                                            ? 'bg-gradient-to-r from-emerald-400/90 to-green-500/90 text-white'
+                                            : assenza.stato === 'pending'
+                                                ? 'bg-gradient-to-r from-amber-400/90 to-yellow-500/90 text-white'
+                                                : 'bg-gradient-to-r from-rose-400/90 to-red-500/90 text-white'
+                                    }`}>
+                                        {assenza.stato === 'pending' ? (
+                                            <><Clock className="w-4 h-4" />In attesa</>
+                                        ) : assenza.stato === 'approved' ? (
+                                            <><CheckCircle className="w-4 h-4" />Approvata</>
+                                        ) : (
+                                            <><XCircle className="w-4 h-4" />Rifiutata</>
+                                        )}
+                                    </span>
+                                                        </td>
 
-                                                    <td className="py-6 px-6 text-base text-zinc-700 max-w-xs truncate">
-                                                        {assenza.motivo || '-'}
-                                                    </td>
+                                                        <td className="py-6 px-6 text-base text-zinc-700 max-w-xs truncate">
+                                                            {assenza.motivo || '-'}
+                                                        </td>
 
-                                                    <td className="py-6 px-6">
-                                                        {canCancel ? (
-                                                            <button
-                                                                onClick={() => handleCancelClick(assenza)}
-                                                                className="px-4 py-2 bg-gradient-to-r from-red-500 to-rose-600 hover:from-red-600 hover:to-rose-700 text-white font-bold text-sm rounded-xl shadow-lg hover:shadow-xl transition-all flex items-center gap-2 active:scale-95"
-                                                            >
-                                                                <Trash2 className="w-4 h-4" />
-                                                                Annulla
-                                                            </button>
-                                                        ) : (
-                                                            <span className="text-zinc-400 text-sm font-medium">-</span>
-                                                        )}
-                                                    </td>
-                                                </tr>
-                                            );
-                                        })
+                                                        <td className="py-6 px-6">
+                                                            {canCancel ? (
+                                                                <button
+                                                                    onClick={() => handleCancelClick(assenza)}
+                                                                    className="px-4 py-2 bg-gradient-to-r from-red-500 to-rose-600 hover:from-red-600 hover:to-rose-700 text-white font-bold text-sm rounded-xl shadow-lg hover:shadow-xl transition-all flex items-center gap-2 active:scale-95"
+                                                                >
+                                                                    <Trash2 className="w-4 h-4" />
+                                                                    Annulla
+                                                                </button>
+                                                            ) : (
+                                                                <span className="text-zinc-400 text-sm font-medium">-</span>
+                                                            )}
+                                                        </td>
+                                                    </tr>
+                                                );
+                                            })
                                     )}
                                     </tbody>
                                 </table>
                             </div>
+
                         </div>
                     </>
                 )}

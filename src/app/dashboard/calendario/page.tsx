@@ -78,7 +78,7 @@ const getTipoEmoji = (tipo: string): string => {
     return map[tipo.toLowerCase()] || '📋';
 };
 
-const getTipoColor = (tipo: string): string => {
+ const getTipoColor = (tipo: string): string => {
     if (tipo === 'ferie') return 'from-orange-500 to-orange-600 border-orange-400';
     if (tipo === 'malattia') return 'from-rose-500 to-red-600 border-red-400';
     if (tipo === 'permesso') return 'from-yellow-500 to-amber-600 border-yellow-400';
