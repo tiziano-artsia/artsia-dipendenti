@@ -22,7 +22,7 @@ import {
     MapPin,
     Baby,
     List,
-    Plus, ChevronRight, ChevronLeft
+    Plus, ChevronRight, ChevronLeft, CalendarDays, FolderArchive
 } from 'lucide-react';
 import type {AbsenceDoc} from "@/lib/db";
 import toast, {Toaster} from "react-hot-toast";
@@ -97,6 +97,7 @@ export default function MieiDati() {
     const [activeTab, setActiveTab] = useState<'richieste' | 'nuova'>('richieste');
     const [paginaCorrente, setPaginaCorrente] = useState(1);
     const [itemsPerPage, setItemsPerPage] = useState(10);
+    const [tabRichieste, setTabRichieste] = useState<'future' | 'passate'>('future');
 
     const [form, setForm] = useState({
         tipo: '',
@@ -453,11 +454,10 @@ export default function MieiDati() {
                                 </div>
                             </div>
 
-                            {/* Lista Richieste */}
                             <div className="bg-white/60 backdrop-blur-3xl rounded-2xl sm:rounded-3xl shadow-2xl p-4 sm:p-6 md:p-10 border border-white/70 hover:shadow-3xl transition-all duration-700">
 
-                                {/* Header con contatore e selettore items per pagina */}
-                                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-6 sm:mb-8 md:mb-10 gap-3 sm:gap-4">
+                                {/* Header */}
+                                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-6 sm:mb-8 gap-3 sm:gap-4">
                                     <h2 className="text-2xl sm:text-3xl md:text-4xl font-black tracking-tight bg-gradient-to-r from-zinc-800 to-slate-700 bg-clip-text text-transparent flex items-center gap-3 sm:gap-4">
                                         <Calendar className="w-7 h-7 sm:w-8 sm:h-8 md:w-10 md:h-10 text-zinc-700" />
                                         Le mie richieste
@@ -467,8 +467,8 @@ export default function MieiDati() {
                                         <div className="px-4 sm:px-6 py-2 sm:py-3 bg-white/50 backdrop-blur-xl rounded-full border border-zinc-200 shadow-lg flex items-center gap-2 sm:gap-3">
                                             <span className="text-xl sm:text-2xl font-black text-emerald-600">{assenzeFiltrate.length}</span>
                                             <span className="text-[10px] sm:text-xs md:text-sm text-zinc-500 font-mono tracking-wider uppercase">
-                                {assenzeFiltrate.length === assenze.length ? 'totali' : `su ${assenze.length}`}
-                            </span>
+                    {assenzeFiltrate.length === assenze.length ? 'totali' : `su ${assenze.length}`}
+                </span>
                                         </div>
                                         {/* Selettore righe per pagina */}
                                         <div className="flex items-center gap-2 px-3 sm:px-4 py-2 sm:py-2.5 bg-white/80 border-2 border-zinc-200 rounded-xl shadow-md">
@@ -490,193 +490,253 @@ export default function MieiDati() {
                                     </div>
                                 </div>
 
-                                {/* Layout Cards per mobile */}
-                                <div className="block lg:hidden space-y-4">
-                                    {assenzePagina.length === 0 ? (
-                                        <div className="py-16 text-center">
-                                            <div className="w-24 h-24 mx-auto mb-6 bg-gradient-to-br from-zinc-100/70 to-slate-100/50 rounded-2xl flex items-center justify-center shadow-2xl border-4 border-dashed border-zinc-200/50 backdrop-blur-xl">
-                                                <AlertCircle className="w-12 h-12 text-zinc-300" />
-                                            </div>
-                                            <h3 className="text-2xl font-black bg-gradient-to-r from-zinc-700 to-slate-600 bg-clip-text text-transparent mb-2">
-                                                {contaFiltriAttivi() > 0 ? 'Nessun risultato' : 'Nessuna richiesta'}
-                                            </h3>
-                                            <p className="text-base text-zinc-400 font-light px-4">
-                                                {contaFiltriAttivi() > 0 ? 'Prova a modificare i filtri' : 'Le tue richieste appariranno qui'}
-                                            </p>
-                                        </div>
-                                    ) : (
-                                        assenzePagina.map((assenza, index) => {
-                                            const tipoLower = (assenza.tipo || '').toLowerCase().trim();
-                                            const isPermesso = tipoLower === 'permesso';
-                                            const TipoIcon = getTipoIcon(assenza.tipo);
-                                            const canCancel = (() => {
-                                                const dataString = assenza.dataInizio || assenza.data;
-                                                if (!dataString || dataString === 'N/D') return false;
-                                                try {
-                                                    let dataRichiesta: Date;
-                                                    if (dataString.includes('/')) {
-                                                        const [g, m, a] = dataString.split('/').map(Number);
-                                                        dataRichiesta = new Date(a, m - 1, g);
-                                                    } else {
-                                                        const [a, m, g] = dataString.split('-').map(Number);
-                                                        dataRichiesta = new Date(a, m - 1, g);
-                                                    }
-                                                    const oggi = new Date();
-                                                    oggi.setHours(0, 0, 0, 0);
-                                                    dataRichiesta.setHours(0, 0, 0, 0);
-                                                    if (oggi > dataRichiesta) return false;
-                                                    if (tipoLower === 'smartworking') return true;
-                                                    return assenza.stato === 'pending';
-                                                } catch { return false; }
-                                            })();
+                                {/* Tab Future / Passate */}
+                                {(() => {
+                                    const oggi = new Date();
+                                    oggi.setHours(0, 0, 0, 0);
 
-                                            return (
-                                                <div
-                                                    key={assenza.id || assenza._id || index}
-                                                    className="bg-white/90 backdrop-blur-xl rounded-2xl p-5 shadow-lg border border-zinc-200/50 hover:shadow-xl transition-all space-y-4"
+                                    const parsaTs = (d: string) => {
+                                        if (!d || d === 'N/D') return 0;
+                                        if (d.includes('/')) {
+                                            const [g, m, a] = d.split('/').map(Number);
+                                            return new Date(a, m - 1, g).getTime();
+                                        }
+                                        const [a, m, g] = d.split('-').map(Number);
+                                        return new Date(a, m - 1, g).getTime();
+                                    };
+
+                                    const isDataFutura = (assenza: typeof assenzeFiltrate[0]) => {
+                                        const d = new Date(parsaTs(assenza.dataInizio || assenza.data || ''));
+                                        d.setHours(0, 0, 0, 0);
+                                        return d >= oggi;
+                                    };
+
+                                    const future = [...assenzeFiltrate]
+                                        .filter(isDataFutura)
+                                        .sort((a, b) => parsaTs(a.dataInizio || a.data || '') - parsaTs(b.dataInizio || b.data || '')); // prima → dopo
+
+                                    const passate = [...assenzeFiltrate]
+                                        .filter(a => !isDataFutura(a))
+                                        .sort((a, b) => parsaTs(b.dataInizio || b.data || '') - parsaTs(a.dataInizio || a.data || '')); // più recente prima
+
+                                    const listaAttiva = tabRichieste === 'future' ? future : passate;
+                                    const totalePagine = Math.ceil(listaAttiva.length / itemsPerPage);
+                                    const assenzePagina = listaAttiva.slice(
+                                        (paginaCorrente - 1) * itemsPerPage,
+                                        paginaCorrente * itemsPerPage
+                                    );
+
+                                    const renderRiga = (assenza: typeof assenzeFiltrate[0], index: number) => {
+                                        const tipoLower = (assenza.tipo || '').toLowerCase().trim();
+                                        const isPermesso = tipoLower === 'permesso';
+                                        const TipoIcon = getTipoIcon(assenza.tipo);
+                                        const canCancel = (() => {
+                                            const dataString = assenza.dataInizio || assenza.data;
+                                            if (!dataString || dataString === 'N/D') return false;
+                                            try {
+                                                let dataRichiesta: Date;
+                                                if (dataString.includes('/')) {
+                                                    const [g, m, a] = dataString.split('/').map(Number);
+                                                    dataRichiesta = new Date(a, m - 1, g);
+                                                } else {
+                                                    const [a, m, g] = dataString.split('-').map(Number);
+                                                    dataRichiesta = new Date(a, m - 1, g);
+                                                }
+                                                const oggi2 = new Date();
+                                                oggi2.setHours(0, 0, 0, 0);
+                                                dataRichiesta.setHours(0, 0, 0, 0);
+                                                if (oggi2 > dataRichiesta) return false;
+                                                if (tipoLower === 'smartworking') return true;
+                                                return assenza.stato === 'pending';
+                                            } catch { return false; }
+                                        })();
+
+                                        return { tipoLower, isPermesso, TipoIcon, canCancel };
+                                    };
+
+                                    return (
+                                        <>
+                                            {/* Tab switcher */}
+                                            <div className="flex gap-2 sm:gap-3 mb-6 sm:mb-8 p-1.5 bg-zinc-100/80 rounded-2xl w-full sm:w-fit">
+                                                <button
+                                                    onClick={() => { setTabRichieste('future'); setPaginaCorrente(1); }}
+                                                    className={`flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 sm:px-6 py-2.5 sm:py-3 rounded-xl font-black text-sm sm:text-base transition-all ${
+                                                        tabRichieste === 'future'
+                                                            ? 'bg-white shadow-lg text-emerald-600 border-2 border-emerald-200'
+                                                            : 'text-zinc-500 hover:text-zinc-700'
+                                                    }`}
                                                 >
-                                                    <div className="flex items-start justify-between gap-3 pb-4 border-b border-zinc-100">
-                                                        <div className="flex items-center gap-2 flex-1 min-w-0">
-                                                            <Calendar className="w-4 h-4 text-zinc-500 shrink-0" />
-                                                            <span className="text-base font-bold text-zinc-800 truncate">
+                                                    <span><CalendarDays /></span>
+                                                    <span>Attive</span>
+                                                    {future.length > 0 && (
+                                                        <span className={`px-2 py-0.5 rounded-full text-xs font-black ${
+                                                            tabRichieste === 'future' ? 'bg-emerald-500 text-white' : 'bg-zinc-300 text-zinc-600'
+                                                        }`}>
+                                {future.length}
+                            </span>
+                                                    )}
+                                                </button>
+                                                <button
+                                                    onClick={() => { setTabRichieste('passate'); setPaginaCorrente(1); }}
+                                                    className={`flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 sm:px-6 py-2.5 sm:py-3 rounded-xl font-black text-sm sm:text-base transition-all ${
+                                                        tabRichieste === 'passate'
+                                                            ? 'bg-white shadow-lg text-zinc-700 border-2 border-zinc-200'
+                                                            : 'text-zinc-500 hover:text-zinc-700'
+                                                    }`}
+                                                >
+                                                    <span><FolderArchive /></span>
+                                                    <span>Passate</span>
+                                                    {passate.length > 0 && (
+                                                        <span className={`px-2 py-0.5 rounded-full text-xs font-black ${
+                                                            tabRichieste === 'passate' ? 'bg-zinc-600 text-white' : 'bg-zinc-300 text-zinc-600'
+                                                        }`}>
+                                {passate.length}
+                            </span>
+                                                    )}
+                                                </button>
+                                            </div>
+
+                                            {/* Layout Cards per mobile */}
+                                            <div className="block lg:hidden space-y-4">
+                                                {assenzePagina.length === 0 ? (
+                                                    <div className="py-16 text-center">
+                                                        <div className="w-24 h-24 mx-auto mb-6 bg-gradient-to-br from-zinc-100/70 to-slate-100/50 rounded-2xl flex items-center justify-center shadow-2xl border-4 border-dashed border-zinc-200/50 backdrop-blur-xl">
+                                                            <AlertCircle className="w-12 h-12 text-zinc-300" />
+                                                        </div>
+                                                        <h3 className="text-2xl font-black bg-gradient-to-r from-zinc-700 to-slate-600 bg-clip-text text-transparent mb-2">
+                                                            {tabRichieste === 'future' ? 'Nessuna richiesta futura' : 'Nessuna richiesta passata'}
+                                                        </h3>
+                                                        <p className="text-base text-zinc-400 font-light px-4">
+                                                            {contaFiltriAttivi() > 0 ? 'Prova a modificare i filtri' : tabRichieste === 'future' ? 'Le prossime richieste appariranno qui' : 'Lo storico apparirà qui'}
+                                                        </p>
+                                                    </div>
+                                                ) : (
+                                                    assenzePagina.map((assenza, index) => {
+                                                        const { tipoLower, isPermesso, TipoIcon, canCancel } = renderRiga(assenza, index);
+                                                        return (
+                                                            <div
+                                                                key={assenza.id || assenza._id || index}
+                                                                className="bg-white/90 backdrop-blur-xl rounded-2xl p-5 shadow-lg border border-zinc-200/50 hover:shadow-xl transition-all space-y-4"
+                                                            >
+                                                                <div className="flex items-start justify-between gap-3 pb-4 border-b border-zinc-100">
+                                                                    <div className="flex items-center gap-2 flex-1 min-w-0">
+                                                                        <Calendar className="w-4 h-4 text-zinc-500 shrink-0" />
+                                                                        <span className="text-base font-bold text-zinc-800 truncate">
                                                 {formattaData(assenza.dataInizio || assenza.data || 'N/D')}
                                             </span>
-                                                        </div>
-                                                        <span className={`px-3 py-1.5 rounded-xl text-xs font-black shadow-lg inline-flex items-center gap-1.5 shrink-0 ${
-                                                            assenza.stato === 'approved' ? 'bg-gradient-to-r from-emerald-400/90 to-green-500/90 text-white'
-                                                                : assenza.stato === 'pending' ? 'bg-gradient-to-r from-amber-400/90 to-yellow-500/90 text-white'
-                                                                    : 'bg-gradient-to-r from-rose-400/90 to-red-500/90 text-white'
-                                                        }`}>
+                                                                    </div>
+                                                                    <span className={`px-3 py-1.5 rounded-xl text-xs font-black shadow-lg inline-flex items-center gap-1.5 shrink-0 ${
+                                                                        assenza.stato === 'approved' ? 'bg-gradient-to-r from-emerald-400/90 to-green-500/90 text-white'
+                                                                            : assenza.stato === 'pending' ? 'bg-gradient-to-r from-amber-400/90 to-yellow-500/90 text-white'
+                                                                                : 'bg-gradient-to-r from-rose-400/90 to-red-500/90 text-white'
+                                                                    }`}>
                                             {assenza.stato === 'pending' ? <><Clock className="w-3 h-3" />In attesa</>
                                                 : assenza.stato === 'approved' ? <><CheckCircle className="w-3 h-3" />Approvata</>
                                                     : <><XCircle className="w-3 h-3" />Rifiutata</>}
                                         </span>
-                                                    </div>
-                                                    <div className="grid grid-cols-2 gap-4">
-                                                        <div>
-                                                            <span className="text-xs font-bold text-zinc-500 uppercase tracking-wider block mb-2">Tipo</span>
-                                                            <span className={`px-4 py-2 rounded-xl text-sm font-black shadow-lg inline-flex items-center gap-2 bg-gradient-to-r ${getTipoColor(assenza.tipo)} text-white`}>
+                                                                </div>
+                                                                <div className="grid grid-cols-2 gap-4">
+                                                                    <div>
+                                                                        <span className="text-xs font-bold text-zinc-500 uppercase tracking-wider block mb-2">Tipo</span>
+                                                                        <span className={`px-4 py-2 rounded-xl text-sm font-black shadow-lg inline-flex items-center gap-2 bg-gradient-to-r ${getTipoColor(assenza.tipo)} text-white`}>
                                                 <TipoIcon className="w-4 h-4" />
-                                                                {getTipoLabel(assenza.tipo)}
+                                                                            {getTipoLabel(assenza.tipo)}
                                             </span>
-                                                        </div>
-                                                        <div>
-                                                            <span className="text-xs font-bold text-zinc-500 uppercase tracking-wider block mb-2">Durata</span>
-                                                            <div className="flex items-baseline gap-2">
+                                                                    </div>
+                                                                    <div>
+                                                                        <span className="text-xs font-bold text-zinc-500 uppercase tracking-wider block mb-2">Durata</span>
+                                                                        <div className="flex items-baseline gap-2">
                                                 <span className="text-3xl font-black bg-gradient-to-r from-emerald-500 to-teal-600 bg-clip-text text-transparent">
                                                     {assenza.durata || 0}
                                                 </span>
-                                                                <span className={`text-base font-black uppercase ${isPermesso ? 'text-yellow-600' : 'text-blue-600'}`}>
+                                                                            <span className={`text-base font-black uppercase ${isPermesso ? 'text-yellow-600' : 'text-blue-600'}`}>
                                                     {isPermesso ? 'ore' : 'gg'}
                                                 </span>
+                                                                        </div>
+                                                                    </div>
+                                                                </div>
+                                                                {assenza.motivo && (
+                                                                    <div>
+                                                                        <span className="text-xs font-bold text-zinc-500 uppercase tracking-wider block mb-2">Motivo</span>
+                                                                        <p className="text-sm text-zinc-700 line-clamp-2">{assenza.motivo}</p>
+                                                                    </div>
+                                                                )}
+                                                                {canCancel && (
+                                                                    <button
+                                                                        onClick={() => handleCancelClick(assenza)}
+                                                                        className="w-full px-4 py-3 bg-gradient-to-r from-red-500 to-rose-600 hover:from-red-600 hover:to-rose-700 text-white font-bold text-sm rounded-xl shadow-lg hover:shadow-xl transition-all flex items-center justify-center gap-2 active:scale-95"
+                                                                    >
+                                                                        <Trash2 className="w-4 h-4" />
+                                                                        Annulla Richiesta
+                                                                    </button>
+                                                                )}
                                                             </div>
-                                                        </div>
-                                                    </div>
-                                                    {assenza.motivo && (
-                                                        <div>
-                                                            <span className="text-xs font-bold text-zinc-500 uppercase tracking-wider block mb-2">Motivo</span>
-                                                            <p className="text-sm text-zinc-700 line-clamp-2">{assenza.motivo}</p>
-                                                        </div>
-                                                    )}
-                                                    {canCancel && (
-                                                        <button
-                                                            onClick={() => handleCancelClick(assenza)}
-                                                            className="w-full px-4 py-3 bg-gradient-to-r from-red-500 to-rose-600 hover:from-red-600 hover:to-rose-700 text-white font-bold text-sm rounded-xl shadow-lg hover:shadow-xl transition-all flex items-center justify-center gap-2 active:scale-95"
-                                                        >
-                                                            <Trash2 className="w-4 h-4" />
-                                                            Annulla Richiesta
-                                                        </button>
-                                                    )}
-                                                </div>
-                                            );
-                                        })
-                                    )}
-                                </div>
+                                                        );
+                                                    })
+                                                )}
+                                            </div>
 
-                                {/* Layout Tabella per desktop */}
-                                <div className="hidden lg:block overflow-x-auto">
-                                    <table className="w-full">
-                                        <thead>
-                                        <tr className="bg-gradient-to-r from-white/80 to-zinc-50/80 backdrop-blur-xl">
-                                            <th className="text-left py-6 px-6 font-black text-zinc-800 text-lg tracking-tight border-b-2 border-white/50">Data</th>
-                                            <th className="text-left py-6 px-6 font-black text-zinc-800 text-lg tracking-tight border-b-2 border-white/50">Tipo</th>
-                                            <th className="text-left py-6 px-6 font-black text-zinc-800 text-lg tracking-tight border-b-2 border-white/50">Durata</th>
-                                            <th className="text-left py-6 px-6 font-black text-zinc-800 text-lg tracking-tight border-b-2 border-white/50">Stato</th>
-                                            <th className="text-left py-6 px-6 font-black text-zinc-800 text-lg tracking-tight border-b-2 border-white/50">Motivo</th>
-                                            <th className="text-left py-6 px-6 font-black text-zinc-800 text-lg tracking-tight border-b-2 border-white/50">Azioni</th>
-                                        </tr>
-                                        </thead>
-                                        <tbody className="divide-y divide-zinc-100/50">
-                                        {assenzePagina.length === 0 ? (
-                                            <tr>
-                                                <td colSpan={6} className="py-32 text-center">
-                                                    <div className="w-32 h-32 mx-auto mb-8 bg-gradient-to-br from-zinc-100/70 to-slate-100/50 rounded-3xl flex items-center justify-center shadow-2xl border-4 border-dashed border-zinc-200/50 backdrop-blur-xl">
-                                                        <AlertCircle className="w-16 h-16 text-zinc-300" />
-                                                    </div>
-                                                    <h3 className="text-3xl font-black bg-gradient-to-r from-zinc-700 to-slate-600 bg-clip-text text-transparent mb-3">
-                                                        {contaFiltriAttivi() > 0 ? 'Nessun risultato' : 'Nessuna richiesta'}
-                                                    </h3>
-                                                    <p className="text-xl text-zinc-400 font-light">
-                                                        {contaFiltriAttivi() > 0
-                                                            ? 'Prova a modificare i filtri per vedere più risultati'
-                                                            : 'Le tue richieste appariranno qui in ordine cronologico'}
-                                                    </p>
-                                                </td>
-                                            </tr>
-                                        ) : (
-                                            assenzePagina.map((assenza, index) => {
-                                                const tipoLower = (assenza.tipo || '').toLowerCase().trim();
-                                                const isPermesso = tipoLower === 'permesso';
-                                                const TipoIcon = getTipoIcon(assenza.tipo);
-                                                const canCancel = (() => {
-                                                    const dataString = assenza.dataInizio || assenza.data;
-                                                    if (!dataString || dataString === 'N/D') return false;
-                                                    try {
-                                                        let dataRichiesta: Date;
-                                                        if (dataString.includes('/')) {
-                                                            const [g, m, a] = dataString.split('/').map(Number);
-                                                            dataRichiesta = new Date(a, m - 1, g);
-                                                        } else {
-                                                            const [a, m, g] = dataString.split('-').map(Number);
-                                                            dataRichiesta = new Date(a, m - 1, g);
-                                                        }
-                                                        const oggi = new Date();
-                                                        oggi.setHours(0, 0, 0, 0);
-                                                        dataRichiesta.setHours(0, 0, 0, 0);
-                                                        if (oggi > dataRichiesta) return false;
-                                                        if (tipoLower === 'smartworking') return true;
-                                                        return assenza.stato === 'pending';
-                                                    } catch { return false; }
-                                                })();
-
-                                                return (
-                                                    <tr
-                                                        key={assenza.id || assenza._id || index}
-                                                        className="hover:bg-gradient-to-r hover:from-blue-50/80 hover:to-indigo-50/80 backdrop-blur-xl transition-all duration-300 group"
-                                                    >
-                                                        <td className="py-6 px-6 text-base font-semibold text-zinc-800">
-                                                            <div className="flex items-center gap-3">
-                                                                <Calendar className="w-5 h-5 text-zinc-500" />
-                                                                {formattaData(assenza.dataInizio || assenza.data || 'N/D')}
-                                                            </div>
-                                                        </td>
-                                                        <td className="py-6 px-6">
+                                            {/* Layout Tabella per desktop */}
+                                            <div className="hidden lg:block overflow-x-auto">
+                                                <table className="w-full">
+                                                    <thead>
+                                                    <tr className="bg-gradient-to-r from-white/80 to-zinc-50/80 backdrop-blur-xl">
+                                                        <th className="text-left py-6 px-6 font-black text-zinc-800 text-lg tracking-tight border-b-2 border-white/50">Data</th>
+                                                        <th className="text-left py-6 px-6 font-black text-zinc-800 text-lg tracking-tight border-b-2 border-white/50">Tipo</th>
+                                                        <th className="text-left py-6 px-6 font-black text-zinc-800 text-lg tracking-tight border-b-2 border-white/50">Durata</th>
+                                                        <th className="text-left py-6 px-6 font-black text-zinc-800 text-lg tracking-tight border-b-2 border-white/50">Stato</th>
+                                                        <th className="text-left py-6 px-6 font-black text-zinc-800 text-lg tracking-tight border-b-2 border-white/50">Motivo</th>
+                                                        <th className="text-left py-6 px-6 font-black text-zinc-800 text-lg tracking-tight border-b-2 border-white/50">Azioni</th>
+                                                    </tr>
+                                                    </thead>
+                                                    <tbody className="divide-y divide-zinc-100/50">
+                                                    {assenzePagina.length === 0 ? (
+                                                        <tr>
+                                                            <td colSpan={6} className="py-32 text-center">
+                                                                <div className="w-32 h-32 mx-auto mb-8 bg-gradient-to-br from-zinc-100/70 to-slate-100/50 rounded-3xl flex items-center justify-center shadow-2xl border-4 border-dashed border-zinc-200/50 backdrop-blur-xl">
+                                                                    <AlertCircle className="w-16 h-16 text-zinc-300" />
+                                                                </div>
+                                                                <h3 className="text-3xl font-black bg-gradient-to-r from-zinc-700 to-slate-600 bg-clip-text text-transparent mb-3">
+                                                                    {tabRichieste === 'future' ? 'Nessuna richiesta futura' : 'Nessuna richiesta passata'}
+                                                                </h3>
+                                                                <p className="text-xl text-zinc-400 font-light">
+                                                                    {contaFiltriAttivi() > 0
+                                                                        ? 'Prova a modificare i filtri per vedere più risultati'
+                                                                        : tabRichieste === 'future' ? 'Le prossime richieste appariranno qui' : 'Lo storico apparirà qui'}
+                                                                </p>
+                                                            </td>
+                                                        </tr>
+                                                    ) : (
+                                                        assenzePagina.map((assenza, index) => {
+                                                            const { tipoLower, isPermesso, TipoIcon, canCancel } = renderRiga(assenza, index);
+                                                            return (
+                                                                <tr
+                                                                    key={assenza.id || assenza._id || index}
+                                                                    className="hover:bg-gradient-to-r hover:from-blue-50/80 hover:to-indigo-50/80 backdrop-blur-xl transition-all duration-300 group"
+                                                                >
+                                                                    <td className="py-6 px-6 text-base font-semibold text-zinc-800">
+                                                                        <div className="flex items-center gap-3">
+                                                                            <Calendar className="w-5 h-5 text-zinc-500" />
+                                                                            {formattaData(assenza.dataInizio || assenza.data || 'N/D')}
+                                                                        </div>
+                                                                    </td>
+                                                                    <td className="py-6 px-6">
                                                 <span className={`px-4 py-2 rounded-xl text-sm font-black shadow-lg inline-flex items-center gap-2 bg-gradient-to-r ${getTipoColor(assenza.tipo)} text-white`}>
                                                     <TipoIcon className="w-4 h-4" />
                                                     {getTipoLabel(assenza.tipo)}
                                                 </span>
-                                                        </td>
-                                                        <td className="py-6 px-6">
-                                                            <div className="flex items-baseline gap-2">
-                                                                <div className="text-3xl font-black bg-gradient-to-r from-emerald-500 to-teal-600 bg-clip-text text-transparent">
-                                                                    {assenza.durata || 0}
-                                                                </div>
-                                                                <div className={`text-lg font-black uppercase ${isPermesso ? 'text-yellow-600' : 'text-blue-600'}`}>
-                                                                    {isPermesso ? 'ore' : 'gg'}
-                                                                </div>
-                                                            </div>
-                                                        </td>
-                                                        <td className="py-6 px-6">
+                                                                    </td>
+                                                                    <td className="py-6 px-6">
+                                                                        <div className="flex items-baseline gap-2">
+                                                                            <div className="text-3xl font-black bg-gradient-to-r from-emerald-500 to-teal-600 bg-clip-text text-transparent">
+                                                                                {assenza.durata || 0}
+                                                                            </div>
+                                                                            <div className={`text-lg font-black uppercase ${isPermesso ? 'text-yellow-600' : 'text-blue-600'}`}>
+                                                                                {isPermesso ? 'ore' : 'gg'}
+                                                                            </div>
+                                                                        </div>
+                                                                    </td>
+                                                                    <td className="py-6 px-6">
                                                 <span className={`px-4 py-2 rounded-xl text-sm font-black shadow-xl inline-flex items-center gap-2 ${
                                                     assenza.stato === 'approved' ? 'bg-gradient-to-r from-emerald-400/90 to-green-500/90 text-white'
                                                         : assenza.stato === 'pending' ? 'bg-gradient-to-r from-amber-400/90 to-yellow-500/90 text-white'
@@ -686,106 +746,98 @@ export default function MieiDati() {
                                                         : assenza.stato === 'approved' ? <><CheckCircle className="w-4 h-4" />Approvata</>
                                                             : <><XCircle className="w-4 h-4" />Rifiutata</>}
                                                 </span>
-                                                        </td>
-                                                        <td className="py-6 px-6 text-base text-zinc-700 max-w-xs truncate">
-                                                            {assenza.motivo || '-'}
-                                                        </td>
-                                                        <td className="py-6 px-6">
-                                                            {canCancel ? (
-                                                                <button
-                                                                    onClick={() => handleCancelClick(assenza)}
-                                                                    className="px-4 py-2 bg-gradient-to-r from-red-500 to-rose-600 hover:from-red-600 hover:to-rose-700 text-white font-bold text-sm rounded-xl shadow-lg hover:shadow-xl transition-all flex items-center gap-2 active:scale-95"
-                                                                >
-                                                                    <Trash2 className="w-4 h-4" />
-                                                                    Annulla
-                                                                </button>
-                                                            ) : (
-                                                                <span className="text-zinc-400 text-sm font-medium">-</span>
-                                                            )}
-                                                        </td>
-                                                    </tr>
-                                                );
-                                            })
-                                        )}
-                                        </tbody>
-                                    </table>
-                                </div>
-
-                                {/* Paginazione */}
-                                {totalePagine > 1 && (
-                                    <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mt-8 pt-6 border-t-2 border-zinc-100">
-                                        {/* Info */}
-                                        <p className="text-sm font-semibold text-zinc-500">
-                                            Pagina <span className="text-zinc-800 font-black">{paginaCorrente}</span> di <span className="text-zinc-800 font-black">{totalePagine}</span>
-                                            <span className="ml-2 text-zinc-400">
-                                ({(paginaCorrente - 1) * itemsPerPage + 1}–{Math.min(paginaCorrente * itemsPerPage, assenzeSorted.length)} di {assenzeSorted.length})
-                            </span>
-                                        </p>
-                                        {/* Bottoni */}
-                                        <div className="flex items-center gap-2">
-                                            {/* Prima pagina */}
-                                            <button
-                                                onClick={() => setPaginaCorrente(1)}
-                                                disabled={paginaCorrente === 1}
-                                                className="p-2 rounded-xl border-2 border-zinc-200 text-zinc-600 hover:bg-zinc-100 disabled:opacity-30 disabled:cursor-not-allowed transition-all font-black text-sm active:scale-95"
-                                            >
-                                                «
-                                            </button>
-                                            {/* Precedente */}
-                                            <button
-                                                onClick={() => setPaginaCorrente(p => Math.max(1, p - 1))}
-                                                disabled={paginaCorrente === 1}
-                                                className="px-4 py-2 rounded-xl border-2 border-zinc-200 text-zinc-600 hover:bg-zinc-100 disabled:opacity-30 disabled:cursor-not-allowed transition-all font-bold text-sm active:scale-95 flex items-center gap-1"
-                                            >
-                                                <ChevronLeft className="w-4 h-4" /> Prec
-                                            </button>
-                                            {/* Numeri pagina */}
-                                            <div className="flex items-center gap-1">
-                                                {Array.from({ length: totalePagine }, (_, i) => i + 1)
-                                                    .filter(n => n === 1 || n === totalePagine || Math.abs(n - paginaCorrente) <= 1)
-                                                    .reduce<(number | '...')[]>((acc, n, i, arr) => {
-                                                        if (i > 0 && n - (arr[i - 1] as number) > 1) acc.push('...');
-                                                        acc.push(n);
-                                                        return acc;
-                                                    }, [])
-                                                    .map((item, i) =>
-                                                        item === '...' ? (
-                                                            <span key={`ellipsis-${i}`} className="px-2 text-zinc-400 font-bold">…</span>
-                                                        ) : (
-                                                            <button
-                                                                key={item}
-                                                                onClick={() => setPaginaCorrente(item as number)}
-                                                                className={`w-10 h-10 rounded-xl text-sm font-black transition-all active:scale-95 ${
-                                                                    paginaCorrente === item
-                                                                        ? 'bg-emerald-500 text-white shadow-lg border-2 border-emerald-400'
-                                                                        : 'border-2 border-zinc-200 text-zinc-600 hover:bg-zinc-100'
-                                                                }`}
-                                                            >
-                                                                {item}
-                                                            </button>
-                                                        )
+                                                                    </td>
+                                                                    <td className="py-6 px-6 text-base text-zinc-700 max-w-xs truncate">
+                                                                        {assenza.motivo || '-'}
+                                                                    </td>
+                                                                    <td className="py-6 px-6">
+                                                                        {canCancel ? (
+                                                                            <button
+                                                                                onClick={() => handleCancelClick(assenza)}
+                                                                                className="px-4 py-2 bg-gradient-to-r from-red-500 to-rose-600 hover:from-red-600 hover:to-rose-700 text-white font-bold text-sm rounded-xl shadow-lg hover:shadow-xl transition-all flex items-center gap-2 active:scale-95"
+                                                                            >
+                                                                                <Trash2 className="w-4 h-4" />
+                                                                                Annulla
+                                                                            </button>
+                                                                        ) : (
+                                                                            <span className="text-zinc-400 text-sm font-medium">-</span>
+                                                                        )}
+                                                                    </td>
+                                                                </tr>
+                                                            );
+                                                        })
                                                     )}
+                                                    </tbody>
+                                                </table>
                                             </div>
-                                            {/* Successiva */}
-                                            <button
-                                                onClick={() => setPaginaCorrente(p => Math.min(totalePagine, p + 1))}
-                                                disabled={paginaCorrente === totalePagine}
-                                                className="px-4 py-2 rounded-xl border-2 border-zinc-200 text-zinc-600 hover:bg-zinc-100 disabled:opacity-30 disabled:cursor-not-allowed transition-all font-bold text-sm active:scale-95 flex items-center gap-1"
-                                            >
-                                                Succ <ChevronRight className="w-4 h-4" />
-                                            </button>
-                                            {/* Ultima pagina */}
-                                            <button
-                                                onClick={() => setPaginaCorrente(totalePagine)}
-                                                disabled={paginaCorrente === totalePagine}
-                                                className="p-2 rounded-xl border-2 border-zinc-200 text-zinc-600 hover:bg-zinc-100 disabled:opacity-30 disabled:cursor-not-allowed transition-all font-black text-sm active:scale-95"
-                                            >
-                                                »
-                                            </button>
-                                        </div>
-                                    </div>
-                                )}
+
+                                            {/* Paginazione */}
+                                            {totalePagine > 1 && (
+                                                <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mt-8 pt-6 border-t-2 border-zinc-100">
+                                                    <p className="text-sm font-semibold text-zinc-500">
+                                                        Pagina <span className="text-zinc-800 font-black">{paginaCorrente}</span> di{' '}
+                                                        <span className="text-zinc-800 font-black">{totalePagine}</span>
+                                                        <span className="ml-2 text-zinc-400">
+                                ({(paginaCorrente - 1) * itemsPerPage + 1}–{Math.min(paginaCorrente * itemsPerPage, listaAttiva.length)} di {listaAttiva.length})
+                            </span>
+                                                    </p>
+                                                    <div className="flex items-center gap-2">
+                                                        <button
+                                                            onClick={() => setPaginaCorrente(1)}
+                                                            disabled={paginaCorrente === 1}
+                                                            className="p-2 rounded-xl border-2 border-zinc-200 text-zinc-600 hover:bg-zinc-100 disabled:opacity-30 disabled:cursor-not-allowed transition-all font-black text-sm active:scale-95"
+                                                        >«</button>
+                                                        <button
+                                                            onClick={() => setPaginaCorrente(p => Math.max(1, p - 1))}
+                                                            disabled={paginaCorrente === 1}
+                                                            className="px-4 py-2 rounded-xl border-2 border-zinc-200 text-zinc-600 hover:bg-zinc-100 disabled:opacity-30 disabled:cursor-not-allowed transition-all font-bold text-sm active:scale-95 flex items-center gap-1"
+                                                        >
+                                                            <ChevronLeft className="w-4 h-4" /> Prec
+                                                        </button>
+                                                        <div className="flex items-center gap-1">
+                                                            {Array.from({ length: totalePagine }, (_, i) => i + 1)
+                                                                .filter(n => n === 1 || n === totalePagine || Math.abs(n - paginaCorrente) <= 1)
+                                                                .reduce<(number | '...')[]>((acc, n, i, arr) => {
+                                                                    if (i > 0 && n - (arr[i - 1] as number) > 1) acc.push('...');
+                                                                    acc.push(n);
+                                                                    return acc;
+                                                                }, [])
+                                                                .map((item, i) =>
+                                                                    item === '...' ? (
+                                                                        <span key={`ellipsis-${i}`} className="px-2 text-zinc-400 font-bold">…</span>
+                                                                    ) : (
+                                                                        <button
+                                                                            key={item}
+                                                                            onClick={() => setPaginaCorrente(item as number)}
+                                                                            className={`w-10 h-10 rounded-xl text-sm font-black transition-all active:scale-95 ${
+                                                                                paginaCorrente === item
+                                                                                    ? 'bg-emerald-500 text-white shadow-lg border-2 border-emerald-400'
+                                                                                    : 'border-2 border-zinc-200 text-zinc-600 hover:bg-zinc-100'
+                                                                            }`}
+                                                                        >{item}</button>
+                                                                    )
+                                                                )}
+                                                        </div>
+                                                        <button
+                                                            onClick={() => setPaginaCorrente(p => Math.min(totalePagine, p + 1))}
+                                                            disabled={paginaCorrente === totalePagine}
+                                                            className="px-4 py-2 rounded-xl border-2 border-zinc-200 text-zinc-600 hover:bg-zinc-100 disabled:opacity-30 disabled:cursor-not-allowed transition-all font-bold text-sm active:scale-95 flex items-center gap-1"
+                                                        >
+                                                            Succ <ChevronRight className="w-4 h-4" />
+                                                        </button>
+                                                        <button
+                                                            onClick={() => setPaginaCorrente(totalePagine)}
+                                                            disabled={paginaCorrente === totalePagine}
+                                                            className="p-2 rounded-xl border-2 border-zinc-200 text-zinc-600 hover:bg-zinc-100 disabled:opacity-30 disabled:cursor-not-allowed transition-all font-black text-sm active:scale-95"
+                                                        >»</button>
+                                                    </div>
+                                                </div>
+                                            )}
+                                        </>
+                                    );
+                                })()}
                             </div>
+
                         </>
                     );
                 })()}
