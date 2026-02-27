@@ -1,9 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { connectDB, AbsenceModel } from '@/lib/db';
+import { connectDB, AbsenceModel, EmployeeModel } from '@/lib/db';
 
 export async function GET(req: NextRequest) {
-    console.log('🔍 API hit');
-
     const { searchParams } = new URL(req.url);
     const date = searchParams.get('date');
     const year = searchParams.get('year');
@@ -12,11 +10,19 @@ export async function GET(req: NextRequest) {
     try {
         await connectDB();
 
+        const nonFullRemoteEmployees = await EmployeeModel.find(
+            { fullRemote: { $ne: true } },
+            { id: 1, _id: 0 }
+        ).lean();
+
+        const allowedEmployeeIds = nonFullRemoteEmployees.map(e => e.id);
+
         if (date) {
             const count = await AbsenceModel.countDocuments({
                 type: 'smartworking',
                 status: 'approved',
-                dataInizio: date
+                dataInizio: date,
+                employeeId: { $in: allowedEmployeeIds }
             });
 
             return NextResponse.json({ success: true, date, count });
@@ -30,7 +36,8 @@ export async function GET(req: NextRequest) {
                     $match: {
                         type: 'smartworking',
                         status: 'approved',
-                        dataInizio: { $regex: `^${year}-${monthStr}`, $options: 'i' }
+                        employeeId: { $in: allowedEmployeeIds }, // 🔥 ESCLUSIONE QUI
+                        dataInizio: { $regex: `^${year}-${monthStr}` }
                     }
                 },
                 { $group: { _id: '$dataInizio', count: { $sum: 1 } } }
@@ -56,7 +63,6 @@ export async function GET(req: NextRequest) {
 
     } catch (error) {
         console.error('❌ Smart count:', error);
-
         return NextResponse.json(
             { error: 'Server error' },
             { status: 500 }
