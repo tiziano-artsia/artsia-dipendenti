@@ -112,6 +112,7 @@ const getItalianHolidays = (year: number) => {
 };
 
 
+// @ts-ignore
 const MultiDayPicker = ({ selectedDays, onDaysChange }) => {
     const [currentMonth, setCurrentMonth] = useState(new Date());
     const today = new Date().toISOString().split('T')[0];
@@ -200,6 +201,7 @@ const MultiDayPicker = ({ selectedDays, onDaysChange }) => {
                     const isSunday = jsDate.getDay() === 0 || jsDate.getDay() === 6;
                     const isHoliday = holidays.includes(dateStr) || isSunday;
 
+                    // @ts-ignore
                     const smartCount = monthCounts[dateStr] || 0;
 
                     return (
