@@ -94,92 +94,141 @@ function ConfirmModal({
 
 
 
+const getItalianHolidays = (year: number) => {
+    const fixed = [
+        `${year}-01-01`, // Capodanno
+        `${year}-01-06`, // Epifania
+        `${year}-04-25`, // Liberazione
+        `${year}-05-01`, // Festa del Lavoro
+        `${year}-06-02`, // Festa Repubblica
+        `${year}-08-15`, // Ferragosto
+        `${year}-11-01`, // Ognissanti
+        `${year}-12-08`, // Immacolata
+        `${year}-12-25`, // Natale
+        `${year}-12-26`, // Santo Stefano
+    ];
 
+    return fixed;
+};
 
 
 const MultiDayPicker = ({ selectedDays, onDaysChange }) => {
     const [currentMonth, setCurrentMonth] = useState(new Date());
     const today = new Date().toISOString().split('T')[0];
 
+    const holidays = getItalianHolidays(currentMonth.getFullYear());
+
     const monthCounts = useMonthSmartCounts(
         currentMonth.getFullYear(),
         currentMonth.getMonth() + 1
     );
 
-    const daysInMonth = new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 0).getDate();
-    const firstDay = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), 1).getDay();
+    const year = currentMonth.getFullYear();
+    const month = currentMonth.getMonth();
 
-    const handleDayClick = (day) => {
-        const dateStr = `${currentMonth.getFullYear()}-${String(currentMonth.getMonth() + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+    const firstDay = (new Date(year, month, 1).getDay() + 6) % 7; // Lunedì primo giorno
+
+    const handleDayClick = (day: number) => {
+        const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+
         if (dateStr >= today) {
             const newSelected = selectedDays.includes(dateStr)
                 ? selectedDays.filter(d => d !== dateStr)
                 : [...selectedDays, dateStr].sort();
+
             onDaysChange(newSelected);
         }
     };
 
-    const prevMonth = () => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1, 1));
-    const nextMonth = () => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 1));
+    const prevMonth = () =>
+        setCurrentMonth(new Date(year, month - 1, 1));
+
+    const nextMonth = () =>
+        setCurrentMonth(new Date(year, month + 1, 1));
 
     return (
         <div className="bg-white/80 backdrop-blur-xl border-2 border-zinc-200/50 rounded-2xl p-6 shadow-xl">
-            {/* Navigazione mesi */}
+
+            {/* NAVIGAZIONE */}
             <div className="flex items-center justify-between mb-4">
-                <button type="button" onClick={prevMonth} className="p-2 hover:bg-zinc-100 rounded-lg transition-all flex items-center justify-center" aria-label="Mese precedente">
+                <button type="button" onClick={prevMonth}
+                        className="p-2 hover:bg-zinc-100 rounded-lg transition-all"
+                        aria-label="Mese precedente">
                     <ChevronLeft className="w-5 h-5" />
                 </button>
+
                 <h3 className="text-xl font-bold text-zinc-800">
-                    {currentMonth.toLocaleDateString('it-IT', { month: 'long', year: 'numeric' })}
+                    {currentMonth
+                        .toLocaleDateString('it-IT', { month: 'long', year: 'numeric' })
+                        .toUpperCase()}
                 </h3>
-                <button type="button" onClick={nextMonth} className="p-2 hover:bg-zinc-100 rounded-lg transition-all flex items-center justify-center" aria-label="Mese successivo">
+
+                <button type="button" onClick={nextMonth}
+                        className="p-2 hover:bg-zinc-100 rounded-lg transition-all"
+                        aria-label="Mese successivo">
                     <ChevronRight className="w-5 h-5" />
                 </button>
             </div>
 
-            {/* Header giorni settimana */}
+            {/* HEADER GIORNI */}
             <div className="grid grid-cols-7 gap-1 text-center mb-3">
                 {['Lun', 'Mar', 'Mer', 'Gio', 'Ven', 'Sab', 'Dom'].map((day, index) => (
-                    <div key={`header-${index}`} className="font-bold text-zinc-600 py-2 uppercase text-sm tracking-wider">
-                        {day.substring(0, 3)}
+                    <div key={index}
+                         className="font-bold text-zinc-600 py-2 uppercase text-sm tracking-wider">
+                        {day}
                     </div>
                 ))}
             </div>
 
-            {/* Griglia giorni */}
+            {/* GRIGLIA */}
             <div className="grid grid-cols-7 gap-1">
+
                 {Array(firstDay).fill(null).map((_, i) => (
                     <div key={`empty-${i}`} className="h-12" />
                 ))}
 
-                {/* ✅ NO HOOK IN LOOP: usa monthCounts */}
-                {Array(daysInMonth).fill(null).map((_, i) => {
+                {Array.from({ length: daysInMonth }).map((_, i) => {
                     const day = i + 1;
-                    const dateStr = `${currentMonth.getFullYear()}-${String(currentMonth.getMonth() + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+                    const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+
                     const isSelected = selectedDays.includes(dateStr);
                     const isPast = dateStr < today;
                     const isToday = dateStr === today;
-                    const smartCount = monthCounts[dateStr] || 0;  // ✅ DALLO STATE!
+
+                    const jsDate = new Date(year, month, day);
+                    const isSunday = jsDate.getDay() === 0 || jsDate.getDay() === 6;
+                    const isHoliday = holidays.includes(dateStr) || isSunday;
+
+                    const smartCount = monthCounts[dateStr] || 0;
 
                     return (
                         <button
-                            key={`day-${day}`}
+                            key={day}
                             type="button"
                             onClick={() => handleDayClick(day)}
                             disabled={isPast}
                             className={`
-                                relative h-12 w-12 mx-auto rounded-xl font-semibold transition-all duration-200 flex items-center justify-center group
+                                relative h-12 w-12 mx-auto rounded-xl font-semibold 
+                                transition-all duration-200 flex items-center justify-center group
+
                                 ${isPast ? 'opacity-30 cursor-not-allowed bg-zinc-100 text-zinc-400' : ''}
+
                                 ${isSelected ? 'bg-emerald-500 text-white shadow-lg scale-105 border-2 border-emerald-600' : ''}
+
                                 ${isToday && !isSelected ? 'ring-2 ring-emerald-400 bg-emerald-50 border-2 border-emerald-300' : ''}
-                                ${!isPast && !isSelected ? 'hover:bg-zinc-100 hover:scale-105 hover:shadow-md active:scale-95' : ''}
+
+                                ${isHoliday && !isSelected ? 'bg-red-50 text-red-600 border-2 border-red-400 font-bold' : ''}
+
+                                ${!isPast && !isSelected && !isHoliday ? 'hover:bg-zinc-100 hover:scale-105 hover:shadow-md active:scale-95' : ''}
+
                                 disabled:opacity-50 disabled:cursor-not-allowed
                             `}
-                            aria-label={`Giorno ${day}, ${isSelected ? 'selezionato' : 'non selezionato'}, ${smartCount} in smartworking`}
                         >
                             <span className="relative z-10">{day}</span>
+
                             {smartCount > 0 && (
-                                <div className="absolute -top-0.5 -right-0.5 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center font-bold border-2 border-white shadow-lg z-20 group-hover:scale-110 transition-all duration-200">
+                                <div className="absolute -top-0.5 -right-0.5 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center font-bold border-2 border-white shadow-lg">
                                     {smartCount}
                                 </div>
                             )}
@@ -188,16 +237,18 @@ const MultiDayPicker = ({ selectedDays, onDaysChange }) => {
                 })}
             </div>
 
-            {/* Contatore selezionati */}
+            {/* CONTATORE */}
             {selectedDays.length > 0 && (
                 <div className="mt-6 p-4 bg-emerald-50 border-2 border-emerald-200 rounded-2xl shadow-md">
                     <div className="flex items-center gap-3">
-                        <CheckCircle className="w-6 h-6 text-emerald-600 flex-shrink-0" />
+                        <CheckCircle className="w-6 h-6 text-emerald-600" />
                         <div>
                             <p className="text-lg font-bold text-emerald-800">
                                 {selectedDays.length} {selectedDays.length === 1 ? 'giorno' : 'giorni'} selezionati
                             </p>
-                            <p className="text-sm text-emerald-600">Clicca di nuovo per deselezionare</p>
+                            <p className="text-sm text-emerald-600">
+                                Clicca di nuovo per deselezionare
+                            </p>
                         </div>
                     </div>
                 </div>
@@ -205,7 +256,6 @@ const MultiDayPicker = ({ selectedDays, onDaysChange }) => {
         </div>
     );
 };
-
 
 
 
