@@ -78,6 +78,7 @@ export type AbsenceDoc = {
     _id: any;
     stato: string;
     requestedBy: string;
+    giorni?: string[];
 }
 
 
@@ -402,11 +403,11 @@ export async function deleteAbsence(absenceId: string, userId: number): Promise<
             return false;
         }
 
-/*
-        if (assenza.status !== 'pending') {
-            return false;
-        }
-*/
+        /*
+                if (assenza.status !== 'pending') {
+                    return false;
+                }
+        */
         const result = await AbsenceModel.deleteOne({ _id: assenza._id });
 
         return result.deletedCount > 0;

@@ -26,6 +26,8 @@ import {
 } from 'lucide-react';
 import type {AbsenceDoc} from "@/lib/db";
 import toast, {Toaster} from "react-hot-toast";
+import {useSmartworkingCount} from "@/hooks/useSmartworkingCount";
+import {useMonthSmartCounts} from "@/hooks/useMonthSmartCounts";
 
 
 
@@ -90,6 +92,124 @@ function ConfirmModal({
     );
 }
 
+
+
+
+
+
+const MultiDayPicker = ({ selectedDays, onDaysChange }) => {
+    const [currentMonth, setCurrentMonth] = useState(new Date());
+    const today = new Date().toISOString().split('T')[0];
+
+    const monthCounts = useMonthSmartCounts(
+        currentMonth.getFullYear(),
+        currentMonth.getMonth() + 1
+    );
+
+    const daysInMonth = new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 0).getDate();
+    const firstDay = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), 1).getDay();
+
+    const handleDayClick = (day) => {
+        const dateStr = `${currentMonth.getFullYear()}-${String(currentMonth.getMonth() + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+        if (dateStr >= today) {
+            const newSelected = selectedDays.includes(dateStr)
+                ? selectedDays.filter(d => d !== dateStr)
+                : [...selectedDays, dateStr].sort();
+            onDaysChange(newSelected);
+        }
+    };
+
+    const prevMonth = () => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1, 1));
+    const nextMonth = () => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 1));
+
+    return (
+        <div className="bg-white/80 backdrop-blur-xl border-2 border-zinc-200/50 rounded-2xl p-6 shadow-xl">
+            {/* Navigazione mesi */}
+            <div className="flex items-center justify-between mb-4">
+                <button type="button" onClick={prevMonth} className="p-2 hover:bg-zinc-100 rounded-lg transition-all flex items-center justify-center" aria-label="Mese precedente">
+                    <ChevronLeft className="w-5 h-5" />
+                </button>
+                <h3 className="text-xl font-bold text-zinc-800">
+                    {currentMonth.toLocaleDateString('it-IT', { month: 'long', year: 'numeric' })}
+                </h3>
+                <button type="button" onClick={nextMonth} className="p-2 hover:bg-zinc-100 rounded-lg transition-all flex items-center justify-center" aria-label="Mese successivo">
+                    <ChevronRight className="w-5 h-5" />
+                </button>
+            </div>
+
+            {/* Header giorni settimana */}
+            <div className="grid grid-cols-7 gap-1 text-center mb-3">
+                {['Lun', 'Mar', 'Mer', 'Gio', 'Ven', 'Sab', 'Dom'].map((day, index) => (
+                    <div key={`header-${index}`} className="font-bold text-zinc-600 py-2 uppercase text-sm tracking-wider">
+                        {day.substring(0, 3)}
+                    </div>
+                ))}
+            </div>
+
+            {/* Griglia giorni */}
+            <div className="grid grid-cols-7 gap-1">
+                {Array(firstDay).fill(null).map((_, i) => (
+                    <div key={`empty-${i}`} className="h-12" />
+                ))}
+
+                {/* ✅ NO HOOK IN LOOP: usa monthCounts */}
+                {Array(daysInMonth).fill(null).map((_, i) => {
+                    const day = i + 1;
+                    const dateStr = `${currentMonth.getFullYear()}-${String(currentMonth.getMonth() + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+                    const isSelected = selectedDays.includes(dateStr);
+                    const isPast = dateStr < today;
+                    const isToday = dateStr === today;
+                    const smartCount = monthCounts[dateStr] || 0;  // ✅ DALLO STATE!
+
+                    return (
+                        <button
+                            key={`day-${day}`}
+                            type="button"
+                            onClick={() => handleDayClick(day)}
+                            disabled={isPast}
+                            className={`
+                                relative h-12 w-12 mx-auto rounded-xl font-semibold transition-all duration-200 flex items-center justify-center group
+                                ${isPast ? 'opacity-30 cursor-not-allowed bg-zinc-100 text-zinc-400' : ''}
+                                ${isSelected ? 'bg-emerald-500 text-white shadow-lg scale-105 border-2 border-emerald-600' : ''}
+                                ${isToday && !isSelected ? 'ring-2 ring-emerald-400 bg-emerald-50 border-2 border-emerald-300' : ''}
+                                ${!isPast && !isSelected ? 'hover:bg-zinc-100 hover:scale-105 hover:shadow-md active:scale-95' : ''}
+                                disabled:opacity-50 disabled:cursor-not-allowed
+                            `}
+                            aria-label={`Giorno ${day}, ${isSelected ? 'selezionato' : 'non selezionato'}, ${smartCount} in smartworking`}
+                        >
+                            <span className="relative z-10">{day}</span>
+                            {smartCount > 0 && (
+                                <div className="absolute -top-0.5 -right-0.5 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center font-bold border-2 border-white shadow-lg z-20 group-hover:scale-110 transition-all duration-200">
+                                    {smartCount}
+                                </div>
+                            )}
+                        </button>
+                    );
+                })}
+            </div>
+
+            {/* Contatore selezionati */}
+            {selectedDays.length > 0 && (
+                <div className="mt-6 p-4 bg-emerald-50 border-2 border-emerald-200 rounded-2xl shadow-md">
+                    <div className="flex items-center gap-3">
+                        <CheckCircle className="w-6 h-6 text-emerald-600 flex-shrink-0" />
+                        <div>
+                            <p className="text-lg font-bold text-emerald-800">
+                                {selectedDays.length} {selectedDays.length === 1 ? 'giorno' : 'giorni'} selezionati
+                            </p>
+                            <p className="text-sm text-emerald-600">Clicca di nuovo per deselezionare</p>
+                        </div>
+                    </div>
+                </div>
+            )}
+        </div>
+    );
+};
+
+
+
+
+
 export default function MieiDati() {
     const { user } = useAuth();
     const { assenze, loading, submitRequest, cancelRequest } = useMyAbsences();
@@ -99,13 +219,20 @@ export default function MieiDati() {
     const [itemsPerPage, setItemsPerPage] = useState(10);
     const [tabRichieste, setTabRichieste] = useState<'future' | 'passate'>('future');
 
+
+
+
+
     const [form, setForm] = useState({
         tipo: '',
         dataInizio: '',
         durata: '',
         motivo: '',
-        dataFine: ''
+        dataFine: '',
+        giorniSmart: []  // Nuovo campo
     });
+
+
 
     const [filtri, setFiltri] = useState({
         tipo: 'tutti',
@@ -123,23 +250,33 @@ export default function MieiDati() {
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        const payload = {
+
+        const payload: any = {
             tipo: form.tipo,
-            data: form.dataInizio,
             durata: Number(form.durata),
-            motivo: form.motivo || ''
+            motivo: form.motivo
         };
+
+        if (form.tipo === 'smartworking') {
+            payload.giorni = form.giorniSmart;  // Array giorni
+            payload.data = form.giorniSmart[0] || '';  // Prima data per compatibilità
+        } else if (form.tipo === 'permesso') {
+            payload.data = form.dataInizio;
+        } else {
+            payload.data = form.dataInizio;
+            payload.dataFine = form.dataFine;
+        }
+
+        console.log('📤 Submit payload:', payload);  // Debug
 
         const success = await submitRequest(payload);
         if (success) {
-            toast.success('Richiesta inviata! In attesa di approvazione.',{duration:3000});
-            setForm({dataFine: "", tipo: '', dataInizio: '', durata: '', motivo: '' });
+            toast.success('Richiesta inviata! In attesa di approvazione.', { duration: 3000 });
+            setForm({ tipo: '', dataInizio: '', durata: '', motivo: '', dataFine: '', giorniSmart: [] });
             setActiveTab('richieste');
         } else {
-            toast.error('Errore invio. Riprova.',{duration:3000});
+            toast.error('Errore invio. Riprova.', { duration: 3000 });
         }
-
-
     };
 
     const handleCancelClick = (assenza: AbsenceDoc) => {
@@ -274,6 +411,9 @@ export default function MieiDati() {
     }, [assenze, filtri]);
 
     const nomeUtente = user?.name || `Utente ${user?.id || ''}`;
+
+
+
 
     if (loading) {
         return (
@@ -553,6 +693,84 @@ export default function MieiDati() {
 
                                         return { tipoLower, isPermesso, TipoIcon, canCancel };
                                     };
+                                    const renderSmartworkingRighe = (assenza: any, index: number) => {
+                                        if (!assenza.giorni || !Array.isArray(assenza.giorni)) {
+                                            return renderRiga(assenza, index);
+                                        }
+
+                                        return assenza.giorni.map((giorno: string, giornoIndex: number) => (
+                                            <React.Fragment key={`${assenza.id}-smart-${giorno}`}>
+                                                {/* CARD MOBILE */}
+                                                <div className="bg-white/90 backdrop-blur-xl rounded-2xl p-5 shadow-lg border border-zinc-200/50 hover:shadow-xl transition-all space-y-4">
+                                                    <div className="flex items-start justify-between gap-3 pb-4 border-b border-zinc-100">
+                                                        <div className="flex items-center gap-2 flex-1 min-w-0">
+                                                            <Calendar className="w-4 h-4 text-zinc-500 shrink-0" />
+                                                            <span className="text-base font-bold text-zinc-800 truncate">
+                            {formattaData(giorno)}
+                        </span>
+                                                        </div>
+                                                        <span className="px-3 py-1.5 rounded-xl text-xs font-black shadow-lg bg-gradient-to-r from-blue-400/90 to-blue-500/90 text-white inline-flex items-center gap-1.5">
+                        <Home className="w-3 h-3" />
+                                                            {assenza.stato}
+                    </span>
+                                                    </div>
+                                                    <div className="grid grid-cols-2 gap-4">
+                                                        <div>
+                                                            <span className="text-xs font-bold text-zinc-500 uppercase tracking-wider block mb-2">Tipo</span>
+                                                            <span className="px-4 py-2 rounded-xl text-sm font-black shadow-lg inline-flex items-center gap-2 bg-gradient-to-r from-blue-500 to-blue-600 text-white">
+                            <Home className="w-4 h-4" /> Smartworking
+                        </span>
+                                                        </div>
+                                                        <div>
+                                                            <span className="text-xs font-bold text-zinc-500 uppercase tracking-wider block mb-2">Durata</span>
+                                                            <div className="flex items-baseline gap-2">
+                                                                <span className="text-3xl font-black bg-gradient-to-r from-emerald-500 to-teal-600 bg-clip-text text-transparent">1</span>
+                                                                <span className="text-base font-black text-blue-600">gg</span>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                    {assenza.motivo && (
+                                                        <div>
+                                                            <span className="text-xs font-bold text-zinc-500 uppercase tracking-wider block mb-2">Motivo</span>
+                                                            <p className="text-sm text-zinc-700 line-clamp-2">{assenza.motivo}</p>
+                                                        </div>
+                                                    )}
+                                                </div>
+
+                                                {/* TR TABILE DESKTOP */}
+                                                <tr className="hover:bg-gradient-to-r hover:from-blue-50/80 hover:to-indigo-50/80 backdrop-blur-xl transition-all duration-300 group">
+                                                    <td className="py-6 px-6 text-base font-semibold text-zinc-800">
+                                                        <div className="flex items-center gap-3">
+                                                            <Calendar className="w-5 h-5 text-zinc-500" />
+                                                            {formattaData(giorno)}
+                                                        </div>
+                                                    </td>
+                                                    <td className="py-6 px-6">
+                    <span className="px-4 py-2 rounded-xl text-sm font-black shadow-lg inline-flex items-center gap-2 bg-gradient-to-r from-blue-500 to-blue-600 text-white">
+                        <Home className="w-4 h-4" /> Smartworking
+                    </span>
+                                                    </td>
+                                                    <td className="py-6 px-6">
+                                                        <div className="flex items-baseline gap-2">
+                                                            <span className="text-3xl font-black bg-gradient-to-r from-emerald-500 to-teal-600 bg-clip-text text-transparent">1</span>
+                                                            <span className="text-lg font-black text-blue-600">gg</span>
+                                                        </div>
+                                                    </td>
+                                                    <td className="py-6 px-6">
+                    <span className="px-4 py-2 rounded-xl text-sm font-black shadow-xl inline-flex items-center gap-2 bg-gradient-to-r from-blue-400/90 to-blue-500/90 text-white">
+                        <Home className="w-4 h-4" />
+                        {assenza.stato}
+                    </span>
+                                                    </td>
+                                                    <td className="py-6 px-6 text-base text-zinc-700 max-w-xs truncate">{assenza.motivo || '-'}</td>
+                                                    <td className="py-6 px-6">
+                                                        <span className="text-zinc-400 text-sm font-medium">-</span>
+                                                    </td>
+                                                </tr>
+                                            </React.Fragment>
+                                        ));
+                                    };
+
 
                                     return (
                                         <>
@@ -611,8 +829,72 @@ export default function MieiDati() {
                                                         </p>
                                                     </div>
                                                 ) : (
-                                                    assenzePagina.map((assenza, index) => {
-                                                        const { tipoLower, isPermesso, TipoIcon, canCancel } = renderRiga(assenza, index);
+                                                    assenzePagina.flatMap((assenza: any, index: number) => {
+                                                        const tipoLower = (assenza.tipo || '').toLowerCase().trim();
+
+                                                        //  SMARTWORKING: espandi in righe singole (1gg ciascuna)
+                                                        if (tipoLower === 'smartworking' && assenza.giorni && Array.isArray(assenza.giorni)) {
+                                                            return assenza.giorni.map((giorno: string, giornoIndex: number) => (
+                                                                <div
+                                                                    key={`${assenza.id || assenza._id || index}-smart-${giorno}`}
+                                                                    className="bg-white/90 backdrop-blur-xl rounded-2xl p-5 shadow-lg border border-zinc-200/50 hover:shadow-xl transition-all space-y-4"
+                                                                >
+                                                                    <div className="flex items-start justify-between gap-3 pb-4 border-b border-zinc-100">
+                                                                        <div className="flex items-center gap-2 flex-1 min-w-0">
+                                                                            <Calendar className="w-4 h-4 text-zinc-500 shrink-0" />
+                                                                            <span className="text-base font-bold text-zinc-800 truncate">
+                                                                            {formattaData(giorno, 'N/D')}
+                                                                        </span>
+                                                                        </div>
+                                                                        <span className={`px-3 py-1.5 rounded-xl text-xs font-black shadow-lg inline-flex items-center gap-1.5 shrink-0 ${
+                                                                            assenza.stato === 'approved'
+                                                                                ? 'bg-gradient-to-r from-emerald-400/90 to-green-500/90 text-white'
+                                                                                : assenza.stato === 'pending'
+                                                                                    ? 'bg-gradient-to-r from-amber-400/90 to-yellow-500/90 text-white'
+                                                                                    : 'bg-gradient-to-r from-rose-400/90 to-red-500/90 text-white'
+                                                                        }`}>
+                                                                                {assenza.stato === 'pending' ? <><Clock className="w-3 h-3" />In attesa</>
+                                                                                    : assenza.stato === 'approved' ? <><CheckCircle className="w-3 h-3" />Approvata</>
+                                                                                        : <><XCircle className="w-3 h-3" />Rifiutata</>}
+                                                                        </span>
+                                                                    </div>
+
+                                                                    <div className="grid grid-cols-2 gap-4">
+                                                                        <div>
+                                                                            <span className="text-xs font-bold text-zinc-500 uppercase tracking-wider block mb-2">Tipo</span>
+                                                                            <span className="px-4 py-2 rounded-xl text-sm font-black shadow-lg inline-flex items-center gap-2 bg-gradient-to-r from-blue-500 to-blue-600 text-white">
+                                    <Home className="w-4 h-4" />
+                                    Smartworking
+                                </span>
+                                                                        </div>
+                                                                        <div>
+                                                                            <span className="text-xs font-bold text-zinc-500 uppercase tracking-wider block mb-2">Durata</span>
+                                                                            <div className="flex items-baseline gap-2">
+                                    <span className="text-3xl font-black bg-gradient-to-r from-emerald-500 to-teal-600 bg-clip-text text-transparent">
+                                        1
+                                    </span>
+                                                                                <span className="text-base font-black text-blue-600">gg</span>
+                                                                            </div>
+                                                                        </div>
+                                                                    </div>
+
+                                                                    {assenza.motivo && (
+                                                                        <div>
+                                                                            <span className="text-xs font-bold text-zinc-500 uppercase tracking-wider block mb-2">Motivo</span>
+                                                                            <p className="text-sm text-zinc-700 line-clamp-2">{assenza.motivo}</p>
+                                                                        </div>
+                                                                    )}
+
+                                                                    {/* No bottone Annulla per singoli giorni */}
+                                                                    <div className="pt-2">
+                                                                        <span className="text-zinc-400 text-xs font-medium block text-center">-</span>
+                                                                    </div>
+                                                                </div>
+                                                            ));
+                                                        }
+
+                                                        //  ALTRI TIPI: rendering normale
+                                                        const { isPermesso, TipoIcon, canCancel } = renderRiga(assenza, index);
                                                         return (
                                                             <div
                                                                 key={assenza.id || assenza._id || index}
@@ -622,45 +904,48 @@ export default function MieiDati() {
                                                                     <div className="flex items-center gap-2 flex-1 min-w-0">
                                                                         <Calendar className="w-4 h-4 text-zinc-500 shrink-0" />
                                                                         <span className="text-base font-bold text-zinc-800 truncate">
-                                                {formattaData(assenza.dataInizio || assenza.data || 'N/D')}
-                                            </span>
+                                {formattaData(assenza.dataInizio || assenza.data || 'N/D')}
+                            </span>
                                                                     </div>
                                                                     <span className={`px-3 py-1.5 rounded-xl text-xs font-black shadow-lg inline-flex items-center gap-1.5 shrink-0 ${
                                                                         assenza.stato === 'approved' ? 'bg-gradient-to-r from-emerald-400/90 to-green-500/90 text-white'
                                                                             : assenza.stato === 'pending' ? 'bg-gradient-to-r from-amber-400/90 to-yellow-500/90 text-white'
                                                                                 : 'bg-gradient-to-r from-rose-400/90 to-red-500/90 text-white'
                                                                     }`}>
-                                            {assenza.stato === 'pending' ? <><Clock className="w-3 h-3" />In attesa</>
-                                                : assenza.stato === 'approved' ? <><CheckCircle className="w-3 h-3" />Approvata</>
-                                                    : <><XCircle className="w-3 h-3" />Rifiutata</>}
-                                        </span>
+                            {assenza.stato === 'pending' ? <><Clock className="w-3 h-3" />In attesa</>
+                                : assenza.stato === 'approved' ? <><CheckCircle className="w-3 h-3" />Approvata</>
+                                    : <><XCircle className="w-3 h-3" />Rifiutata</>}
+                        </span>
                                                                 </div>
+
                                                                 <div className="grid grid-cols-2 gap-4">
                                                                     <div>
                                                                         <span className="text-xs font-bold text-zinc-500 uppercase tracking-wider block mb-2">Tipo</span>
                                                                         <span className={`px-4 py-2 rounded-xl text-sm font-black shadow-lg inline-flex items-center gap-2 bg-gradient-to-r ${getTipoColor(assenza.tipo)} text-white`}>
-                                                <TipoIcon className="w-4 h-4" />
+                                <TipoIcon className="w-4 h-4" />
                                                                             {getTipoLabel(assenza.tipo)}
-                                            </span>
+                            </span>
                                                                     </div>
                                                                     <div>
                                                                         <span className="text-xs font-bold text-zinc-500 uppercase tracking-wider block mb-2">Durata</span>
                                                                         <div className="flex items-baseline gap-2">
-                                                <span className="text-3xl font-black bg-gradient-to-r from-emerald-500 to-teal-600 bg-clip-text text-transparent">
-                                                    {assenza.durata || 0}
-                                                </span>
+                                <span className="text-3xl font-black bg-gradient-to-r from-emerald-500 to-teal-600 bg-clip-text text-transparent">
+                                    {assenza.durata || 0}
+                                </span>
                                                                             <span className={`text-base font-black uppercase ${isPermesso ? 'text-yellow-600' : 'text-blue-600'}`}>
-                                                    {isPermesso ? 'ore' : 'gg'}
-                                                </span>
+                                    {isPermesso ? 'ore' : 'gg'}
+                                </span>
                                                                         </div>
                                                                     </div>
                                                                 </div>
+
                                                                 {assenza.motivo && (
                                                                     <div>
                                                                         <span className="text-xs font-bold text-zinc-500 uppercase tracking-wider block mb-2">Motivo</span>
                                                                         <p className="text-sm text-zinc-700 line-clamp-2">{assenza.motivo}</p>
                                                                     </div>
                                                                 )}
+
                                                                 {canCancel && (
                                                                     <button
                                                                         onClick={() => handleCancelClick(assenza)}
@@ -675,6 +960,7 @@ export default function MieiDati() {
                                                     })
                                                 )}
                                             </div>
+
 
                                             {/* Layout Tabella per desktop */}
                                             <div className="hidden lg:block overflow-x-auto">
@@ -707,8 +993,55 @@ export default function MieiDati() {
                                                             </td>
                                                         </tr>
                                                     ) : (
-                                                        assenzePagina.map((assenza, index) => {
-                                                            const { tipoLower, isPermesso, TipoIcon, canCancel } = renderRiga(assenza, index);
+                                                        assenzePagina.flatMap((assenza, index) => {
+                                                            const tipoLower = assenza.tipo?.toLowerCase().trim();
+
+                                                            //  SMARTWORKING: espandi in righe singole
+                                                            if (tipoLower === 'smartworking' && assenza.giorni && Array.isArray(assenza.giorni)) {
+                                                                return assenza.giorni.map((giorno: string, giornoIndex: number) => (
+                                                                    <tr
+                                                                        key={`${assenza.id || assenza._id}-smart-${giorno}`}
+                                                                        className="hover:bg-gradient-to-r hover:from-blue-50/80 hover:to-indigo-50/80 backdrop-blur-xl transition-all duration-300 group divide-x divide-zinc-200/50"
+                                                                    >
+                                                                        <td className="py-6 px-6 text-base font-semibold text-zinc-800">
+                                                                            <div className="flex items-center gap-3">
+                                                                                <Calendar className="w-5 h-5 text-zinc-500" />
+                                                                                {formattaData(giorno)}
+                                                                            </div>
+                                                                        </td>
+                                                                        <td className="py-6 px-6">
+                                <span className="px-4 py-2 rounded-xl text-sm font-black shadow-lg inline-flex items-center gap-2 bg-gradient-to-r from-blue-500 to-blue-600 text-white">
+                                    <Home className="w-4 h-4" />
+                                    Smartworking
+                                </span>
+                                                                        </td>
+                                                                        <td className="py-6 px-6">
+                                                                            <div className="flex items-baseline gap-2">
+                                    <span className="text-3xl font-black bg-gradient-to-r from-emerald-500 to-teal-600 bg-clip-text text-transparent">
+                                        1
+                                    </span>
+                                                                                <span className="text-lg font-black text-blue-600">gg</span>
+                                                                            </div>
+                                                                        </td>
+                                                                        <td className="py-6 px-6">
+                                <span className="px-4 py-2 rounded-xl text-sm font-black shadow-xl inline-flex items-center gap-2 bg-gradient-to-r from-emerald-400/90 to-green-500/90 text-white">
+                                    {assenza.stato === 'pending' ? <><Clock className="w-4 h-4" />In attesa</>
+                                        : assenza.stato === 'approved' ? <><CheckCircle className="w-4 h-4" />Approvata</>
+                                            : <><XCircle className="w-4 h-4" />Rifiutata</>}
+                                </span>
+                                                                        </td>
+                                                                        <td className="py-6 px-6 text-base text-zinc-700 max-w-xs truncate">
+                                                                            {assenza.motivo || '-'}
+                                                                        </td>
+                                                                        <td className="py-6 px-6">
+                                                                            <span className="text-zinc-400 text-sm font-medium">-</span>
+                                                                        </td>
+                                                                    </tr>
+                                                                ));
+                                                            }
+
+                                                            //  ALTRI TIPI: rendering normale
+                                                            const { isPermesso, TipoIcon, canCancel } = renderRiga(assenza, index);
                                                             return (
                                                                 <tr
                                                                     key={assenza.id || assenza._id || index}
@@ -721,10 +1054,10 @@ export default function MieiDati() {
                                                                         </div>
                                                                     </td>
                                                                     <td className="py-6 px-6">
-                                                <span className={`px-4 py-2 rounded-xl text-sm font-black shadow-lg inline-flex items-center gap-2 bg-gradient-to-r ${getTipoColor(assenza.tipo)} text-white`}>
-                                                    <TipoIcon className="w-4 h-4" />
-                                                    {getTipoLabel(assenza.tipo)}
-                                                </span>
+                            <span className={`px-4 py-2 rounded-xl text-sm font-black shadow-lg inline-flex items-center gap-2 bg-gradient-to-r ${getTipoColor(assenza.tipo)} text-white`}>
+                                <TipoIcon className="w-4 h-4" />
+                                {getTipoLabel(assenza.tipo)}
+                            </span>
                                                                     </td>
                                                                     <td className="py-6 px-6">
                                                                         <div className="flex items-baseline gap-2">
@@ -737,15 +1070,15 @@ export default function MieiDati() {
                                                                         </div>
                                                                     </td>
                                                                     <td className="py-6 px-6">
-                                                <span className={`px-4 py-2 rounded-xl text-sm font-black shadow-xl inline-flex items-center gap-2 ${
-                                                    assenza.stato === 'approved' ? 'bg-gradient-to-r from-emerald-400/90 to-green-500/90 text-white'
-                                                        : assenza.stato === 'pending' ? 'bg-gradient-to-r from-amber-400/90 to-yellow-500/90 text-white'
-                                                            : 'bg-gradient-to-r from-rose-400/90 to-red-500/90 text-white'
-                                                }`}>
-                                                    {assenza.stato === 'pending' ? <><Clock className="w-4 h-4" />In attesa</>
-                                                        : assenza.stato === 'approved' ? <><CheckCircle className="w-4 h-4" />Approvata</>
-                                                            : <><XCircle className="w-4 h-4" />Rifiutata</>}
-                                                </span>
+                            <span className={`px-4 py-2 rounded-xl text-sm font-black shadow-xl inline-flex items-center gap-2 ${
+                                assenza.stato === 'approved' ? 'bg-gradient-to-r from-emerald-400/90 to-green-500/90 text-white'
+                                    : assenza.stato === 'pending' ? 'bg-gradient-to-r from-amber-400/90 to-yellow-500/90 text-white'
+                                        : 'bg-gradient-to-r from-rose-400/90 to-red-500/90 text-white'
+                            }`}>
+                                {assenza.stato === 'pending' ? <><Clock className="w-4 h-4" />In attesa</>
+                                    : assenza.stato === 'approved' ? <><CheckCircle className="w-4 h-4" />Approvata</>
+                                        : <><XCircle className="w-4 h-4" />Rifiutata</>}
+                            </span>
                                                                     </td>
                                                                     <td className="py-6 px-6 text-base text-zinc-700 max-w-xs truncate">
                                                                         {assenza.motivo || '-'}
@@ -770,6 +1103,7 @@ export default function MieiDati() {
                                                     </tbody>
                                                 </table>
                                             </div>
+
 
                                             {/* Paginazione */}
                                             {totalePagine > 1 && (
@@ -864,8 +1198,16 @@ export default function MieiDati() {
                                     value={form.tipo}
                                     onChange={(e) => {
                                         const nuovoTipo = e.target.value;
-                                        // Reset date se si passa a/da permesso
-                                        setForm({ ...form, tipo: nuovoTipo, durata: '', dataInizio: '', dataFine: '' });
+                                        if (nuovoTipo === 'smartworking') {
+                                            // Smartworking: reset + giorni vuoti + durata 0
+                                            setForm({ ...form, tipo: nuovoTipo, durata: '0', dataInizio: '', dataFine: '', giorniSmart: [] });
+                                        } else if (nuovoTipo === 'permesso') {
+                                            // Permesso: reset completo
+                                            setForm({ ...form, tipo: nuovoTipo, durata: '', dataInizio: '', dataFine: '', giorniSmart: [] });
+                                        } else {
+                                            // Altri: reset date ma mantieni tipo
+                                            setForm({ ...form, tipo: nuovoTipo, durata: '', dataInizio: '', dataFine: '', giorniSmart: [] });
+                                        }
                                     }}
                                     className="w-full h-14 sm:h-16 px-4 sm:px-6 bg-white/80 backdrop-blur-xl border-2 border-zinc-200/50 rounded-xl sm:rounded-2xl text-base sm:text-lg md:text-xl font-semibold text-zinc-800 focus:ring-4 focus:ring-emerald-500/20 focus:border-emerald-500 shadow-xl hover:shadow-2xl hover:border-zinc-300 transition-all appearance-none"
                                     required
@@ -880,8 +1222,48 @@ export default function MieiDati() {
                                 </select>
                             </div>
 
+                            {/* SMARTWORKING*/}
+                            {form.tipo === 'smartworking' && (
+                                <div>
+                                    <label className="block text-base sm:text-lg md:text-xl font-black tracking-tight text-zinc-800 mb-3 sm:mb-4 md:mb-5 flex items-center gap-2">
+                                        <Calendar className="w-4 h-4 sm:w-5 sm:h-5" />
+                                        Seleziona giorni Smartworking (clicca sui giorni)
+                                    </label>
+                                    <MultiDayPicker
+                                        selectedDays={form.giorniSmart}
+                                        onDaysChange={(giorni) => {
+                                            setForm({
+                                                ...form,
+                                                giorniSmart: giorni,
+                                                durata: String(giorni.length)
+                                            });
+                                       }}
+                                    />
+
+
+                                    {/* Durata visualizzata */}
+                                    {form.giorniSmart.length > 0 && (
+                                        <div
+                                            className="mt-4 p-4 bg-emerald-50 border-2 border-emerald-300 rounded-xl shadow-md">
+                                            <div className="flex items-center gap-3">
+                                                <CheckCircle className="w-6 h-6 text-emerald-600"/>
+                                                <span className="text-lg font-bold text-emerald-800">
+                        {form.giorniSmart.length} {form.giorniSmart.length === 1 ? 'giorno' : 'giorni'} selezionati
+                    </span>
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {/* Hidden inputs PER IL FORM SUBMIT */}
+                                    <input type="hidden" name="durata" value={form.giorniSmart.length} />
+                                    <input type="hidden" name="giorniSmart" value={form.giorniSmart.join(',')} />
+                                </div>
+                            )}
+
+
+
                             {/* Date: Dal - Al (tutti tranne permesso) */}
-                            {form.tipo !== 'permesso' && form.tipo !== '' && (
+                            {form.tipo !== 'permesso' && form.tipo !== '' && form.tipo !== 'smartworking' && (
                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 sm:gap-8">
                                     <div>
                                         <label className="block text-base sm:text-lg md:text-xl font-black tracking-tight text-zinc-800 mb-3 sm:mb-4 flex items-center gap-2">
@@ -1014,7 +1396,12 @@ export default function MieiDati() {
                             <div className="flex flex-col sm:flex-row gap-4 sm:gap-6 pt-4 sm:pt-6">
                                 <button
                                     type="submit"
-                                    disabled={!form.tipo || !form.dataInizio || !form.durata || Number(form.durata) <= 0}
+                                    disabled={
+                                        !form.tipo ||
+                                        (form.tipo === 'smartworking' && form.giorniSmart.length === 0) ||
+                                        (form.tipo !== 'smartworking' && !form.dataInizio) ||
+                                        Number(form.durata) === 0
+                                    }
                                     className="flex-1 min-h-[64px] sm:min-h-[80px] bg-gradient-to-r from-emerald-500 to-green-600 hover:from-emerald-600 hover:to-green-700 disabled:from-zinc-300 disabled:to-zinc-400 disabled:cursor-not-allowed text-white font-black text-lg sm:text-xl md:text-2xl rounded-xl sm:rounded-2xl shadow-2xl hover:shadow-3xl hover:-translate-y-1 disabled:translate-y-0 transition-all duration-500 flex items-center justify-center gap-3 sm:gap-4 backdrop-blur-xl border border-emerald-400/50 group active:scale-95"
                                 >
                                     <Send className="w-5 h-5 sm:w-6 sm:h-6 group-hover:translate-x-1 transition-transform duration-300" />

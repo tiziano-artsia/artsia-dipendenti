@@ -16,7 +16,7 @@ export async function GET(request: NextRequest) {
             employeeId: decoded.id
         }).sort({ dataInizio: -1 }).lean();
 
-        // ✅ Mappatura completa con tutti i nuovi tipi
+        //  Mappatura completa con tutti i nuovi tipi
         const formatted = absences.map(abs => {
             const tipoLabels: Record<string, string> = {
                 'ferie': 'Ferie',

@@ -487,148 +487,6 @@ export default function Dashboard() {
                         </div>
                     </div>
                 )}
-
-                {/* Stats Grid - 2 colonne su mobile, 4 su desktop */}
-                {!isAdmin && (
-                    <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 md:gap-6">
-                        {[
-                            {
-                                value: stats.ferie,
-                                label: 'Ferie',
-                                icon: Plane,
-                                color: 'from-orange-500 to-orange-600',
-                                unit: 'giorni',
-                                bgColor: 'from-orange-100/80 to-orange-50/60'
-                            },
-                            {
-                                value: stats.permessi,
-                                label: 'Permessi',
-                                icon: Clock,
-                                color: 'from-yellow-500 to-amber-600',
-                                unit: 'ore',
-                                bgColor: 'from-yellow-100/80 to-amber-50/60'
-                            },
-                            {
-                                value: stats.smartworking,
-                                label: 'Smartworking',
-                                icon: Home,
-                                color: 'from-blue-500 to-indigo-600',
-                                unit: 'giorni',
-                                bgColor: 'from-blue-100/80 to-blue-50/60'
-                            },
-                            {
-                                value: stats.malattia,
-                                label: 'Malattia',
-                                icon: FileText,
-                                color: 'from-rose-500 to-red-600',
-                                unit: 'giorni',
-                                bgColor: 'from-rose-100/80 to-red-50/60'
-                            }
-                        ].map(({ value, label, icon: Icon, color, unit, bgColor }) => (
-                            <div
-                                key={label}
-                                className="group bg-white/70 backdrop-blur-3xl rounded-2xl sm:rounded-3xl p-4 sm:p-5 md:p-8 shadow-xl hover:shadow-2xl hover:-translate-y-1 sm:hover:-translate-y-2 border border-white/50 hover:border-white/70 transition-all duration-500 cursor-pointer relative overflow-hidden active:scale-95"
-                            >
-                                <div className={`absolute inset-0 bg-gradient-to-br ${bgColor} opacity-0 group-hover:opacity-100 transition-opacity duration-500`} />
-
-                                <div className="relative z-10">
-                                    <div className={`w-10 h-10 sm:w-11 sm:h-11 md:w-14 md:h-14 bg-gradient-to-br ${color} rounded-xl sm:rounded-2xl flex items-center justify-center mb-2 sm:mb-3 md:mb-4 shadow-lg group-hover:shadow-xl group-hover:scale-110 transition-all duration-500`}>
-                                        <Icon className="w-5 h-5 sm:w-6 sm:h-6 md:w-7 md:h-7 text-white drop-shadow-lg" />
-                                    </div>
-
-                                    <h3 className="text-[10px] sm:text-xs md:text-sm font-black text-zinc-600 uppercase tracking-wider mb-1 sm:mb-2 md:mb-3 opacity-90">
-                                        {label}
-                                    </h3>
-
-                                    <div className="flex items-baseline gap-1 sm:gap-2">
-                                        <p className={`text-2xl sm:text-3xl md:text-5xl font-black bg-gradient-to-r ${color} bg-clip-text text-transparent`}>
-                                            {value}
-                                        </p>
-                                    </div>
-
-                                    <p className="text-[9px] sm:text-[10px] md:text-xs text-zinc-500 font-mono tracking-widest uppercase opacity-70 mt-1 sm:mt-2">
-                                        {unit}
-                                    </p>
-                                </div>
-                            </div>
-                        ))}
-                    </div>
-                )}
-                {/* Buste Paga */}
-                {user?.role !== 'admin'  && userPayslips.length > 0 && (
-                    <div className="bg-white/60 backdrop-blur-3xl rounded-2xl sm:rounded-3xl shadow-2xl p-5 sm:p-6 md:p-10 border border-white/70 hover:shadow-3xl transition-all duration-700">
-                        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-6 sm:mb-8 md:mb-10 gap-4">
-                            <div className="flex items-center gap-3 sm:gap-4">
-                                <FileText className="w-8 h-8 sm:w-10 sm:h-10 md:w-12 md:h-12 text-indigo-600 shrink-0" />
-                                <h2 className="text-2xl sm:text-3xl md:text-4xl font-black tracking-tight bg-gradient-to-r from-zinc-800 to-slate-700 bg-clip-text text-transparent">
-                                    Ultimi Documenti
-                                </h2>
-                            </div>
-                            {/*   <button
-                                onClick={() => setShowPayslips(!showPayslips)}
-                                className="flex items-center gap-2 px-3 sm:px-4 py-2 bg-white/80 backdrop-blur-xl rounded-xl sm:rounded-2xl border border-zinc-200 hover:border-indigo-300 hover:shadow-md transition-all duration-300 text-xs sm:text-sm font-mono uppercase tracking-wider active:scale-95 w-full sm:w-auto justify-center"
-                                title={showPayslips ? "Nascondi importi" : "Mostra importi"}
-                            >
-                                {showPayslips ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                                <span>{showPayslips ? 'Nascondi' : 'Mostra'}</span>
-                            </button> */}
-
-                        </div>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
-                            {loadingUserPayslips ? (
-                                <div className="col-span-full flex items-center justify-center py-12">
-                                    <Loader2 className="w-6 h-6 sm:w-8 sm:h-8 animate-spin text-indigo-500 mr-2" />
-                                    <span className="text-sm sm:text-base">Caricamento documenti...</span>
-                                </div>
-                            ) : userPayslips.length === 0 ? (
-                                <div className="col-span-full text-center py-12 text-zinc-500 text-sm sm:text-base">
-                                    Nessuna documento disponibile
-                                </div>
-                            ) : (
-                                userPayslips.slice(0, 3).map((payslip) => (
-                                    <a
-                                        key={payslip.id}
-                                        href={`/api/payslips/${payslip.id}/download`}
-                                        className="group relative p-5 sm:p-6 bg-white/90 backdrop-blur-xl border border-zinc-200/50 rounded-xl sm:rounded-2xl hover:shadow-xl hover:border-indigo-300 hover:-translate-y-1 transition-all duration-400 overflow-hidden flex flex-col active:scale-95"
-                                    >
-                                        <div className="absolute inset-0 bg-gradient-to-r from-indigo-500/5 to-purple-500/5 opacity-0 group-hover:opacity-100 transition-opacity" />
-
-                                        <div className="relative z-10 flex items-start justify-between mb-2 sm:mb-3">
-                                            <h3 className="font-black text-lg sm:text-xl text-zinc-800 group-hover:text-indigo-700">
-                                                {payslip.mese
-                                                    ? `${payslip.mese.charAt(0).toUpperCase()}${payslip.mese.slice(1)} ${payslip.anno}`
-                                                    : (payslip.documentName || `Documento ${payslip.anno}`)
-                                                }
-                                            </h3>
-                                            {/* <Euro className="w-4 h-4 sm:w-5 sm:h-5 text-indigo-500 group-hover:scale-110 transition-transform" />
- */}
-                                        </div>
-
-                                        {payslip.netto && (
-                                            <p className="text-xl sm:text-2xl font-black text-indigo-600 mb-2">
-                                                {showPayslips ? `€${payslip.netto}` : '****'}
-                                            </p>
-                                        )}
-
-                                        <div className="flex items-center gap-2 text-[10px] sm:text-xs font-mono text-zinc-500 uppercase tracking-wider">
-                                            <span>Scarica PDF</span>
-                                            <Download className="w-4 h-4 sm:w-5 sm:h-5 text-indigo-500 group-hover:scale-110 transition-transform" />
-                                        </div>
-                                    </a>
-                                ))
-                            )}
-                            <a
-                                href="/dashboard/documenti"
-                                className="group p-5 sm:p-6 bg-gradient-to-br from-indigo-50 to-purple-50 border-2 border-dashed border-indigo-200 hover:border-indigo-400 rounded-xl sm:rounded-2xl hover:shadow-lg hover:-translate-y-1 transition-all duration-400 flex flex-col items-center justify-center text-center active:scale-95"
-                            >
-                                <FileText className="w-10 h-10 sm:w-12 sm:h-12 text-indigo-400 mb-3 sm:mb-4 group-hover:scale-110 transition-transform" />
-                                <h3 className="font-black text-lg sm:text-xl text-zinc-700 mb-1 sm:mb-2">Vedi Tutti</h3>
-                                <p className="text-xs sm:text-sm text-zinc-500">Archivio completo Documenti</p>
-                            </a>
-                        </div>
-                    </div>
-                )}
-
                 {/* Quick Actions */}
                 <div className="bg-white/60 backdrop-blur-3xl rounded-2xl sm:rounded-3xl shadow-2xl p-5 sm:p-6 md:p-10 border border-white/70 hover:shadow-3xl transition-all duration-700">
                     <h2 className="text-2xl sm:text-3xl md:text-4xl font-black tracking-tight mb-4 sm:mb-8 md:mb-10 bg-gradient-to-r from-zinc-800 to-slate-700 bg-clip-text text-transparent">
@@ -815,6 +673,148 @@ export default function Dashboard() {
                         )}
                     </div>
                 </div>
+
+                {/* Stats Grid - 2 colonne su mobile, 4 su desktop */}
+                {!isAdmin && (
+                    <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 md:gap-6">
+                        {[
+                            {
+                                value: stats.ferie,
+                                label: 'Ferie',
+                                icon: Plane,
+                                color: 'from-orange-500 to-orange-600',
+                                unit: 'giorni',
+                                bgColor: 'from-orange-100/80 to-orange-50/60'
+                            },
+                            {
+                                value: stats.permessi,
+                                label: 'Permessi',
+                                icon: Clock,
+                                color: 'from-yellow-500 to-amber-600',
+                                unit: 'ore',
+                                bgColor: 'from-yellow-100/80 to-amber-50/60'
+                            },
+                            {
+                                value: stats.smartworking,
+                                label: 'Smartworking',
+                                icon: Home,
+                                color: 'from-blue-500 to-indigo-600',
+                                unit: 'giorni',
+                                bgColor: 'from-blue-100/80 to-blue-50/60'
+                            },
+                            {
+                                value: stats.malattia,
+                                label: 'Malattia',
+                                icon: FileText,
+                                color: 'from-rose-500 to-red-600',
+                                unit: 'giorni',
+                                bgColor: 'from-rose-100/80 to-red-50/60'
+                            }
+                        ].map(({ value, label, icon: Icon, color, unit, bgColor }) => (
+                            <div
+                                key={label}
+                                className="group bg-white/70 backdrop-blur-3xl rounded-2xl sm:rounded-3xl p-4 sm:p-5 md:p-8 shadow-xl hover:shadow-2xl hover:-translate-y-1 sm:hover:-translate-y-2 border border-white/50 hover:border-white/70 transition-all duration-500 cursor-pointer relative overflow-hidden active:scale-95"
+                            >
+                                <div className={`absolute inset-0 bg-gradient-to-br ${bgColor} opacity-0 group-hover:opacity-100 transition-opacity duration-500`} />
+
+                                <div className="relative z-10">
+                                    <div className={`w-10 h-10 sm:w-11 sm:h-11 md:w-14 md:h-14 bg-gradient-to-br ${color} rounded-xl sm:rounded-2xl flex items-center justify-center mb-2 sm:mb-3 md:mb-4 shadow-lg group-hover:shadow-xl group-hover:scale-110 transition-all duration-500`}>
+                                        <Icon className="w-5 h-5 sm:w-6 sm:h-6 md:w-7 md:h-7 text-white drop-shadow-lg" />
+                                    </div>
+
+                                    <h3 className="text-[10px] sm:text-xs md:text-sm font-black text-zinc-600 uppercase tracking-wider mb-1 sm:mb-2 md:mb-3 opacity-90">
+                                        {label}
+                                    </h3>
+
+                                    <div className="flex items-baseline gap-1 sm:gap-2">
+                                        <p className={`text-2xl sm:text-3xl md:text-5xl font-black bg-gradient-to-r ${color} bg-clip-text text-transparent`}>
+                                            {value}
+                                        </p>
+                                    </div>
+
+                                    <p className="text-[9px] sm:text-[10px] md:text-xs text-zinc-500 font-mono tracking-widest uppercase opacity-70 mt-1 sm:mt-2">
+                                        {unit}
+                                    </p>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                )}
+
+                {/* Buste Paga */}
+                {user?.role !== 'admin'  && userPayslips.length > 0 && (
+                    <div className="bg-white/60 backdrop-blur-3xl rounded-2xl sm:rounded-3xl shadow-2xl p-5 sm:p-6 md:p-10 border border-white/70 hover:shadow-3xl transition-all duration-700">
+                        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-6 sm:mb-8 md:mb-10 gap-4">
+                            <div className="flex items-center gap-3 sm:gap-4">
+                                <FileText className="w-8 h-8 sm:w-10 sm:h-10 md:w-12 md:h-12 text-indigo-600 shrink-0" />
+                                <h2 className="text-2xl sm:text-3xl md:text-4xl font-black tracking-tight bg-gradient-to-r from-zinc-800 to-slate-700 bg-clip-text text-transparent">
+                                    Ultimi Documenti
+                                </h2>
+                            </div>
+                            {/*   <button
+                                onClick={() => setShowPayslips(!showPayslips)}
+                                className="flex items-center gap-2 px-3 sm:px-4 py-2 bg-white/80 backdrop-blur-xl rounded-xl sm:rounded-2xl border border-zinc-200 hover:border-indigo-300 hover:shadow-md transition-all duration-300 text-xs sm:text-sm font-mono uppercase tracking-wider active:scale-95 w-full sm:w-auto justify-center"
+                                title={showPayslips ? "Nascondi importi" : "Mostra importi"}
+                            >
+                                {showPayslips ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                                <span>{showPayslips ? 'Nascondi' : 'Mostra'}</span>
+                            </button> */}
+
+                        </div>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
+                            {loadingUserPayslips ? (
+                                <div className="col-span-full flex items-center justify-center py-12">
+                                    <Loader2 className="w-6 h-6 sm:w-8 sm:h-8 animate-spin text-indigo-500 mr-2" />
+                                    <span className="text-sm sm:text-base">Caricamento documenti...</span>
+                                </div>
+                            ) : userPayslips.length === 0 ? (
+                                <div className="col-span-full text-center py-12 text-zinc-500 text-sm sm:text-base">
+                                    Nessuna documento disponibile
+                                </div>
+                            ) : (
+                                userPayslips.slice(0, 3).map((payslip) => (
+                                    <a
+                                        key={payslip.id}
+                                        href={`/api/payslips/${payslip.id}/download`}
+                                        className="group relative p-5 sm:p-6 bg-white/90 backdrop-blur-xl border border-zinc-200/50 rounded-xl sm:rounded-2xl hover:shadow-xl hover:border-indigo-300 hover:-translate-y-1 transition-all duration-400 overflow-hidden flex flex-col active:scale-95"
+                                    >
+                                        <div className="absolute inset-0 bg-gradient-to-r from-indigo-500/5 to-purple-500/5 opacity-0 group-hover:opacity-100 transition-opacity" />
+
+                                        <div className="relative z-10 flex items-start justify-between mb-2 sm:mb-3">
+                                            <h3 className="font-black text-lg sm:text-xl text-zinc-800 group-hover:text-indigo-700">
+                                                {payslip.mese
+                                                    ? `${payslip.mese.charAt(0).toUpperCase()}${payslip.mese.slice(1)} ${payslip.anno}`
+                                                    : (payslip.documentName || `Documento ${payslip.anno}`)
+                                                }
+                                            </h3>
+                                            {/* <Euro className="w-4 h-4 sm:w-5 sm:h-5 text-indigo-500 group-hover:scale-110 transition-transform" />
+ */}
+                                        </div>
+
+                                        {payslip.netto && (
+                                            <p className="text-xl sm:text-2xl font-black text-indigo-600 mb-2">
+                                                {showPayslips ? `€${payslip.netto}` : '****'}
+                                            </p>
+                                        )}
+
+                                        <div className="flex items-center gap-2 text-[10px] sm:text-xs font-mono text-zinc-500 uppercase tracking-wider">
+                                            <span>Scarica PDF</span>
+                                            <Download className="w-4 h-4 sm:w-5 sm:h-5 text-indigo-500 group-hover:scale-110 transition-transform" />
+                                        </div>
+                                    </a>
+                                ))
+                            )}
+                            <a
+                                href="/dashboard/documenti"
+                                className="group p-5 sm:p-6 bg-gradient-to-br from-indigo-50 to-purple-50 border-2 border-dashed border-indigo-200 hover:border-indigo-400 rounded-xl sm:rounded-2xl hover:shadow-lg hover:-translate-y-1 transition-all duration-400 flex flex-col items-center justify-center text-center active:scale-95"
+                            >
+                                <FileText className="w-10 h-10 sm:w-12 sm:h-12 text-indigo-400 mb-3 sm:mb-4 group-hover:scale-110 transition-transform" />
+                                <h3 className="font-black text-lg sm:text-xl text-zinc-700 mb-1 sm:mb-2">Vedi Tutti</h3>
+                                <p className="text-xs sm:text-sm text-zinc-500">Archivio completo Documenti</p>
+                            </a>
+                        </div>
+                    </div>
+                )}
             </div>
         </div>
     );

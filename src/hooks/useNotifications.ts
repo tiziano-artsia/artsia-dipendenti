@@ -334,6 +334,8 @@ export function useNotifications() {
         const options: NotificationOptions = {
             body: data.body || '',
             tag: 'artsia-notification',
+            badge:'/icons/badge.png',
+            icon:'/icons/logo-artsia.png',
             // @ts-ignore
             vibrate: [200, 100, 200],
             actions: [
