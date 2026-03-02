@@ -1074,11 +1074,18 @@ export default function Calendario() {
                                             >
                                                 <div className="flex items-center justify-between gap-1">
                                                     <p className="truncate flex-1">{nomeCorto}</p>
-                                                    <span
-                                                        className="text-[10px] sm:text-xs bg-white/30 px-1 rounded shrink-0">
-                            {assenza.durata}
-                                                        {assenza.tipo === 'permesso' ? 'h' : 'g'}
-                          </span>
+                                                    {assenza.tipo === 'permesso' ? (
+                                                        <span
+                                                            className="text-[10px] sm:text-xs bg-white/30 px-1 rounded shrink-0">
+                                            {assenza.durata}h
+                                        </span>
+                                                    ) : assenza.tipo === 'smartworking' ? null : (
+                                                        <span
+                                                            className="text-[10px] sm:text-xs bg-white/30 px-1 rounded shrink-0">
+                                            {assenza.durata}g
+                                        </span>
+                                                    )}
+
                                                 </div>
                                                 <p className="text-[9px] sm:text-[10px] opacity-90 mt-0.5 capitalize">{assenza.tipo}</p>
                                             </div>
