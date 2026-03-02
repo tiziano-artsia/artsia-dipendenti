@@ -1577,8 +1577,12 @@ export default function Calendario() {
                                                                     className="text-[10px] md:text-[11px] truncate">{nomeCompleto}</span>
                                                                 <span
                                                                     className="text-[9px] md:text-[10px] bg-white/30 px-1 rounded-sm shrink-0">
-                                  {assenza.tipo === 'permesso' ? `${assenza.durata}h` : `${assenza.durata}g`}
-                                </span>
+                                                             {assenza.tipo === 'permesso' ? (
+                                                                 <span className="text-[10px] bg-white/30 px-1 rounded">{assenza.durata}h</span>
+                                                             ) : assenza.tipo === 'smartworking' ? null : (
+                                                                 <span className="text-[10px] bg-white/30 px-1 rounded">{assenza.durata}g</span>
+                                                             )}
+                                                            </span>
                                                             </div>
                                                         </div>
                                                     );
