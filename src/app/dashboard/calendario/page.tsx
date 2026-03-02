@@ -443,12 +443,19 @@ export default function Calendario() {
                 return true;
             })
             .map((a) => {
-                if (isAdmin || a.employeeId === user?.id) return a;
-                return {
-                    ...a,
-                    motivo: undefined,
-                    note: undefined,
-                } as Absence;
+                const raw = a as unknown as Record<string, any>;
+                const tipo = a.tipo ?? raw.type;
+
+                if (isAdmin || a.employeeId === user?.id || isManager) return a;
+
+                if (tipo !== 'permesso') {
+                    return {
+                        ...a,
+                        motivo: undefined,
+                        note: undefined,
+                    } as Absence;
+                }
+                return a;
             });
     };
 
