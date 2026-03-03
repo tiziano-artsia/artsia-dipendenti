@@ -1564,14 +1564,20 @@ export default function Calendario() {
                                                 className="hidden sm:block text-zinc-400 text-xs md:text-sm">🏖️</div>}
                                         </div>
 
-                                        {/* Assenze - responsive */}
+                                        {/* Assenze - responsive NO FULL REMOTE */}
                                         <div className="flex flex-col gap-0.5 sm:gap-1 mt-auto z-10 w-full">
                                             {assenzeGiorno
-                                                .filter((a) => {
+                                                .filter((assenza) => {
                                                     const info = getInfoGiorno(giorno, mese, anno);
-                                                    return info.isLavorativo;
+
+                                                    //  ESCLUDE fullRemote (smartworking con employee.fullRemote = true)
+                                                    const employee = getEmployeeById(assenza.employeeId);
+                                                    const isFullRemoteEmployee = employee?.fullRemote || false;
+
+                                                    return info.isLavorativo &&
+                                                        !(assenza.tipo === 'smartworking' && isFullRemoteEmployee);
                                                 })
-                                                .slice(0, 4) // Riduci a 2 su mobile
+                                                .slice(0, 4) // Max 4 elementi
                                                 .map((assenza, idx) => {
                                                     const employee = getEmployeeById(assenza.employeeId);
                                                     const nomeCompleto = employee?.name || `Dip.${assenza.employeeId}`;
@@ -1585,23 +1591,21 @@ export default function Calendario() {
                                                             )} border-${assenza.tipo}-400/60 sm:text-white`}
                                                         >
                                                             {/* Tablet e Desktop: Nome + Durata */}
-                                                            <div
-                                                                className="hidden sm:flex items-center justify-between gap-1">
-                                                                <span
-                                                                    className="text-[10px] md:text-[11px] truncate">{nomeCompleto}</span>
-                                                                <span
-                                                                    className="text-[9px] md:text-[10px] bg-white/30 px-1 rounded-sm shrink-0">
-                                                             {assenza.tipo === 'permesso' ? (
-                                                                 <span className="text-[10px] bg-white/30 px-1 rounded">{assenza.durata}h</span>
-                                                             ) : assenza.tipo === 'smartworking' ? null : (
-                                                                 <span className="text-[10px] bg-white/30 px-1 rounded">{assenza.durata}g</span>
-                                                             )}
-                                                            </span>
+                                                            <div className="hidden sm:flex items-center justify-between gap-1">
+                                                                <span className="text-[10px] md:text-[11px] truncate">{nomeCompleto}</span>
+                                                                <span className="text-[9px] md:text-[10px] bg-white/30 px-1 rounded-sm shrink-0">
+                            {assenza.tipo === 'permesso' ? (
+                                <span className="text-[10px] bg-white/30 px-1 rounded">{assenza.durata}h</span>
+                            ) : (
+                                <span className="text-[10px] bg-white/30 px-1 rounded">{assenza.durata}g</span>
+                            )}
+                        </span>
                                                             </div>
                                                         </div>
                                                     );
                                                 })}
                                         </div>
+
 
                                         {/* Badge per assenze extra */}
                                         {assenzeGiorno.length > 4 && (
@@ -1707,8 +1711,8 @@ export default function Calendario() {
                                                             <div className="px-2.5 py-1.5 sm:px-3 sm:py-1.5 md:px-3.5 md:py-2 bg-gradient-to-r from-emerald-100 to-green-100 border border-emerald-300 rounded-lg sm:rounded-xl shadow-md inline-flex items-center justify-end gap-1.5">
                                                                 <Clock className="w-3 h-3 sm:w-4 sm:h-4 text-emerald-700 flex-shrink-0" />
                                                                 <span className="text-[11px] sm:text-xs md:text-sm font-semibold text-emerald-800 whitespace-nowrap">
-                {assenza.durata} {assenza.tipo === 'permesso' ? 'h' : 'gg'}
-            </span>
+                                                {assenza.durata} {assenza.tipo === 'permesso' ? 'h' : 'gg'}
+                                            </span>
                                                             </div>
                                                         </div>
                                                     </div>
