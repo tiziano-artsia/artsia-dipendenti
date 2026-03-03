@@ -300,31 +300,75 @@ export default function MieiDati() {
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
 
-        const payload: any = {
-            tipo: form.tipo,
-            durata: Number(form.durata),
-            motivo: form.motivo
-        };
-
-        if (form.tipo === 'smartworking') {
-            payload.giorni = form.giorniSmart;  // Array giorni
-            payload.data = form.giorniSmart[0] || '';  // Prima data per compatibilità
-        } else if (form.tipo === 'permesso') {
-            payload.data = form.dataInizio;
-        } else {
-            payload.data = form.dataInizio;
-            payload.dataFine = form.dataFine;
+        if (form.tipo === 'smartworking' && (!form.giorniSmart || form.giorniSmart.length === 0)) {
+            toast.error('⚠️ Seleziona almeno un giorno per smartworking.', { duration: 3000 });
+            return;
         }
 
-        console.log('📤 Submit payload:', payload);  // Debug
+        const payloadBase: any = {
+            tipo: form.tipo,
+            durata: 1, // 🎯 SEMPRE 1 per smartworking (giorno singolo)
+            motivo: form.motivo.trim(),
+        };
 
-        const success = await submitRequest(payload);
-        if (success) {
-            toast.success('Richiesta inviata! In attesa di approvazione.', {duration: 3000});
-            setForm({tipo: '', dataInizio: '', durata: '', motivo: '', dataFine: '', giorniSmart: []});
+        console.log('📤 Base payload:', payloadBase, 'Giorni:', form.giorniSmart);
+
+        try {
+            if (form.tipo === 'smartworking') {
+              const results = await Promise.allSettled(
+                    form.giorniSmart.map(async (giorno: string) => {
+                        const payloadSingolo: any = {
+                            ...payloadBase,
+                            data: giorno,
+                      };
+
+                        console.log(`📅 Invio giorno: ${giorno}`, payloadSingolo);
+                        return submitRequest(payloadSingolo);
+                    })
+                );
+
+                const successes = results.filter((r): r is PromiseFulfilledResult<any> =>
+                    r.status === 'fulfilled' && r.value === true
+                ).length;
+
+
+                if (successes === form.giorniSmart.length) {
+                    toast.success(
+                        `✅ ${successes} giorno/i smartworking inviati!`,
+                        { duration: 4000 }
+                    );
+                } else {
+                    toast.error(
+                        `⚠️ ${successes}/${form.giorniSmart.length} giorni inviati (alcuni falliti)`,
+                        { duration: 5000 }
+                    );
+                }
+            } else {
+                const payload: any = {
+                    ...payloadBase,
+                    ...(form.tipo === 'permesso' ? { data: form.dataInizio } : {
+                        data: form.dataInizio,
+                        dataFine: form.dataFine,
+                    }),
+                };
+
+                const success = await submitRequest(payload);
+                if (success) {
+                    toast.success('✅ Richiesta inviata!', { duration: 3000 });
+                } else {
+                    throw new Error('Invio fallito');
+                }
+            }
+
+            // Reset
+            setForm({
+                tipo: '', dataInizio: '', durata: '', motivo: '', dataFine: '', giorniSmart: []
+            });
             setActiveTab('richieste');
-        } else {
-            toast.error('Errore invio. Riprova.', {duration: 3000});
+
+        } catch (error) {
+            console.error('❌ Errore:', error);
+            toast.error('❌ Errore invio. Riprova.', { duration: 3000 });
         }
     };
 
