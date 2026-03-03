@@ -175,8 +175,7 @@ export default function Header() {
     return (
         <>
             {/* Top Header - ✅ Nessun style inline */}
-            <header className="bg-white shadow-sm border-b border-gray-200 sticky top-20 z-40">
-                <div className="max-w-7xl mx-auto px-4 md:px-6 py-3 md:py-4">
+            <header className="bg-white shadow-sm border-b border-gray-200 pt-[env(safe-area-inset-top)] sm:pt-0 sticky top-[env(safe-area-inset-top)] z-40">                <div className="max-w-7xl mx-auto px-4 md:px-6 py-3 md:py-4">
                     <div className="flex items-center justify-between">
                         {/* Logo e Back */}
                         <div className="flex items-center gap-2 md:gap-3 flex-1 min-w-0">
