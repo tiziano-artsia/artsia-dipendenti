@@ -1622,202 +1622,207 @@ export default function Calendario() {
                 {vistaCalendario === 'settimanale' && renderVistaSettimanale()}
             </div>
 
-            {/* Modale per dettagli assenze */}
-            {modalAperto && (
-                <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 md:p-6 bg-black/60 backdrop-blur-xl">
-                    <div className="
-        bg-white/95 backdrop-blur-3xl
-        rounded-t-3xl sm:rounded-3xl
-        w-full sm:max-w-4xl
-        h-[88vh] sm:h-auto sm:max-h-[85vh]
-        mb-2 mt-[4vh]
-        flex flex-col
-        overflow-hidden
-        shadow-2xl border border-white/70
-    ">
 
-                    {/* Header modale */}
-                        <div
-                            className="flex-shrink-0 bg-gradient-to-r from-emerald-500 to-green-600 p-4 sm:p-6 md:p-8 flex justify-between items-start gap-3 border-b-4 border-emerald-400/50">
+            {/* Modale per dettagli assenze*/}
+            {modalAperto && (
+                <div className="fixed inset-0  z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 md:p-6 bg-black/60 backdrop-blur-xl">
+                    <div className="
+            bg-white/95 backdrop-blur-3xl
+            rounded-t-3xl sm:rounded-3xl
+             sm:max-w-4xl
+            h-[88vh]
+            mb-2 mt-[4vh]
+            flex flex-col
+            overflow-hidden
+            shadow-2xl border border-white/70
+        ">
+
+                        {/* Header modale */}
+                        <div className="flex-shrink-0 bg-gradient-to-r from-emerald-500 to-green-600 p-4 sm:p-6 md:p-8 flex justify-between items-start gap-3 border-b-4 border-emerald-400/50">
                             <div className="flex-1 min-w-0">
                                 <h2 className="text-xl sm:text-2xl md:text-4xl font-black text-white tracking-tight flex items-center gap-2 sm:gap-3 md:gap-4 flex-wrap">
                                     <Calendar className="w-6 h-6 sm:w-8 sm:h-8 md:w-10 md:h-10 shrink-0"/>
-                                    <span
-                                        className="break-words">Assenze del {formattaDataItaliana(giornoSelezionato)}</span>
+                                    <span className="break-words">Assenze del {formattaDataItaliana(giornoSelezionato)}</span>
                                 </h2>
                                 <p className="text-emerald-100 text-sm sm:text-base md:text-lg mt-2 font-medium">
                                     {assenzeModale.length} {assenzeModale.length === 1 ? 'richiesta' : 'richieste'} totali
                                 </p>
                             </div>
-                            <button
-                                onClick={() => setModalAperto(false)}
-                                className="p-2 sm:p-3 hover:bg-white/20 rounded-xl sm:rounded-2xl transition-all hover:rotate-90 duration-300 backdrop-blur-xl border border-white/30 shrink-0 active:scale-95"
-                            >
+                            <button onClick={() => setModalAperto(false)} className="p-2 sm:p-3 hover:bg-white/20 rounded-xl sm:rounded-2xl transition-all hover:rotate-90 duration-300 backdrop-blur-xl border border-white/30 shrink-0 active:scale-95">
                                 <X className="w-6 h-6 sm:w-7 sm:h-7 md:w-8 md:h-8 text-white"/>
                             </button>
                         </div>
 
-                        {/* Corpo modale con scroll */}
-                        <div
-                            className="flex-1 min-h-0 overflow-y-auto overscroll-contain p-4 sm:p-6 md:p-8 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+                        {/* Corpo modale */}
+                        <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain p-4 sm:p-6 md:p-8 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
                             <div className="space-y-4 sm:space-y-6">
-                                {assenzeModale.map((assenza, idx) => {
-                                    const employee = getEmployeeById(assenza.employeeId);
-                                    const nomeCompleto = employee?.name || `Dipendente ${assenza.employeeId}`;
-                                    const team = employee?.team || 'N/D';
+                                {(() => {
+                                    // Separa usando fullRemote boolean dal EmployeeDoc
+                                    const normali = assenzeModale.filter((assenza) => {
+                                        const employee = getEmployeeById(assenza.employeeId);
+                                        return !employee?.fullRemote; // Normali PRIME (non fullRemote)
+                                    });
+                                    const fullRemote = assenzeModale.filter((assenza) => {
+                                        const employee = getEmployeeById(assenza.employeeId);
+                                        return employee?.fullRemote; // Full Remote ULTIMI
+                                    });
 
-                                    return (
-                                        <div
-                                            key={`modal-${assenza.id}-${idx}`}
-                                            className="bg-white/80 backdrop-blur-xl rounded-xl sm:rounded-2xl p-4 sm:p-5 md:p-6 border-2 border-zinc-200/50 shadow-lg hover:shadow-xl transition-all"
-                                        >
-                                            <div className="flex flex-col gap-4 sm:gap-6">
+                                    const ordineVisualizzazione = [...normali, ...fullRemote];
 
-                                                {/* Info dipendente */}
-                                                <div className="flex items-start gap-3 sm:gap-4">
-                                                    <div
-                                                        className="w-10 h-10 sm:w-12 sm:h-12 md:w-14 md:h-14 bg-gradient-to-br from-emerald-500 to-green-600 rounded-xl sm:rounded-2xl flex items-center justify-center shadow-xl border border-white/40 shrink-0">
-                                                        <Users
-                                                            className="w-5 h-5 sm:w-6 sm:h-6 md:w-7 md:h-7 text-white"/>
-                                                    </div>
-                                                    <div className="flex-1 min-w-0">
-                                                        <h3 className="text-lg sm:text-xl md:text-2xl font-black text-zinc-800 tracking-tight truncate">{nomeCompleto}</h3>
-                                                        <p className="text-zinc-600 font-medium text-sm sm:text-base md:text-lg">Team: {team}</p>
-                                                    </div>
-                                                </div>
+                                    return ordineVisualizzazione.map((assenza, idx) => {
+                                        const employee = getEmployeeById(assenza.employeeId);
+                                        const nomeCompleto = employee?.name || `Dipendente ${assenza.employeeId}`;
+                                        const team = employee?.team || 'N/D';
+                                        const isFullRemote = employee?.fullRemote || false;
 
-                                                {/* Dal - Al */}
-                                                {assenza.tipo !== 'smartworking' && assenza.tipo !== 'permesso' && (() => {
-                                                    const parsaData = (dateStr: string): Date => {
-                                                        if (!dateStr) return new Date(NaN);
-                                                        if (dateStr.includes('/')) {
-                                                            const [g, m, a] = dateStr.split('/').map(Number);
-                                                            return new Date(a, m - 1, g);
-                                                        }
-                                                        const [a, m, g] = dateStr.split('-').map(Number);
-                                                        return new Date(a, m - 1, g);
-                                                    };
+                                        return (
+                                            <div key={`modal-${assenza.id}-${idx}`} className="bg-white/80 backdrop-blur-xl rounded-xl sm:rounded-2xl p-4 sm:p-5 md:p-6 border-2 border-zinc-200/50 shadow-lg hover:shadow-xl transition-all">
+                                                <div className="flex flex-col gap-4 sm:gap-6">
 
-                                                    const dataInizio = parsaData(assenza.dataInizio);
+                                                    {/* Info dipendente  */}
+                                                    <div className="flex items-start justify-between gap-3 sm:gap-4 w-full">
 
-                                                    let giorniLavorativiContati = 0;
-                                                    let dataCorrente = new Date(dataInizio);
-                                                    dataCorrente.setDate(dataCorrente.getDate() - 1);
-
-                                                    while (giorniLavorativiContati < assenza.durata) {
-                                                        dataCorrente.setDate(dataCorrente.getDate() + 1);
-                                                        const info = getInfoGiorno(
-                                                            dataCorrente.getDate(),
-                                                            dataCorrente.getMonth(),
-                                                            dataCorrente.getFullYear()
-                                                        );
-                                                        if (info.isLavorativo) giorniLavorativiContati++;
-                                                    }
-
-                                                    const dataFine = dataCorrente;
-
-                                                    return (
-                                                        <div className="flex flex-wrap gap-2 sm:gap-3">
-                                                            <div
-                                                                className="px-3 sm:px-4 md:px-5 py-2 sm:py-2.5 md:py-3 bg-gradient-to-r from-blue-100 to-indigo-100 border-2 border-blue-300 rounded-xl sm:rounded-2xl font-black text-blue-800 text-sm sm:text-base md:text-lg shadow-lg inline-flex items-center gap-2 sm:gap-3">
-                                                                <Calendar className="w-4 h-4 sm:w-5 sm:h-5 shrink-0"/>
-                                                                <span>Dal <span
-                                                                    className="font-black">{dataInizio.toLocaleDateString('it-IT')}</span></span>
+                                                        <div className="flex items-start gap-3 sm:gap-4 flex-1 min-w-0">
+                                                            <div className="w-10 h-10 sm:w-12 sm:h-12 md:w-14 md:h-14 flex-shrink-0 bg-gradient-to-br from-emerald-500 to-green-600 rounded-xl sm:rounded-2xl flex items-center justify-center shadow-xl border border-white/40">
+                                                                <Users className="w-4 h-4 sm:w-6 sm:h-6 md:w-7 md:h-7 text-white" />
                                                             </div>
-                                                            <div
-                                                                className="px-3 sm:px-4 md:px-5 py-2 sm:py-2.5 md:py-3 bg-gradient-to-r from-purple-100 to-violet-100 border-2 border-purple-300 rounded-xl sm:rounded-2xl font-black text-purple-800 text-sm sm:text-base md:text-lg shadow-lg inline-flex items-center gap-2 sm:gap-3">
-                                                                <Calendar className="w-4 h-4 sm:w-5 sm:h-5 shrink-0"/>
-                                                                <span>Al <span
-                                                                    className="font-black">{dataFine.toLocaleDateString('it-IT')}</span></span>
+                                                            <div className="flex-1 min-w-0">
+                                                                <h3 className="text-base sm:text-xl md:text-2xl font-black text-zinc-800 tracking-tight truncate leading-tight">
+                                                                    {nomeCompleto}
+                                                                </h3>
+                                                                <p className="text-zinc-600 font-medium text-xs sm:text-sm md:text-base flex items-center flex-wrap gap-1.5">
+                                                                    <span>Team:</span>
+                                                                    <span className="truncate">{team}</span>
+                                                                    {isFullRemote && (
+                                                                        <span className="px-2 py-px bg-blue-100 text-blue-800 text-[10px] sm:text-xs font-bold rounded-full border border-blue-200 whitespace-nowrap ml-1">
+                                                                            FULL REMOTE
+                                                                        </span>
+                                                                    )}
+                                                                </p>
                                                             </div>
                                                         </div>
-                                                    );
-                                                })()}
 
-                                                {/* Badges tipo e stato */}
-                                                <div className="flex flex-wrap gap-2 sm:gap-3">
-                                                    <div
-                                                        className={`px-4 sm:px-5 md:px-6 py-2 sm:py-2.5 md:py-3 rounded-xl sm:rounded-2xl font-black text-sm sm:text-base md:text-lg shadow-lg border-2 inline-flex items-center gap-2 bg-gradient-to-r ${getTipoColor(assenza.tipo)} text-white`}>
-                                                        <span
-                                                            className="text-lg sm:text-xl md:text-2xl">{getTipoEmoji(assenza.tipo)}</span>
-                                                        <span className="truncate">{assenza.tipo.toUpperCase()}</span>
+                                                        {/* Destra: Giorni in alto, più piccoli */}
+                                                        <div className="flex-shrink-0 ml-2">
+                                                            <div className="px-2.5 py-1.5 sm:px-3 sm:py-1.5 md:px-3.5 md:py-2 bg-gradient-to-r from-emerald-100 to-green-100 border border-emerald-300 rounded-lg sm:rounded-xl shadow-md inline-flex items-center justify-end gap-1.5">
+                                                                <Clock className="w-3 h-3 sm:w-4 sm:h-4 text-emerald-700 flex-shrink-0" />
+                                                                <span className="text-[11px] sm:text-xs md:text-sm font-semibold text-emerald-800 whitespace-nowrap">
+                {assenza.durata} {assenza.tipo === 'permesso' ? 'h' : 'gg'}
+            </span>
+                                                            </div>
+                                                        </div>
                                                     </div>
-                                                    <div
-                                                        className={`px-4 sm:px-5 md:px-6 py-2 sm:py-2.5 md:py-4 rounded-xl sm:rounded-2xl font-black text-sm sm:text-base md:text-lg shadow-xl border-2 inline-flex items-center gap-2 ${
+
+
+                                                    {/* Dal - Al (solo non smart/permesso) */}
+                                                    {assenza.tipo !== 'smartworking' && assenza.tipo !== 'permesso' && (() => {
+                                                        const parsaData = (dateStr: string): Date => {
+                                                            if (!dateStr) return new Date(NaN);
+                                                            if (dateStr.includes('/')) {
+                                                                const [g, m, a] = dateStr.split('/').map(Number);
+                                                                return new Date(a, m - 1, g);
+                                                            }
+                                                            const [a, m, g] = dateStr.split('-').map(Number);
+                                                            return new Date(a, m - 1, g);
+                                                        };
+
+                                                        const dataInizio = parsaData(assenza.dataInizio);
+                                                        let giorniLavorativiContati = 0;
+                                                        let dataCorrente = new Date(dataInizio);
+                                                        dataCorrente.setDate(dataCorrente.getDate() - 1);
+
+                                                        while (giorniLavorativiContati < assenza.durata) {
+                                                            dataCorrente.setDate(dataCorrente.getDate() + 1);
+                                                            const info = getInfoGiorno(
+                                                                dataCorrente.getDate(),
+                                                                dataCorrente.getMonth(),
+                                                                dataCorrente.getFullYear()
+                                                            );
+                                                            if (info.isLavorativo) giorniLavorativiContati++;
+                                                        }
+                                                        const dataFine = dataCorrente;
+
+                                                        return (
+                                                            <div className="flex flex-wrap gap-2 sm:gap-3">
+                                                                <div className="px-3 sm:px-4 md:px-5 py-2 sm:py-2.5 md:py-3 bg-gradient-to-r from-blue-100 to-indigo-100 border-2 border-blue-300 rounded-xl sm:rounded-2xl font-black text-blue-800 text-sm sm:text-base md:text-lg shadow-lg inline-flex items-center gap-2 sm:gap-3 flex-1">
+                                                                    <Calendar className="w-4 h-4 sm:w-5 sm:h-5 shrink-0"/>
+                                                                    <span>Dal <span className="font-black">{dataInizio.toLocaleDateString('it-IT')}</span></span>
+                                                                </div>
+                                                                <div className="px-3 sm:px-4 md:px-5 py-2 sm:py-2.5 md:py-3 bg-gradient-to-r from-purple-100 to-violet-100 border-2 border-purple-300 rounded-xl sm:rounded-2xl font-black text-purple-800 text-sm sm:text-base md:text-lg shadow-lg inline-flex items-center gap-2 sm:gap-3 flex-1">
+                                                                    <Calendar className="w-4 h-4 sm:w-5 sm:h-5 shrink-0"/>
+                                                                    <span>Al <span className="font-black">{dataFine.toLocaleDateString('it-IT')}</span></span>
+                                                                </div>
+                                                            </div>
+                                                        );
+                                                    })()}
+
+                                                    {/* Badges tipo e stato */}
+                                                    <div className="flex flex-wrap gap-2 sm:gap-3">
+                                                        <div className={`px-4 sm:px-5 md:px-6 py-2 sm:py-2.5 md:py-3 rounded-xl sm:rounded-2xl font-black text-sm sm:text-base md:text-lg shadow-lg border-2 inline-flex items-center gap-2 bg-gradient-to-r ${getTipoColor(assenza.tipo)} text-white`}>
+                                                            <span className="text-lg sm:text-xl md:text-2xl">{getTipoEmoji(assenza.tipo)}</span>
+                                                            <span className="truncate">{assenza.tipo.toUpperCase()}</span>
+                                                        </div>
+                                                        <div className={`px-4 sm:px-5 md:px-6 py-2 sm:py-2.5 md:py-4 rounded-xl sm:rounded-2xl font-black text-sm sm:text-base md:text-lg shadow-xl border-2 inline-flex items-center gap-2 ${
                                                             assenza.stato === 'approved'
                                                                 ? 'bg-gradient-to-r from-emerald-500 to-green-600 text-white border-emerald-400/50'
                                                                 : assenza.stato === 'pending'
                                                                     ? 'bg-gradient-to-r from-amber-500 to-yellow-600 text-white border-amber-400/50'
                                                                     : 'bg-gradient-to-r from-rose-500 to-red-600 text-white border-red-400/50'
                                                         }`}>
-                                                        {assenza.stato === 'pending' ? (
-                                                            <>
-                                                                <Clock className="w-4 h-4 sm:w-5 sm:h-5"/>
-                                                                <span className="hidden sm:inline">IN ATTESA</span>
-                                                                <span className="sm:hidden">ATTESA</span>
-                                                            </>
-                                                        ) : assenza.stato === 'approved' ? (
-                                                            <>
-                                                                <CheckCircle className="w-4 h-4 sm:w-5 sm:h-5"/>
-                                                                <span className="hidden sm:inline">APPROVATA</span>
-                                                                <span className="sm:hidden">OK</span>
-                                                            </>
-                                                        ) : (
-                                                            <>
-                                                                <XCircle className="w-4 h-4 sm:w-5 sm:h-5"/>
-                                                                <span className="hidden sm:inline">RIFIUTATA</span>
-                                                                <span className="sm:hidden">NO</span>
-                                                            </>
-                                                        )}
-                                                    </div>
-                                                </div>
-
-                                                {/* Durata */}
-                                                <div
-                                                    className="px-3 sm:px-4 md:px-5 py-2 sm:py-2.5 md:py-3 bg-gradient-to-r from-emerald-100 to-green-100 border-2 border-emerald-300 rounded-xl sm:rounded-2xl font-black text-emerald-800 text-sm sm:text-base md:text-lg shadow-lg inline-flex items-center gap-2 sm:gap-3 w-full sm:w-auto">
-                                                    <Clock className="w-4 h-4 sm:w-5 sm:h-5 shrink-0"/>
-                                                    <span className="truncate">
-                                            {assenza.durata} {assenza.tipo === 'permesso' ? 'ore' : 'giorni'}
-                                        </span>
-                                                </div>
-
-                                                {/* Motivo */}
-                                                {assenza.motivo && (
-                                                    <div
-                                                        className="bg-zinc-100/80 border-2 border-zinc-200 rounded-xl sm:rounded-2xl p-3 sm:p-4 backdrop-blur-xl">
-                                                        <div className="flex items-start gap-2 sm:gap-3">
-                                                            <AlertCircle
-                                                                className="w-4 h-4 sm:w-5 sm:h-5 text-zinc-600 mt-0.5 shrink-0"/>
-                                                            <div className="flex-1 min-w-0">
-                                                                <p className="text-xs sm:text-sm font-bold text-zinc-600 uppercase tracking-wider mb-1">Motivo</p>
-                                                                <p className="text-zinc-800 font-medium text-sm sm:text-base md:text-lg break-words">{assenza.motivo}</p>
-                                                            </div>
+                                                            {assenza.stato === 'pending' ? (
+                                                                <>
+                                                                    <Clock className="w-4 h-4 sm:w-5 sm:h-5"/>
+                                                                    <span className="hidden sm:inline">IN ATTESA</span>
+                                                                    <span className="sm:hidden">ATTESA</span>
+                                                                </>
+                                                            ) : assenza.stato === 'approved' ? (
+                                                                <>
+                                                                    <CheckCircle className="w-4 h-4 sm:w-5 sm:h-5"/>
+                                                                    <span className="hidden sm:inline">APPROVATA</span>
+                                                                    <span className="sm:hidden">OK</span>
+                                                                </>
+                                                            ) : (
+                                                                <>
+                                                                    <XCircle className="w-4 h-4 sm:w-5 sm:h-5"/>
+                                                                    <span className="hidden sm:inline">RIFIUTATA</span>
+                                                                    <span className="sm:hidden">NO</span>
+                                                                </>
+                                                            )}
                                                         </div>
                                                     </div>
-                                                )}
-                                            </div>
-                                        </div>
-                                    );
-                                })}
 
-                                {/* Spacer finale per non tagliare l'ultima card */}
+                                                    {/* Motivo */}
+                                                    {assenza.motivo && (
+                                                        <div className="bg-zinc-100/80 border-2 border-zinc-200 rounded-xl sm:rounded-2xl p-3 sm:p-4 backdrop-blur-xl">
+                                                            <div className="flex items-start gap-2 sm:gap-3">
+                                                                <AlertCircle className="w-4 h-4 sm:w-5 sm:h-5 text-zinc-600 mt-0.5 shrink-0"/>
+                                                                <div className="flex-1 min-w-0">
+                                                                    <p className="text-xs sm:text-sm font-bold text-zinc-600 uppercase tracking-wider mb-1">Motivo</p>
+                                                                    <p className="text-zinc-800 font-medium text-sm sm:text-base md:text-lg break-words">{assenza.motivo}</p>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        );
+                                    });
+                                })()}
+
                                 <div className="h-2"/>
                             </div>
                         </div>
 
-                        {/* Footer modale */}
-                        <div
-                            className="flex-shrink-0 bg-zinc-100/80 backdrop-blur-xl p-4 sm:p-6 border-t-2 border-zinc-200/50">
-                            <button
-                                onClick={() => setModalAperto(false)}
-                                className="w-full sm:w-auto px-6 sm:px-8 py-3 sm:py-4 bg-gradient-to-r from-emerald-500 to-green-600 text-white font-black text-sm sm:text-base rounded-xl sm:rounded-2xl hover:from-emerald-600 hover:to-green-700 shadow-2xl transition-all active:scale-95 mx-auto block"
-                            >
+                        {/* Footer */}
+                        <div className="flex-shrink-0 bg-zinc-100/80 backdrop-blur-xl p-4 sm:p-6 border-t-2 border-zinc-200/50">
+                            <button onClick={() => setModalAperto(false)} className="w-full sm:w-auto px-6 sm:px-8 py-3 sm:py-4 bg-gradient-to-r from-emerald-500 to-green-600 text-white font-black text-sm sm:text-base rounded-xl sm:rounded-2xl hover:from-emerald-600 hover:to-green-700 shadow-2xl transition-all active:scale-95 mx-auto block">
                                 Chiudi
                             </button>
                         </div>
                     </div>
                 </div>
             )}
+
 
 
             {/* Popup nuova richiesta
