@@ -1,18 +1,8 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-
-import type {EmployeePresence} from "@/types";
+import type {EmployeePresence, UseDailyPresencesReturn} from "@/types";
 import {useAuth} from "@/hooks/useAuth";
-
-
-
-interface UseDailyPresencesReturn {
-    smart: EmployeePresence[];
-    office: EmployeePresence[];
-    loading: boolean;
-    total: number;
-}
 
 export default function useDailyPresences(date: string): UseDailyPresencesReturn {
     const { token } = useAuth();
@@ -51,11 +41,13 @@ export default function useDailyPresences(date: string): UseDailyPresencesReturn
 
     const smart = presences.filter((p: EmployeePresence) => p.status === 'smart');
     const office = presences.filter((p: EmployeePresence) => p.status === 'ufficio');
+    const assente = presences.filter((p: EmployeePresence) => p.status === 'assente');
 
     return {
         smart,
         office,
         loading,
+        assente,
         total: presences.length
     };
 }

@@ -1,3 +1,5 @@
+import type {Team} from "@/lib/db";
+
 export interface Employee {
     _id?: string;
     id: number;
@@ -48,4 +50,23 @@ export interface EmployeePresence {
     fullRemote: boolean;
     status: 'smart' | 'ufficio' | 'assente';
     absenceType?: string;
+}
+
+
+export interface PresenceEmployee {
+    id: number;
+    name: string;
+    surname?: string;
+    team: Team;
+    fullRemote: boolean;
+    status: 'smart' | 'ufficio' | 'assente';
+    absenceType?: string;
+}
+
+export interface UseDailyPresencesReturn {
+    smart: EmployeePresence[];
+    office: EmployeePresence[];
+    assente: EmployeePresence[];
+    loading: boolean;
+    total: number;
 }

@@ -9,7 +9,7 @@ import useDailyPresences from '@/hooks/useDailyPresences';
 const PresenceWidget: React.FC = () => {
     const [selectedDate, setSelectedDate] = useState<Date>(new Date());
     const dateString = format(selectedDate, 'yyyy-MM-dd');
-    const { smart, office, loading, total } = useDailyPresences(dateString);
+    const { smart, office, loading, assente } = useDailyPresences(dateString);
 
     const prevDay = (): void => {
         let newDate = subDays(selectedDate, 1);
@@ -62,6 +62,8 @@ const PresenceWidget: React.FC = () => {
             </div>
         );
     }
+
+
 
     // Nascondi se weekend
     if (isSaturday(selectedDate) || isSunday(selectedDate)) {
@@ -122,7 +124,7 @@ const PresenceWidget: React.FC = () => {
 
             </div>
 
-            {/* Cards Smart vs Ufficio - IDENTICO */}
+
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 {/* Smartworking */}
                 <div className="group bg-gradient-to-br from-blue-50/80 to-indigo-50/80 backdrop-blur-xl p-6 md:p-8 rounded-3xl border border-blue-200/50 hover:border-blue-300 hover:shadow-2xl hover:-translate-y-1 transition-all duration-500">
@@ -181,6 +183,37 @@ const PresenceWidget: React.FC = () => {
                         {office.length > 8 && <p className="text-xs text-zinc-500 text-center pt-2">+{office.length - 8} altri</p>}
                     </div>
                 </div>
+
+                {/* Assenti */}
+                {assente.length > 0 && (
+                    <div className="group bg-gradient-to-br from-orange-50/80 to-amber-50/80 backdrop-blur-xl p-6 md:p-8 rounded-3xl border border-orange-200/50 hover:border-orange-300 hover:shadow-2xl hover:-translate-y-1 transition-all duration-500">
+                        <div className="flex items-start gap-4 mb-6">
+                            <div className="w-14 h-14 md:w-16 md:h-16 bg-gradient-to-br from-orange-500 to-amber-600 rounded-2xl flex items-center justify-center shadow-xl flex-shrink-0 group-hover:scale-110 transition-transform">
+                                <Calendar className="w-6 h-6 md:w-7 md:h-7 text-white drop-shadow-lg" />
+                            </div>
+                            <div>
+                                <h3 className="text-xl md:text-2xl font-black text-zinc-800 mb-1">Assenti</h3>
+                                <p className="text-3xl md:text-5xl lg:text-6xl font-black bg-gradient-to-r from-orange-600 to-amber-700 bg-clip-text text-transparent">
+                                    {assente.length}
+                                </p>
+                            </div>
+                        </div>
+                        <div className="space-y-2 max-h-48 overflow-y-auto scrollbar-thin scrollbar-thumb-zinc-300 scrollbar-track-zinc-100 pr-2">
+                            {assente.length === 0 ? (
+                                <p className="text-zinc-500 italic text-sm py-6 text-center bg-white/50 rounded-2xl p-4">Tutti in presenza oggi</p>
+                            ) : (
+                                assente.slice(0, 8).map((emp: any) => (
+                                    <div key={emp.id} className="flex items-center gap-3 p-3 bg-white/70 hover:bg-white/90 rounded-2xl text-sm transition-all hover:shadow-md">
+                                        <div className="w-3 h-3 bg-orange-500 rounded-full flex-shrink-0" />
+                                        <span className="font-medium text-zinc-800 truncate">{emp.name}</span>
+                                        {emp.surname && <span className="text-zinc-500">({emp.surname})</span>}
+                                    </div>
+                                ))
+                            )}
+                            {assente.length > 8 && <p className="text-xs text-zinc-500 text-center pt-2">+{assente.length - 8} altri</p>}
+                        </div>
+                    </div>
+                )}
             </div>
         </div>
     );

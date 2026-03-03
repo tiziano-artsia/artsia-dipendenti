@@ -1,16 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import {connectDB, EmployeeModel, AbsenceModel, type EmployeeDoc, type Team} from '@/lib/db';
+import type {PresenceEmployee} from "@/types";
 
-// Interfacce per il frontend
-export interface PresenceEmployee {
-    id: number;
-    name: string;
-    surname?: string; // Aggiungi se presente nel tuo schema
-    team: Team;
-    fullRemote: boolean;
-    status: 'smart' | 'ufficio' | 'assente';
-    absenceType?: string;
-}
+
 
 export async function GET(request: NextRequest) {
     try {
@@ -28,21 +20,34 @@ export async function GET(request: NextRequest) {
         for (const emp of employees) {
             if (emp.fullRemote || emp.team === 'Bottega') continue;
 
-            const smartworkingAbsence = await AbsenceModel.findOne({
+            const todayAbsences = await AbsenceModel.find({
                 employeeId: emp.id,
-                type: 'smartworking',
                 status: 'approved',
                 $expr: {
                     $and: [
-                        { $lte: ['$dataInizio', date] },  // dataInizio <= oggi
-                        { $gte: ['$dataFine', date] }     // dataFine >= oggi
+                        { $lte: ['$dataInizio', date] },
+                        { $gte: ['$dataFine', date] }
                     ]
                 }
             }).lean();
 
+            let status: PresenceEmployee['status'] = 'ufficio';
+            let absenceType: string | undefined;
 
-
-            const status: PresenceEmployee['status'] = smartworkingAbsence ? 'smart' : 'ufficio';
+            const smartworkingAbsence = todayAbsences.find(abs => abs.type === 'smartworking');
+            if (smartworkingAbsence) {
+                status = 'smart';
+                absenceType = smartworkingAbsence.type;
+            } else {
+                const otherAbsence = todayAbsences.find(abs =>
+                    ['ferie', 'malattia'].includes(abs.type)
+                );
+                if (otherAbsence) {
+                    status = 'assente';
+                    absenceType = otherAbsence.type;
+                }
+                // Se nessuna assenza → ufficio
+            }
 
             presences.push({
                 id: emp.id,
@@ -50,9 +55,10 @@ export async function GET(request: NextRequest) {
                 team: emp.team,
                 fullRemote: emp.fullRemote || false,
                 status,
-                absenceType: smartworkingAbsence?.type
+                absenceType
             });
         }
+
 
 
         const filteredPresences = presences.filter(p =>
