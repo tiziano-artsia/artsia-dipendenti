@@ -39,9 +39,9 @@ const PresenceWidget: React.FC = () => {
         selectedDate.setTime(today.getTime());
     }
     const getItalianDate = (date: Date): string => {
-        const days = ['domenica', 'lunedì', 'martedì', 'mercoledì', 'giovedì', 'venerdì', 'sabato'];
-        const months = ['', 'gennaio', 'febbraio', 'marzo', 'aprile', 'maggio', 'giugno',
-            'luglio', 'agosto', 'settembre', 'ottobre', 'novembre', 'dicembre'];
+        const days = ['Domenica', 'Lunedì', 'Martedì', 'Mercoledì', 'Giovedì', 'Venerdì', 'Sabato'];
+        const months = ['', 'Gennaio', 'Febbraio', 'Marzo', 'Aprile', 'Maggio', 'Giugno',
+            'Luglio', 'Agosto', 'Settembre', 'Ottobre', 'Novembre', 'Dicembre'];
 
         const dayName = days[date.getDay()];
         const dayNum = date.getDate();
@@ -96,32 +96,36 @@ const PresenceWidget: React.FC = () => {
 
     return (
         <div className="bg-white/60 backdrop-blur-3xl rounded-3xl shadow-2xl p-6 md:p-10 border border-white/70 hover:shadow-3xl transition-all duration-700 col-span-full">
-            {/* Header con navigazione + info giorno */}
-            <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between mb-8 gap-4">
-                <div className="flex items-center gap-3 flex-1">
+            {/* Header con navigazione + info giorno - MOBILE PERFECT */}
+            <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between mb-6 sm:mb-8 gap-3 sm:gap-4 px-1 sm:px-0">
+                <div className="flex items-center justify-center lg:justify-start gap-2 sm:gap-3 flex-1 min-w-0">
+                    {/* Prev Button - Fisso mobile */}
                     <button
                         onClick={prevDay}
-                        className="p-2.5 rounded-2xl bg-white/50 hover:bg-white/80 hover:shadow-md transition-all border border-zinc-200 active:scale-95"
+                        className="p-2 sm:p-2.5 rounded-2xl bg-white/60 hover:bg-white/90 hover:shadow-md transition-all border border-zinc-200/80 active:scale-95 flex-shrink-0 hover:scale-105"
                         aria-label="Giorno lavorativo precedente"
                         title="Giorno lavorativo precedente"
                     >
                         <ChevronLeft className="w-5 h-5 text-zinc-700" />
                     </button>
-                    <div className="text-center">
-                        <h2 className="text-2xl md:text-3xl lg:text-4xl font-black bg-gradient-to-r from-zinc-800 to-slate-700 bg-clip-text text-transparent truncate">
-                            Presenze {getItalianDate(selectedDate)}
+
+                    {/* Data Centrale - Responsive perfetta */}
+                    <div className="text-center flex-1 px-2 sm:px-4 min-w-0">
+                        <h2 className="sm:d-none  sm:text-2xl md:text-3xl lg:text-4xl font-black bg-gradient-to-r from-zinc-800 via-zinc-700 to-slate-800 bg-clip-text text-transparent truncate leading-tight px-1 sm:px-2">
+                           {getItalianDate(selectedDate)}
                         </h2>
                     </div>
+
+                    {/* Next Button - Fisso mobile */}
                     <button
                         onClick={nextDay}
-                        className="p-2.5 rounded-2xl bg-white/50 hover:bg-white/80 hover:shadow-md transition-all border border-zinc-200 active:scale-95"
+                        className="p-2 sm:p-2.5 rounded-2xl bg-white/60 hover:bg-white/90 hover:shadow-md transition-all border border-zinc-200/80 active:scale-95 flex-shrink-0 hover:scale-105"
                         aria-label="Giorno lavorativo successivo"
                         title="Giorno lavorativo successivo"
                     >
                         <ChevronRight className="w-5 h-5 text-zinc-700" />
                     </button>
                 </div>
-
             </div>
 
 
