@@ -36,7 +36,6 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     return (
         <html lang="it">
         <head>
-            {/* Rimosso meta viewport perché già gestito da export viewport */}
 
             {/* PWA */}
             <meta name="mobile-web-app-capable" content="yes" />
