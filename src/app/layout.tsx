@@ -9,6 +9,8 @@ export const metadata: Metadata = {
     description: 'Sistema di gestione dipendenti Artsia',
     applicationName: 'Artsia Dipendenti',
     manifest: '/manifest.json',
+    category: 'productivity',
+    themeColor: '#662D87',
     appleWebApp: {
         capable: true,
         statusBarStyle: 'black-translucent',
@@ -18,7 +20,16 @@ export const metadata: Metadata = {
         telephone: false,
     },
     icons: {
-        apple: '/apple-touch-icon.png',
+        icon: '/icons/logo-artsia.png',
+        shortcut: '/icons/logo-artsia.png',
+        apple: '/icons/logo-artsia.png',
+        other: [
+            {
+                rel: 'mask-icon',
+                url: '/icons/logo-artsia.png',
+                color: '#662D87',
+            },
+        ],
     },
 };
 
@@ -36,22 +47,41 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     return (
         <html lang="it">
         <head>
-
-            {/* PWA */}
+            {/*  PWA iOS */}
+            <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1, user-scalable=no" />
             <meta name="mobile-web-app-capable" content="yes" />
             <meta name="apple-mobile-web-app-capable" content="yes" />
-            <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+            <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+            <meta name="apple-mobile-web-app-title" content="Artsia" />
 
-            {/* iOS Icons */}
-            <link rel="apple-touch-icon" href="/logo-artsia.png" />
-            <link rel="apple-touch-icon" sizes="152x152" href="/logo-artsia.png" />
-            <link rel="apple-touch-icon" sizes="180x180" href="/logo-artsia.png" />
-            <link rel="apple-touch-icon" sizes="167x167" href="/logo-artsia.png" />
+            {/*  PWA ANDROID */}
+            <meta name="theme-color" content="#662D87" />
+            <meta name="msapplication-TileColor" content="#662D87" />
+            <meta name="msapplication-navbutton-color" content="#662D87" />
+            <meta name="msapplication-starturl" content="/" />
+            <meta name="display" content="standalone" />
 
-            {/* Splash Screens iOS */}
-            <link rel="apple-touch-startup-image" href="/logo-artsia.png" />
+            {/* iOS Icons & Splash */}
+            <link rel="apple-touch-icon" sizes="180x180" href="/icons/logo-artsia.png" />
+            <link rel="apple-touch-icon" sizes="152x152" href="/icons/logo-artsia.png" />
+            <link rel="apple-touch-icon" sizes="120x120" href="/icons/logo-artsia.png" />
+            <link rel="apple-touch-icon" sizes="76x76" href="/icons/logo-artsia.png" />
+            <link rel="apple-touch-startup-image" href="/icons/splash-artsia.png"
+                  media="(device-width: 390px) and (device-height: 844px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)" />
+            <link rel="apple-touch-startup-image" href="/icons/splash-artsia.png"
+                  media="(device-width: 428px) and (device-height: 926px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)" />
 
-            <meta name="format-detection" content="telephone=no" />
+            {/* Android Icons */}
+            <link rel="icon" type="image/png" sizes="192x192" href="/icons/logo-artsia.png" />
+            <link rel="icon" type="image/png" sizes="512x512" href="/icons/logo-artsia.png" />
+
+            {/* Android Maskable */}
+            <link rel="icon" type="image/png" sizes="192x192" href="/icons/logo-artsia.png" />
+            <link rel="icon" type="image/png" sizes="512x512" href="/icons/logo-artsia.png" />
+
+            {/* Windows */}
+            <meta name="msapplication-TileImage" content="/icons/logo-artsia.png" />
+            <meta name="msapplication-square150x150logo" content="/icons/logo-artsia.png" />
         </head>
 
         <body className="overflow-x-hidden">
@@ -64,3 +94,5 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         </html>
     );
 }
+
+
