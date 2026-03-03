@@ -19,11 +19,12 @@ import {
     Euro,
     Download,
     EuroIcon,
-    Lock, Archive
+    Lock, Archive, Users
 } from 'lucide-react';
 import {useEffect, useState} from 'react';
 import { useUserPayslips } from '@/hooks/useUserPayslips';
 import toast, {Toaster} from "react-hot-toast";
+import PresenceWidget from "@/components/PresenceWidget";
 
 export default function Dashboard() {
     const { user, logout, token } = useAuth();
@@ -417,7 +418,7 @@ export default function Dashboard() {
             )}
 
 
-
+                <PresenceWidget />
                 {/* Modale Aggiungi Dipendente */}
                 {showAddEmployeeModal && (
                     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
@@ -504,6 +505,7 @@ export default function Dashboard() {
                                     color: 'from-blue-500 to-indigo-600',
                                     description: 'Gestisci le tue assenze'
                                 }] : []),
+
                                 {
                                     href: '/dashboard/calendario',
                                     label: 'Calendario',
@@ -574,6 +576,7 @@ export default function Dashboard() {
                                     </div>
                                 </div>
                             )}
+
                         </div>
                     </div>
 
@@ -601,8 +604,16 @@ export default function Dashboard() {
                                     icon: CheckCircle,
                                     color: 'from-emerald-500 to-green-600',
                                     description: 'Approva richieste'
+                                },
+                                {
+                                    href: '/dashboard/dipendenti',
+                                    label: 'Lista Dipendenti',
+                                    icon: Users,
+                                    color: 'from-indigo-500 to-blue-600',
+                                    description: 'Gestisci tutti i dipendenti'
                                 }
                             ]: []),
+
                             {
                                 href: '/dashboard/documenti',
                                 label: 'Documenti',
@@ -671,6 +682,8 @@ export default function Dashboard() {
                                 </div>
                             </div>
                         )}
+
+
                     </div>
                 </div>
 
@@ -815,6 +828,8 @@ export default function Dashboard() {
                         </div>
                     </div>
                 )}
+
+
             </div>
         </div>
     );

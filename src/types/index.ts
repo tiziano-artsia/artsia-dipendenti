@@ -40,3 +40,12 @@ export interface ApiResponse<T> {
     error?: string;
     message?: string;
 }
+
+export interface EmployeePresence {
+    id: number;
+    name: string;
+    team: 'Sviluppo' | 'Digital' | 'Bottega' | 'Admin';
+    fullRemote: boolean;
+    status: 'smart' | 'ufficio' | 'assente';
+    absenceType?: string;
+}

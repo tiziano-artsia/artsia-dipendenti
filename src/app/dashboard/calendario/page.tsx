@@ -1820,7 +1820,7 @@ export default function Calendario() {
             )}
 
 
-            {/* Popup nuova richiesta */}
+            {/* Popup nuova richiesta
             {popupNuovaRichiesta && !isAdmin && (
                 <div
                     className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 md:p-6 bg-black/60 backdrop-blur-xl">
@@ -1842,7 +1842,7 @@ export default function Calendario() {
                             </button>
                         </div>
 
-                        {/* Form */}
+
                         <div className="p-4 sm:p-6 md:p-8 space-y-4 sm:space-y-6">
                             <div>
                                 <label className="block text-xs sm:text-sm font-bold text-zinc-700 mb-2">Tipo</label>
@@ -1898,7 +1898,7 @@ export default function Calendario() {
                         </div>
                     </div>
                 </div>
-            )}
+            )} */}
         </div>
     );
 }

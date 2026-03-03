@@ -1,5 +1,6 @@
 import mongoose, { Schema, Model } from "mongoose";
 import bcrypt from "bcryptjs";
+import {data} from "autoprefixer";
 
 const MONGODB_URI = process.env.MONGODB_URI;
 if (!MONGODB_URI) {
@@ -59,6 +60,13 @@ export type EmployeeDoc = {
     pushToken?: string | null;
     badgeCount?: number;
     fullRemote?:boolean,
+    costoAnnuale?: string | null;
+    costoOrario?: number | null,
+    costoMensile?:number | null,
+    dataNascita?:Date | null,
+    dataAssunzione?: Date | null,
+    inquadramento?: string | undefined,
+    mansione?: string | null,
 };
 
 export type AbsenceDoc = {
@@ -95,7 +103,14 @@ const employeeSchema = new Schema<EmployeeDoc>(
         fullRemote: { type: Boolean, default: false },
         passwordHash: { type: String, required: true },
         pushToken: { type: String, default: null },
-        badgeCount: { type: Number, default: 0 }
+        badgeCount: { type: Number, default: 0 },
+        costoMensile: { type: Number, default: 0 },
+        costoAnnuale: { type: String, default: null },
+        costoOrario: { type: Number, default: 0 },
+        dataNascita: { type: Date, default: null },
+        dataAssunzione: { type: Date, default: null },
+        inquadramento: { type: String },
+        mansione: { type: String },
     },
     { timestamps: true }
 );
