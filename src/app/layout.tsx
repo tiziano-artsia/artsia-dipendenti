@@ -20,20 +20,20 @@ export const metadata: Metadata = {
         telephone: false,
     },
     icons: {
-        icon: '/icons/logo-artsia.png',
-        shortcut: '/icons/logo-artsia.png',
-        apple: '/icons/logo-artsia.png',
+        icon: '/public/icons/logo-artsia.png',
+        shortcut: '/public/icons/logo-artsia.png',
+        apple: '/public/icons/logo-artsia.png',
         other: [
             {
                 rel: 'mask-icon',
-                url: '/icons/logo-artsia.png',
+                url: '/public/icons/logo-artsia.png',
                 color: '#662D87',
             },
         ],
     },
 };
 
-//  Separa viewport e themeColor
+
 export const viewport: Viewport = {
     width: 'device-width',
     initialScale: 1,
@@ -62,26 +62,26 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             <meta name="display" content="standalone" />
 
             {/* iOS Icons & Splash */}
-            <link rel="apple-touch-icon" sizes="180x180" href="/icons/logo-artsia.png" />
-            <link rel="apple-touch-icon" sizes="152x152" href="/icons/logo-artsia.png" />
-            <link rel="apple-touch-icon" sizes="120x120" href="/icons/logo-artsia.png" />
-            <link rel="apple-touch-icon" sizes="76x76" href="/icons/logo-artsia.png" />
-            <link rel="apple-touch-startup-image" href="/icons/splash-artsia.png"
+            <link rel="apple-touch-icon" sizes="180x180" href="/public/icons/logo-artsia.png" />
+            <link rel="apple-touch-icon" sizes="152x152" href="/public/icons/logo-artsia.png" />
+            <link rel="apple-touch-icon" sizes="120x120" href="/public/icons/logo-artsia.png" />
+            <link rel="apple-touch-icon" sizes="76x76" href="/public/icons/logo-artsia.png" />
+            <link rel="apple-touch-startup-image" href="/public/icons/logo-artsia.png"
                   media="(device-width: 390px) and (device-height: 844px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)" />
-            <link rel="apple-touch-startup-image" href="/icons/splash-artsia.png"
+            <link rel="apple-touch-startup-image" href="/public/icons/logo-artsia.png"
                   media="(device-width: 428px) and (device-height: 926px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)" />
 
             {/* Android Icons */}
-            <link rel="icon" type="image/png" sizes="192x192" href="/icons/logo-artsia.png" />
-            <link rel="icon" type="image/png" sizes="512x512" href="/icons/logo-artsia.png" />
+            <link rel="icon" type="image/png" sizes="192x192" href="/public/icons/logo-artsia.png" />
+            <link rel="icon" type="image/png" sizes="512x512" href="/public/icons/logo-artsia.png" />
 
             {/* Android Maskable */}
-            <link rel="icon" type="image/png" sizes="192x192" href="/icons/logo-artsia.png" />
-            <link rel="icon" type="image/png" sizes="512x512" href="/icons/logo-artsia.png" />
+            <link rel="icon" type="image/png" sizes="192x192" href="/public/icons/logo-artsia.png" />
+            <link rel="icon" type="image/png" sizes="512x512" href="/public/icons/logo-artsia.png" />
 
             {/* Windows */}
-            <meta name="msapplication-TileImage" content="/icons/logo-artsia.png" />
-            <meta name="msapplication-square150x150logo" content="/icons/logo-artsia.png" />
+            <meta name="msapplication-TileImage" content="/public/icons/logo-artsia.png" />
+            <meta name="msapplication-square150x150logo" content="/public/icons/logo-artsia.png" />
         </head>
 
         <body className="overflow-x-hidden">

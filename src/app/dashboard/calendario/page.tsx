@@ -1629,13 +1629,13 @@ export default function Calendario() {
 
             {/* Modale per dettagli assenze*/}
             {modalAperto && (
-                <div className="fixed inset-0  z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 md:p-6 bg-black/60 backdrop-blur-xl">
+                <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center  sm:p-4 md:p-6 bg-black/60 backdrop-blur-xl">
                     <div className="
             bg-white/95 backdrop-blur-3xl
             rounded-t-3xl sm:rounded-3xl
              sm:max-w-4xl
             h-[88vh]
-            mb-2 mt-[4vh]
+            mt-[4vh]
             flex flex-col
             overflow-hidden
             shadow-2xl border border-white/70

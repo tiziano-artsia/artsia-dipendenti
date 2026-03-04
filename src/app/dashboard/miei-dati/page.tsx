@@ -307,7 +307,7 @@ export default function MieiDati() {
 
         const payloadBase: any = {
             tipo: form.tipo,
-            durata: 1, // 🎯 SEMPRE 1 per smartworking (giorno singolo)
+            durata: 1, 
             motivo: form.motivo.trim(),
         };
 
