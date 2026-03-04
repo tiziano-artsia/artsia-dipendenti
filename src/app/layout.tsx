@@ -19,13 +19,13 @@ export const metadata: Metadata = {
         telephone: false,
     },
     icons: {
-        icon: '/icons/logo-artsia.png',
-        shortcut: '/icons/logo-artsia.png',
-        apple: '/icons/logo-artsia.png',
+        icon: '/logo-artsia.png',
+        shortcut: '/logo-artsia.png',
+        apple: '/logo-artsia.png',
         other: [
             {
                 rel: 'mask-icon',
-                url: '/icons/logo-artsia.png',
+                url: '/logo-artsia.png',
                 color: '#662D87',
             },
         ],
@@ -61,18 +61,18 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             <meta name="display" content="standalone" />
 
             {/* iOS Icons - CORRETTO: senza /public/ */}
-            <link rel="apple-touch-icon" sizes="180x180" href="/icons/logo-artsia.png" />
-            <link rel="apple-touch-icon" sizes="152x152" href="/icons/logo-artsia.png" />
-            <link rel="apple-touch-icon" sizes="120x120" href="/icons/logo-artsia.png" />
-            <link rel="apple-touch-icon" sizes="76x76" href="/icons/logo-artsia.png" />
-            <link rel="apple-touch-startup-image" href="/icons/logo-artsia.png"
+            <link rel="apple-touch-icon" sizes="180x180" href="/logo-artsia.png" />
+            <link rel="apple-touch-icon" sizes="152x152" href="/logo-artsia.png" />
+            <link rel="apple-touch-icon" sizes="120x120" href="/logo-artsia.png" />
+            <link rel="apple-touch-icon" sizes="76x76" href="/logo-artsia.png" />
+            <link rel="apple-touch-startup-image" href="/logo-artsia.png"
                   media="(device-width: 390px) and (device-height: 844px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)" />
-            <link rel="apple-touch-startup-image" href="/icons/logo-artsia.png"
+            <link rel="apple-touch-startup-image" href="/logo-artsia.png"
                   media="(device-width: 428px) and (device-height: 926px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)" />
 
             {/* Android Icons */}
-            <link rel="icon" type="image/png" sizes="192x192" href="/icons/logo-artsia.png" />
-            <link rel="icon" type="image/png" sizes="512x512" href="/icons/logo-artsia.png" />
+            <link rel="icon" type="image/png" sizes="192x192" href="/logo-artsia.png" />
+            <link rel="icon" type="image/png" sizes="512x512" href="/logo-artsia.png" />
         </head>
 
         <body className="overflow-x-hidden">
