@@ -3,7 +3,6 @@ import './globals.css';
 import type { Metadata, Viewport } from "next";
 import { CapacitorInitializer } from "@/components/CapacitorInitializer";
 import { SWRegistration } from "@/components/SWRegistration";
-import {Toaster} from "react-hot-toast";
 
 export const metadata: Metadata = {
     title: 'Artsia',
@@ -11,7 +10,6 @@ export const metadata: Metadata = {
     applicationName: 'Artsia Dipendenti',
     manifest: '/manifest.json',
     category: 'productivity',
-    themeColor: '#662D87',
     appleWebApp: {
         capable: true,
         statusBarStyle: 'black-translucent',
@@ -42,6 +40,7 @@ export const viewport: Viewport = {
     viewportFit: 'cover',
     themeColor: '#662D87',
 };
+
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
     return (
