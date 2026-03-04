@@ -3,12 +3,13 @@
 import { useAuth } from '@/hooks/useAuth';
 import { usePathname, useRouter } from 'next/navigation';
 import Link from 'next/link';
-import {ArrowLeft, Bell, Home, CalendarDays, PencilLine} from 'lucide-react';
+import {ArrowLeft, Bell, Home, CalendarDays, PencilLine, Key} from 'lucide-react';
 import { useNotifications } from '@/hooks/useNotifications';
 import { useAtom, useAtomValue } from 'jotai';
 import { unreadCountAtom, notificationDropdownAtom } from '@/lib/atoms/notificationAtoms';
 import { useEffect, useRef, useState } from 'react';
 import {useSSE} from "@/hooks/useSSE";
+import useOfficeKeys from "@/hooks/useOfficeKeys";
 
 export default function Header() {
     const { user } = useAuth();
@@ -21,6 +22,9 @@ export default function Header() {
         markAsRead,
         fetchNotifications
     } = useNotifications();
+
+    const { myHasKeys, toggleKeys, loading: keysLoading } = useOfficeKeys();
+
     const unreadCount = useAtomValue(unreadCountAtom);
     const [isDropdownOpen, setIsDropdownOpen] = useAtom(notificationDropdownAtom);
     const [showPermissionBanner, setShowPermissionBanner] = useState(false);
@@ -128,7 +132,7 @@ export default function Header() {
             await markAsRead(notification._id);
         }
 
-        // ✅ Aggiungi timeout prima di navigare
+
         setTimeout(() => {
             if (notification.relatedRequestId) {
                 const user = JSON.parse(localStorage.getItem('user') || '{}');
@@ -209,6 +213,67 @@ export default function Header() {
                                 </div>
                             </Link>
                         </div>
+
+                        {/*  TOGGLE DESKTOP - Si colora intero */}
+                        {user && (
+                            <div className={`hidden md:flex items-center gap-2 ml-3 p-2 rounded-xl backdrop-blur-sm border transition-all duration-300 shadow-sm group hover:shadow-md hover:shadow-orange-200/30 active:scale-[0.98] ${
+                                myHasKeys
+                                    ? 'bg-gradient-to-r from-orange-500/20 to-yellow-500/20 border-orange-300/50 shadow-orange-200/30'
+                                    : 'bg-white/70 hover:bg-gray-50 border-gray-200/50'
+                            } ${keysLoading ? 'opacity-50 cursor-not-allowed' : ''}`}>
+
+                                {/* Icona dinamica */}
+                                <div className={`p-1.5 rounded-lg transition-all duration-300 flex-shrink-0 ${
+                                    myHasKeys
+                                        ? 'bg-gradient-to-br from-orange-500 to-yellow-600 shadow-lg shadow-orange-300/50'
+                                        : 'bg-gray-200 hover:bg-gray-300'
+                                }`}>
+                                    <Key className={`w-4 h-4 transition-all ${
+                                        myHasKeys ? 'text-white drop-shadow-sm rotate-12 scale-105' : 'text-gray-600'
+                                    }`} />
+                                </div>
+
+                                {/* Label dinamica */}
+                                <span className={`text-xs font-bold tracking-wider transition-colors pr-2 ${
+                                    myHasKeys
+                                        ? 'text-orange-700 font-black'
+                                        : 'text-gray-600 group-hover:text-gray-800'
+                                }`}>
+                                  {myHasKeys ? 'Hai le Chiavi?' : 'Hai le Chiavi?'}
+                                </span>
+
+                                {/* Switch che si colora INTERO */}
+                                <div className="relative flex-shrink-0">
+                                    <button
+                                        onClick={toggleKeys}
+                                        disabled={keysLoading}
+                                        className={`relative w-11 h-6 rounded-full shadow-inner border-2 transition-all duration-300 overflow-hidden group-hover:shadow-md active:shadow-inner active:scale-95 ${
+                                            myHasKeys
+                                                ? 'bg-gradient-to-r from-orange-500 to-orange-600 border-orange-400 shadow-orange-400/50 shadow-lg'
+                                                : 'bg-gradient-to-r from-gray-200 to-gray-300 border-gray-300 hover:from-orange-100 hover:to-orange-200'
+                                        }`}
+                                    >
+                                        {/* Knob che si colora */}
+                                        <div className={`absolute top-0.5 left-0.5 w-4 h-4 rounded-full shadow-lg border transition-all duration-300 transform border-white/80 shadow-md ${
+                                            myHasKeys
+                                                ? 'bg-gradient-to-br from-orange-400 to-yellow-400 translate-x-5 shadow-orange-500/50 scale-110 rotate-180'
+                                                : 'bg-white translate-x-0 hover:translate-x-0.5 shadow-gray-300/50'
+                                        }`} />
+
+                                        {/* Glow interno quando attivo */}
+                                        {myHasKeys && (
+                                            <div className="absolute inset-0 bg-gradient-to-r from-orange-400/30 to-transparent rounded-full animate-pulse" />
+                                        )}
+
+                                        {/* Status dot SUPERIORE */}
+                                        {myHasKeys && (
+                                            <div className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-orange-400 rounded-full border-2 border-white shadow-lg animate-ping" />
+                                        )}
+                                    </button>
+                                </div>
+                            </div>
+                        )}
+
 
                         {/* Campanello - Solo Desktop con SSE */}
                         {user && (
@@ -413,6 +478,7 @@ export default function Header() {
                                 <span className="text-xs font-medium">Richieste</span>
                             </Link>
 
+
                             {/* Notifiche */}
                             <button
                                 onClick={toggleDropdown}
@@ -430,8 +496,46 @@ export default function Header() {
                                 </div>
                                 <span className="text-xs font-medium">Notifiche</span>
                             </button>
+                            {/* 🔑 TOGGLE MOBILE - Si colora tutto */}
+                            <button
+                                onClick={toggleKeys}
+                                disabled={keysLoading}
+                                className={`relative flex flex-col items-center justify-center gap-1 py-2 px-2 rounded-xl transition-all duration-300 shadow-sm flex-1 group active:scale-[0.97] ${
+                                    myHasKeys
+                                        ? 'bg-gradient-to-br from-orange-500/20 via-yellow-400/20 to-orange-500/20 border-2 border-orange-300/50 shadow-lg shadow-orange-200/40'
+                                        : 'bg-white/70 hover:bg-gradient-to-br hover:from-orange-50 hover:to-yellow-50 border border-gray-200/50 hover:border-orange-200/50 hover:shadow-md'
+                                } ${keysLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
+                            >
+                                {/* Switch piccolo che si colora */}
+                                <div className={`relative w-9 h-5 rounded-full shadow-inner border overflow-hidden transition-all duration-300 ${
+                                    myHasKeys
+                                        ? 'bg-gradient-to-r from-orange-500 to-orange-600 border-orange-400 shadow-orange-400/30'
+                                        : 'bg-gradient-to-r from-gray-200 to-gray-300 border-gray-300 hover:from-orange-400/20 hover:to-orange-500/20'
+                                }`}>
+                                    {/* Knob colorato */}
+                                    <div className={`absolute top-0.5 left-0.5 w-3.5 h-3.5 rounded-full shadow-lg border transition-all duration-300 border-white shadow-md transform ${
+                                        myHasKeys
+                                            ? 'bg-gradient-to-br from-yellow-400 to-orange-400 translate-x-4 scale-110 shadow-orange-500/50'
+                                            : 'bg-white hover:translate-x-0.5 shadow-gray-400/30'
+                                    }`} />
+                                </div>
 
-                            {/* Profilo */}
+                                {/* Label dinamica + dot */}
+                                <span className={`text-[10px] font-bold tracking-wider transition-all ${
+                                    myHasKeys
+                                        ? 'text-orange-700 scale-105 drop-shadow-sm'
+                                        : 'text-gray-600 group-hover:text-orange-600'
+                                }`}>
+    {myHasKeys ? 'CHIAVI' : 'chiavi'}
+  </span>
+
+                                {/* Dot pulsante SUPREMO */}
+                                {myHasKeys && (
+                                    <div className="absolute -top-0.5 -right-1 w-2 h-2 bg-orange-500 rounded-full border-2 border-white shadow-lg animate-ping z-10" />
+                                )}
+                            </button>
+
+                            {/* Profilo
                             <button className="flex flex-col items-center justify-center gap-1 py-2 text-gray-600 rounded-xl active:bg-gray-100 transition-colors">
                                 <div className="w-7 h-7 rounded-full bg-gradient-to-br from-purple-600 to-blue-600 flex items-center justify-center text-xs font-bold text-white shadow-sm">
                                     {user ? getInitials(user.name) : 'U'}
@@ -440,6 +544,7 @@ export default function Header() {
             {user ? user.name.split(' ')[0] : 'Profilo'}
           </span>
                             </button>
+                            */}
                         </div>
                     </div>
 

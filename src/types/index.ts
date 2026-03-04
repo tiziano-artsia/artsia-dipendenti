@@ -9,6 +9,7 @@ export interface Employee {
     role: 'dipendente' | 'manager' | 'admin';
     passwordHash?: string;
     createdAt?: Date;
+    hasKeys: boolean;
 }
 
 export interface Absence {
@@ -69,4 +70,19 @@ export interface UseDailyPresencesReturn {
     assente: EmployeePresence[];
     loading: boolean;
     total: number;
+}
+
+export interface KeysHolder {
+    id: string;  // String perché DB restituisce string
+    name: string;
+}
+
+export interface SSEKeysResponse {
+    holder: KeysHolder | null;
+}
+
+export interface KeysAPIResponse {
+    success: boolean;
+    hasKeys: boolean;
+    holder?: KeysHolder;
 }

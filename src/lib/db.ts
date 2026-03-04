@@ -67,6 +67,7 @@ export type EmployeeDoc = {
     dataAssunzione?: Date | null,
     inquadramento?: string | undefined,
     mansione?: string | null,
+    hasKeys?: boolean,
 };
 
 export type AbsenceDoc = {
@@ -111,6 +112,7 @@ const employeeSchema = new Schema<EmployeeDoc>(
         dataAssunzione: { type: Date, default: null },
         inquadramento: { type: String },
         mansione: { type: String },
+        hasKeys: { type: Boolean, default: false }
     },
     { timestamps: true }
 );

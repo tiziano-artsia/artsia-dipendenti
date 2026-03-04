@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import {useEffect, useState} from 'react';
 import { ChevronLeft, ChevronRight, Home, Building2, Loader2, Calendar } from 'lucide-react';
 import { format, addDays, subDays, isSaturday, isSunday, getDay } from 'date-fns';
 import { it } from 'date-fns/locale';
@@ -29,15 +29,20 @@ const PresenceWidget: React.FC = () => {
         setSelectedDate(newDate);
     };
 
-    // Skip weekend all'avvio
-    const today = new Date();
-    if (isSaturday(today) || isSunday(today)) {
-        const workDay = today;
-        while (isSaturday(workDay) || isSunday(workDay)) {
-            today.setDate(today.getDate() - 1);
+    useEffect(() => {
+        const today = new Date();
+
+        if (isSaturday(today) || isSunday(today)) {
+            let workDay = today;
+
+            while (isSaturday(workDay) || isSunday(workDay)) {
+                workDay = subDays(workDay, 1);
+            }
+
+            setSelectedDate(workDay);
         }
-        selectedDate.setTime(today.getTime());
-    }
+    }, []);
+
     const getItalianDate = (date: Date): string => {
         const days = ['Domenica', 'Lunedì', 'Martedì', 'Mercoledì', 'Giovedì', 'Venerdì', 'Sabato'];
         const months = ['', 'Gennaio', 'Febbraio', 'Marzo', 'Aprile', 'Maggio', 'Giugno',

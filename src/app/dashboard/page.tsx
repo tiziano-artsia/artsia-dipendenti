@@ -25,6 +25,7 @@ import {useEffect, useState} from 'react';
 import { useUserPayslips } from '@/hooks/useUserPayslips';
 import toast, {Toaster} from "react-hot-toast";
 import PresenceWidget from "@/components/PresenceWidget";
+import OfficeKeysWidget from "@/components/OfficeKeysWidget";
 
 export default function Dashboard() {
     const { user, logout, token } = useAuth();
@@ -417,8 +418,9 @@ export default function Dashboard() {
                 </div>
             )}
 
-
+                <OfficeKeysWidget />
                 <PresenceWidget />
+
                 {/* Modale Aggiungi Dipendente */}
                 {showAddEmployeeModal && (
                     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">

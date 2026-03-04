@@ -29,7 +29,7 @@ export async function verifyAuth(request: NextRequest): Promise<AuthUser | null>
         const decoded = await verifyToken(token);
 
         if (!decoded) {
-            console.log('⚠️ Token non valido o scaduto');
+            console.log(' Token non valido o scaduto');
             return null;
         }
 
