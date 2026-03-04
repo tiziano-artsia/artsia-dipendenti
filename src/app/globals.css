@@ -363,3 +363,9 @@ main {
   from { transform: translateY(-8px); opacity: 0; }
   to { transform: translateY(0); opacity: 1; }
 }
+
+@layer utilities {
+  .header-safe {
+    padding-top: max(env(safe-area-inset-top), 0.5rem);
+  }
+}

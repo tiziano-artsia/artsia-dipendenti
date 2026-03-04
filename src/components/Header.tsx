@@ -91,7 +91,6 @@ export default function Header() {
         };
     }, [fetchNotifications]);
 
-    // ==================== Handlers ====================
 
     const formatNotificationTime = (dateString: string) => {
         const date = new Date(dateString);
@@ -174,8 +173,12 @@ export default function Header() {
     const { data: sseNotifications, connected, error } = useSSE(`/api/notifications/sse?userId=${user?.id || 0}`);
     return (
         <>
-            {/* Top Header - ✅ Nessun style inline */}
-            <header className="bg-white shadow-sm border-b border-gray-200 pt-[env(safe-area-inset-top)] sm:pt-0 sticky top-[env(safe-area-inset-top)] z-40">                <div className="max-w-7xl mx-auto px-4 md:px-6 py-3 md:py-4">
+            {/* Top Header */}
+            <header className="bg-white shadow-sm border-b border-gray-200
+          fixed top-0 left-0 right-0 z-40
+          pt-[max(env(safe-area-inset-top),8px)]
+          sm:pt-4 sm:sticky sm:top-0">
+                <div className="max-w-7xl mx-auto px-4 md:px-6 py-3 md:py-4">
                     <div className="flex items-center justify-between">
                         {/* Logo e Back */}
                         <div className="flex items-center gap-2 md:gap-3 flex-1 min-w-0">
@@ -337,7 +340,7 @@ export default function Header() {
                 </div>
             </header>
 
-            {/* Banner Permessi */}
+            {/* Banner Permessi
             {showPermissionBanner && permission !== 'granted' && (
                 <div className="bg-gradient-to-r from-purple-600 to-blue-600 text-white px-4 md:px-6 py-3 animate-slideDown sm:hidden">
                     <div className="max-w-7xl mx-auto flex items-center justify-between gap-3">
@@ -364,7 +367,7 @@ export default function Header() {
                         </div>
                     </div>
                 </div>
-            )}
+            )}*/}
 
             {/* Bottom Navigation Mobile -  Padding fisso */}
             {user && (
