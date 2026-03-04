@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Key, User } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 
@@ -16,44 +16,50 @@ const OfficeKeysWidget = () => {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
 
+    const fetchKeysHolders = useCallback(async () => {
+        if (!token) return;
+
+        try {
+            setError(null);
+
+            const response = await fetch('/api/office-keys', {
+                method: 'GET',
+                headers: {
+                    Authorization: `Bearer ${token}`,
+                },
+            });
+
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}`);
+            }
+
+            const data = await response.json();
+            setOfficeKeysHolders(data?.holders ?? []);
+        } catch (err) {
+            console.error('Errore caricamento chiavi:', err);
+            setError('Errore nel caricamento');
+        } finally {
+            setLoading(false);
+        }
+    }, [token]);
+
     useEffect(() => {
         if (!token) {
             setLoading(false);
             return;
         }
 
-        const fetchKeysHolders = async () => {
-            try {
-                setLoading(true);
-                setError(null);
-
-                const response = await fetch('/api/office-keys', {
-                    method: 'GET',
-                    headers: {
-                        Authorization: `Bearer ${token}`,
-                    },
-                });
-
-                if (!response.ok) {
-                    throw new Error(`HTTP ${response.status}`);
-                }
-
-                const data = await response.json();
-
-                // L'API deve restituire:
-                // { holders: [{ id: string, name: string }] }
-                setOfficeKeysHolders(data?.holders ?? []);
-            } catch (err) {
-                console.error('Errore caricamento chiavi:', err);
-                setError('Errore nel caricamento');
-                setOfficeKeysHolders([]);
-            } finally {
-                setLoading(false);
-            }
-        };
-
+        // Prima chiamata immediata
         fetchKeysHolders();
-    }, [token]);
+
+        // Auto refresh ogni 5 secondi
+        const interval = setInterval(() => {
+            fetchKeysHolders();
+        }, 5000);
+
+        // Cleanup
+        return () => clearInterval(interval);
+    }, [token, fetchKeysHolders]);
 
     return (
         <div className="bg-white rounded-2xl shadow-sm border border-zinc-200 p-6 col-span-full">
