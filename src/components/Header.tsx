@@ -3,7 +3,7 @@
 import { useAuth } from '@/hooks/useAuth';
 import { usePathname, useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { ArrowLeft, Bell, Home, Calendar, X } from 'lucide-react';
+import {ArrowLeft, Bell, Home, CalendarDays, PencilLine} from 'lucide-react';
 import { useNotifications } from '@/hooks/useNotifications';
 import { useAtom, useAtomValue } from 'jotai';
 import { unreadCountAtom, notificationDropdownAtom } from '@/lib/atoms/notificationAtoms';
@@ -371,9 +371,9 @@ export default function Header() {
 
             {/* Bottom Navigation Mobile -  Padding fisso */}
             {user && (
-                <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 z-50 shadow-lg">
+                <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 z-[999] shadow-lg pb-[max(env(safe-area-inset-bottom),1rem)]">
                     <div className="p-2">
-                        <div className="grid grid-cols-4 gap-1">
+                        <div className="grid grid-cols-5 gap-1"> {/* 5 colonne */}
                             {/* Home */}
                             <Link
                                 href="/dashboard"
@@ -387,6 +387,19 @@ export default function Header() {
                                 <span className="text-xs font-medium">Home</span>
                             </Link>
 
+                            {/* Calendario */}
+                            <Link
+                                href="/dashboard/calendario"
+                                className={`flex flex-col items-center justify-center gap-1 py-2 rounded-xl transition-colors ${
+                                    pathname === '/dashboard/calendario' || pathname === '/dashboard/calendario'
+                                        ? 'text-purple-600'
+                                        : 'text-gray-500 active:bg-gray-100'
+                                }`}
+                            >
+                                <CalendarDays className="w-6 h-6" />
+                                <span className="text-xs font-medium">Calendario</span>
+                            </Link>
+
                             {/* Richieste */}
                             <Link
                                 href="/dashboard/miei-dati"
@@ -396,7 +409,7 @@ export default function Header() {
                                         : 'text-gray-500 active:bg-gray-100'
                                 }`}
                             >
-                                <Calendar className="w-6 h-6" />
+                                <PencilLine className="w-6 h-6" />
                                 <span className="text-xs font-medium">Richieste</span>
                             </Link>
 
@@ -411,8 +424,8 @@ export default function Header() {
                                     <Bell className="w-6 h-6" />
                                     {unreadCount > 0 && (
                                         <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center animate-pulse">
-                                            {unreadCount > 9 ? '9+' : unreadCount}
-                                        </span>
+                {unreadCount > 9 ? '9+' : unreadCount}
+              </span>
                                     )}
                                 </div>
                                 <span className="text-xs font-medium">Notifiche</span>
@@ -424,23 +437,23 @@ export default function Header() {
                                     {user ? getInitials(user.name) : 'U'}
                                 </div>
                                 <span className="text-xs font-medium truncate max-w-[60px]">
-                                    {user ? user.name.split(' ')[0] : 'Profilo'}
-                                </span>
+            {user ? user.name.split(' ')[0] : 'Profilo'}
+          </span>
                             </button>
                         </div>
                     </div>
 
-                    {/* Dropdown Notifiche Mobile */}
+                    {/* Dropdown Notifiche Mobile - z-[1000] */}
                     {isDropdownOpen && unreadCount > 0 && (
                         <>
                             <div
-                                className="fixed inset-0 bg-black/50 z-40 animate-fadeIn"
+                                className="fixed inset-0 bg-black/50 z-[1000] animate-fadeIn"
                                 onClick={() => setIsDropdownOpen(false)}
                             />
 
                             <div
                                 ref={dropdownRef}
-                                className="fixed left-4 right-4 bottom-24 bg-white shadow-2xl rounded-2xl border border-gray-200 z-50 max-h-[60vh] flex flex-col overflow-hidden animate-scaleIn"
+                                className="fixed left-4 right-4 bottom-28 bg-white shadow-2xl rounded-2xl border border-gray-200 z-[1001] max-h-[60vh] flex flex-col overflow-hidden animate-scaleIn pb-[max(env(safe-area-inset-bottom),1rem)]"
                             >
                                 <div className="bg-gradient-to-r from-purple-600 to-blue-600 px-4 py-4 flex-shrink-0 rounded-t-2xl">
                                     <h3 className="text-white font-semibold text-lg">Notifiche</h3>
@@ -497,6 +510,7 @@ export default function Header() {
                     )}
                 </nav>
             )}
+
         </>
     );
 }
