@@ -307,22 +307,21 @@ export default function MieiDati() {
 
         const payloadBase: any = {
             tipo: form.tipo,
-            durata: form.durata ? parseFloat(form.durata) : 1,
+            durata: 1,  // ✅ SEMPRE 1 per smartworking (1 gg = 1 richiesta)
             motivo: form.motivo.trim(),
         };
 
-        console.log('📤 Base payload:', payloadBase, 'Giorni:', form.giorniSmart);
-
         try {
             if (form.tipo === 'smartworking') {
-              const results = await Promise.allSettled(
+                // ✅ 1 GIORNO = 1 RICHIESTA SEPARATA
+                const results = await Promise.allSettled(
                     form.giorniSmart.map(async (giorno: string) => {
                         const payloadSingolo: any = {
                             ...payloadBase,
-                            data: giorno,
-                      };
+                            data: giorno,  // Ogni giorno ha la SUA data
+                        };
 
-                        console.log(`📅 Invio giorno: ${giorno}`, payloadSingolo);
+                        console.log(`📅 Invio: ${giorno} (durata: 1gg)`, payloadSingolo);
                         return submitRequest(payloadSingolo);
                     })
                 );
@@ -331,21 +330,22 @@ export default function MieiDati() {
                     r.status === 'fulfilled' && r.value === true
                 ).length;
 
-
                 if (successes === form.giorniSmart.length) {
                     toast.success(
-                        `✅ ${successes} giorno/i smartworking inviati!`,
+                        `✅ ${successes} giorni smartworking inviati!`,
                         { duration: 4000 }
                     );
                 } else {
                     toast.error(
-                        `⚠️ ${successes}/${form.giorniSmart.length} giorni inviati (alcuni falliti)`,
+                        `⚠️ ${successes}/${form.giorniSmart.length} giorni inviati`,
                         { duration: 5000 }
                     );
                 }
             } else {
+                // PERMESSO: usa durata inserita manualmente
                 const payload: any = {
                     ...payloadBase,
+                    durata: form.durata ? parseFloat(form.durata) : 1,  // 4 ore = durata: 4
                     ...(form.tipo === 'permesso' ? { data: form.dataInizio } : {
                         data: form.dataInizio,
                         dataFine: form.dataFine,
