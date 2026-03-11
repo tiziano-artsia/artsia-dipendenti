@@ -307,7 +307,7 @@ export default function MieiDati() {
 
         const payloadBase: any = {
             tipo: form.tipo,
-            durata: 1, 
+            durata: form.durata ? parseFloat(form.durata) : 1,
             motivo: form.motivo.trim(),
         };
 
