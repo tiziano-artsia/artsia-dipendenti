@@ -19,7 +19,7 @@ import {
     Euro,
     Download,
     EuroIcon,
-    Lock, Archive, Users
+    Lock, Archive, Users, Shield
 } from 'lucide-react';
 import {useEffect, useState} from 'react';
 import { useUserPayslips } from '@/hooks/useUserPayslips';
@@ -500,14 +500,19 @@ export default function Dashboard() {
                     <div className="sm:hidden overflow-x-auto  scrollbar-hide">
                         <div className="flex gap-3 p-2">
                             {[
-                                ...(!isAdmin ? [{
+                                ...(isAdmin ? [{
+                                    href: '/dashboard/admin-assenze',
+                                    label: 'Gestione Assenze',
+                                    icon: Shield,
+                                    color: 'from-emerald-500 to-green-600',
+                                    description: 'Assegna ferie/malattie a tutti'
+                                }] : [{
                                     href: '/dashboard/miei-dati',
                                     label: 'Le mie Richieste',
                                     icon: FileText,
                                     color: 'from-blue-500 to-indigo-600',
                                     description: 'Gestisci le tue assenze'
-                                }] : []),
-
+                                }]),
                                 {
                                     href: '/dashboard/calendario',
                                     label: 'Calendario',
@@ -585,13 +590,19 @@ export default function Dashboard() {
                     {/* Tablet/Desktop: Grid */}
                     <div className="hidden sm:grid sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
                         {[
-                            ...(!isAdmin ? [{
+                            ...(isAdmin ? [{
+                                href: '/dashboard/admin-assenze',
+                                label: 'Gestione Assenze',
+                                icon: Shield,
+                                color: 'from-emerald-500 to-green-600',
+                                description: 'Assegna assesze a tutti'
+                            }] : [{
                                 href: '/dashboard/miei-dati',
                                 label: 'Le mie Richieste',
                                 icon: FileText,
                                 color: 'from-blue-500 to-indigo-600',
                                 description: 'Gestisci le tue assenze'
-                            }] : []),
+                            }]),
                             {
                                 href: '/dashboard/calendario',
                                 label: 'Calendario',
