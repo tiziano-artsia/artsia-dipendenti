@@ -43,7 +43,7 @@ export async function POST(request: NextRequest) {
 
         const user = getUserFromToken(request)
 
-        console.log("DECODED USER:", user)
+
 
         if (!user || user.role !== 'admin') {
 
