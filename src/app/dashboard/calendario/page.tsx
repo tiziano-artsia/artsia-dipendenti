@@ -171,11 +171,11 @@ export default function Calendario() {
                     id: e.id ?? e._id,
                     name: e.name,
                     team: e.team,
-                    fullRemote: e.fullRemote ?? false, // ← AGGIUNGI QUESTO
+                    fullRemote: e.fullRemote ?? false,
                 }))
-                // @ts-ignore
+
                 if (user && !emps.find(e => Number(e.id) === Number(user.id))) {
-                    emps.push({id: user.id, name: user.name, team: user.team ?? 'ND', fullRemote: false})
+                    emps.push({role: user.role, id: user.id, name: user.name, team: user.team ?? 'ND', fullRemote: false})
                 }
 
                 setEmployees(emps)
