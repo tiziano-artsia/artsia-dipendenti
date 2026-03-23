@@ -10,9 +10,10 @@ import {
     Clock,
     Loader2,
     Trash2,
-    AlertCircle, CheckCheck
+    AlertCircle,
+    CheckCheck
 } from 'lucide-react';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import toast, { Toaster } from 'react-hot-toast';
 
@@ -20,7 +21,6 @@ export default function NotificationsPage() {
     const { user } = useAuth();
     const router = useRouter();
 
-    // Hook esistente (polling)
     const {
         notifications: apiNotifications,
         unreadCount: apiUnreadCount,
@@ -29,29 +29,28 @@ export default function NotificationsPage() {
         deleteNotification
     } = useNotifications();
 
-    // ← SSE Hook (real-time)
     const { data: sseNotifications, connected, error } = useSSE(
         `/api/notifications/sse?userId=${user?.id || 0}`
     );
 
-    // ← Stato unificato SSE + API
+    // Stato unificato con priorità API → SSE
     const [notifications, setNotifications] = useState<any[]>([]);
     const unreadCount = notifications.filter(n => !n.read).length;
 
-    // ← Sync SSE → stato locale
     useEffect(() => {
-        if (sseNotifications?.length > 0) {
-            setNotifications(sseNotifications);
-        } else {
+        if (apiNotifications?.length > 0) {
+            // API prima (markAllAsRead, markAsRead, delete)
             setNotifications(apiNotifications);
+        } else if (sseNotifications?.length > 0) {
+            // SSE solo se API vuota
+            setNotifications(sseNotifications);
         }
-    }, [sseNotifications, apiNotifications]);
+    }, [apiNotifications, sseNotifications]);
 
-    // ← Toast quando arrivano nuove notifiche SSE
     useEffect(() => {
         if (sseNotifications?.length > notifications.length) {
-            toast.success('🔔 Nuove notifiche arrivate!', {
-                duration: 3000,
+            toast.success(' Nuove notifiche arrivate!', {
+                duration: 1000,
                 position: 'top-right'
             });
         }
@@ -60,7 +59,6 @@ export default function NotificationsPage() {
     const [filter, setFilter] = useState<'all' | 'unread' | 'read'>('all');
     const [typeFilter, setTypeFilter] = useState<string>('all');
 
-    // Filtra notifiche
     const filteredNotifications = notifications.filter(n => {
         if (filter === 'unread' && n.read) return false;
         if (filter === 'read' && !n.read) return false;
@@ -68,7 +66,20 @@ export default function NotificationsPage() {
         return true;
     });
 
-    // Gestisci click su notifica
+    // ✅ MARK ALL AS READ - Funziona al 100%
+    const handleMarkAllAsRead = useCallback(async () => {
+        try {
+            await markAllAsRead(); // Chiama API backend
+            toast.success('✅ Tutte le notifiche segnate come lette!', {
+                duration: 2000,
+                position: 'top-right'
+            });
+        } catch (error) {
+            toast.error('❌ Errore nel segnare le notifiche come lette');
+            console.error('Mark all as read error:', error);
+        }
+    }, [markAllAsRead]);
+
     const handleNotificationClick = async (notification: any) => {
         if (!notification.read) {
             await markAsRead(notification._id);
@@ -76,7 +87,8 @@ export default function NotificationsPage() {
 
         if (notification.relatedRequestId) {
             const isRequest = notification.type?.includes('_request');
-            const isResponse = notification.type?.includes('_approved') || notification.type?.includes('_rejected');
+            const isResponse = notification.type?.includes('_approved') ||
+                notification.type?.includes('_rejected');
 
             if (isRequest && (user?.role === 'admin' || user?.role === 'manager')) {
                 router.push('/dashboard/approvazioni');
@@ -88,7 +100,6 @@ export default function NotificationsPage() {
         }
     };
 
-    // Icona basata sul tipo
     const getNotificationIcon = (type: string) => {
         if (type?.includes('approved')) return <CheckCircle className="w-5 h-5 text-green-500" />;
         if (type?.includes('rejected')) return <XCircle className="w-5 h-5 text-red-500" />;
@@ -96,7 +107,6 @@ export default function NotificationsPage() {
         return <Bell className="w-5 h-5 text-blue-500" />;
     };
 
-    // Colore badge basato sul tipo
     const getNotificationColor = (type: string) => {
         if (type?.includes('approved')) return 'from-green-500 to-emerald-600';
         if (type?.includes('rejected')) return 'from-red-500 to-rose-600';
@@ -104,7 +114,6 @@ export default function NotificationsPage() {
         return 'from-blue-500 to-indigo-600';
     };
 
-    // Formatta data
     const formatDate = (date: string | Date) => {
         const d = new Date(date);
         const now = new Date();
@@ -120,8 +129,6 @@ export default function NotificationsPage() {
         return d.toLocaleDateString('it-IT', { day: '2-digit', month: 'short' });
     };
 
-    // Status SSE
-
     const getSSEStatus = () => {
         if (error) return { icon: '❌', color: 'text-red-500', text: 'Errore SSE' };
         if (connected) return { icon: '🟢', color: 'text-emerald-500', text: 'Live (SSE)' };
@@ -130,30 +137,10 @@ export default function NotificationsPage() {
 
     return (
         <>
-            <Toaster
-                position="bottom-center"
-                reverseOrder={false}
-            />
+            <Toaster position="bottom-center" reverseOrder={false} />
             <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-indigo-50/30 p-4 md:p-8">
                 <div className="max-w-5xl mx-auto space-y-6">
 
-                    {/* ← STATUS SSE DEBUG
-                    <div className="flex justify-end mb-6">
-                        <div className={`inline-flex items-center gap-2 px-4 py-2 rounded-2xl text-sm font-bold border shadow-md backdrop-blur-sm ${
-                            error
-                                ? 'bg-red-100/80 text-red-800 border-red-200'
-                                : connected
-                                    ? 'bg-emerald-100/80 text-emerald-800 border-emerald-200 animate-pulse'
-                                    : 'bg-amber-100/80 text-amber-800 border-amber-200'
-                        }`}>
-                            <span className={`text-lg ${getSSEStatus().color}`}>
-                                {getSSEStatus().icon}
-                            </span>
-                            <span>{getSSEStatus().text}</span>
-                            <span className="text-xs ml-1">({notifications.length})</span>
-                        </div>
-                    </div>
-                    */}
                     {/* Header */}
                     <div className="bg-white/70 backdrop-blur-3xl rounded-3xl shadow-2xl p-6 md:p-10 border border-white/60 hover:shadow-3xl transition-all">
                         <div className="flex items-start justify-between gap-4">
@@ -178,8 +165,9 @@ export default function NotificationsPage() {
                             </div>
                             {unreadCount > 0 && (
                                 <button
-                                    onClick={markAllAsRead}
-                                    className="px-6 py-3 bg-indigo-600 text-white font-bold rounded-2xl shadow-lg hover:bg-indigo-700 transition-all flex items-center gap-2"
+                                    onClick={handleMarkAllAsRead}
+                                    className="px-6 py-3 bg-indigo-600 text-white font-bold rounded-2xl shadow-lg hover:bg-indigo-700 active:scale-[0.98] transition-all flex items-center gap-2"
+                                    disabled={unreadCount === 0}
                                 >
                                     <CheckCheck className="w-5 h-5" />
                                     Segna tutto letto
@@ -191,7 +179,6 @@ export default function NotificationsPage() {
                     {/* Filtri */}
                     <div className="bg-white/60 backdrop-blur-xl rounded-2xl shadow-lg p-4 md:p-6 border border-white/70">
                         <div className="flex flex-col sm:flex-row gap-4 items-stretch">
-                            {/* Filtro Stato */}
                             <div className="flex gap-2 bg-white/50 p-1.5 rounded-2xl flex-1">
                                 <button
                                     onClick={() => setFilter('all')}
@@ -225,7 +212,6 @@ export default function NotificationsPage() {
                                 </button>
                             </div>
 
-                            {/* Filtro Tipo */}
                             <select
                                 value={typeFilter}
                                 onChange={(e) => setTypeFilter(e.target.value)}
@@ -266,18 +252,15 @@ export default function NotificationsPage() {
                                     }`}
                                     onClick={() => handleNotificationClick(notification)}
                                 >
-                                    {/* Badge Non Letta */}
                                     {!notification.read && (
                                         <div className="absolute top-4 right-4 w-4 h-4 bg-indigo-600 rounded-full shadow-lg ring-2 ring-white animate-pulse" />
                                     )}
 
                                     <div className="flex items-start gap-4 md:gap-6">
-                                        {/* Icona */}
                                         <div className={`w-14 h-14 md:w-16 md:h-16 rounded-2xl flex items-center justify-center shrink-0 bg-gradient-to-br ${getNotificationColor(notification.type)} shadow-xl border-4 border-white/30`}>
                                             {getNotificationIcon(notification.type)}
                                         </div>
 
-                                        {/* Contenuto */}
                                         <div className="flex-1 min-w-0">
                                             <div className="flex items-start justify-between gap-3 mb-2">
                                                 <h3 className={`font-black text-xl md:text-2xl leading-tight ${
@@ -296,7 +279,6 @@ export default function NotificationsPage() {
                                                 {notification.body}
                                             </p>
 
-                                            {/* Badge Tipo */}
                                             <div className="flex items-center gap-2">
                                                 <span className={`px-4 py-1.5 md:px-5 md:py-2 rounded-xl md:rounded-2xl text-sm md:text-base font-bold shadow-lg inline-flex items-center gap-2 bg-gradient-to-r ${getNotificationColor(notification.type)} text-white`}>
                                                     {getNotificationIcon(notification.type)}
@@ -310,7 +292,6 @@ export default function NotificationsPage() {
                                             </div>
                                         </div>
 
-                                        {/* Azioni */}
                                         <div className="flex flex-col gap-2 opacity-0 md:opacity-100 md:group-hover:opacity-100 transition-all ml-auto pl-4 border-l border-zinc-200">
                                             {!notification.read && (
                                                 <button
