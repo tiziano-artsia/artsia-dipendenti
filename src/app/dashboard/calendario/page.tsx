@@ -1,7 +1,7 @@
 'use client';
 
 import * as XLSX from 'xlsx';
-import {useState, useEffect, type SetStateAction} from 'react';
+import React, {useState, useEffect, type SetStateAction} from 'react';
 import {useAuth} from '@/hooks/useAuth';
 import {
     Download,
@@ -36,10 +36,10 @@ interface Absence {
     dataInizio: string;
     dataFine?: string;
     durata: number;
-    tipo: 'ferie' | 'permesso' | 'smartworking' | 'malattia' | 'fuori-sede' | 'congedo-parentale';
-    stato: 'pending' | 'approved' | 'rejected';
+    tipo: "ferie" | "permesso" | "smartworking" | "malattia" | "festivita" |
+        "fuori-sede" | "congedo-parentale" | "maternità" | "congedo-matrimoniale";
+    stato: "pending" | "approved" | "rejected";
     motivo?: string;
-
 }
 
 interface Employee {
@@ -60,11 +60,15 @@ const getTipoLabel = (tipo: string): string => {
         'malattia': 'Malattia',
         'permesso': 'Permesso',
         'smartworking': 'Smartworking',
+        'festivita': 'Festività',
         'fuori-sede': 'Fuori Sede',
         'congedo-parentale': 'Congedo Parentale',
+        'maternità': 'Maternità',
+        'congedo-matrimoniale': 'Congedo Matrimoniale'
     };
     return map[tipo.toLowerCase()] || tipo;
 };
+
 
 const getTipoEmoji = (tipo: string): string => {
     const map: Record<string, string> = {
@@ -74,19 +78,25 @@ const getTipoEmoji = (tipo: string): string => {
         'smartworking': '🏠',
         'fuori-sede': '🏢️',
         'congedo-parentale': '👶',
+        'maternità': '🤰',
+        'congedo-matrimoniale': '🤍',
     };
     return map[tipo.toLowerCase()] || '📋';
 };
 
- const getTipoColor = (tipo: string): string => {
-    if (tipo === 'ferie') return 'from-orange-500 to-orange-600 border-orange-400';
-    if (tipo === 'malattia') return 'from-rose-500 to-red-600 border-red-400';
-    if (tipo === 'permesso') return 'from-yellow-500 to-amber-600 border-yellow-400';
-    if (tipo === 'smartworking') return 'from-blue-500 to-blue-600 border-blue-400';
-    if (tipo === 'fuori-sede') return 'from-cyan-500 to-cyan-600 border-cyan-400';
-    if (tipo === 'congedo-parentale') return 'from-pink-500 to-pink-600 border-pink-400';
+const getTipoColor = (tipo: string): string => {
+    const t = tipo.toLowerCase();
+    if (t === 'ferie') return 'from-orange-500 to-orange-600 border-orange-400';
+    if (t === 'malattia') return 'from-rose-500 to-red-600 border-red-400';
+    if (t === 'permesso') return 'from-yellow-500 to-amber-600 border-yellow-400';
+    if (t === 'smartworking') return 'from-blue-500 to-blue-600 border-blue-400';
+    if (t === 'fuori-sede') return 'from-cyan-500 to-cyan-600 border-cyan-400';
+    if (t === 'congedo-parentale') return 'from-pink-500 to-pink-600 border-pink-400';
+    if (t === 'maternità') return 'from-pink-400 to-rose-500 border-pink-400';
+    if (t === 'congedo-matrimoniale') return 'from-amber-400 to-yellow-500 border-amber-400';
     return 'from-gray-500 to-gray-600 border-gray-400';
 };
+
 
 export default function Calendario() {
     const {user, token} = useAuth();
@@ -1282,7 +1292,7 @@ export default function Calendario() {
                     </div>
 
                     <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 sm:gap-3">
-                        {['smartworking', 'ferie', 'malattia', 'permesso', 'fuori-sede', 'congedo-parentale'].map((tipo) => (
+                        {['smartworking', 'ferie', 'malattia', 'permesso', 'fuori-sede', 'congedo-parentale','maternità','congedo-matrimoniale'].map((tipo) => (
                             <button
                                 key={tipo}
                                 onClick={() => setFiltriAttivi((prev) => (prev.includes(tipo) ? prev.filter((t) => t !== tipo) : [...prev, tipo]))}
@@ -1333,7 +1343,7 @@ export default function Calendario() {
                     {legendaAperta && (
                         <div className="px-4 sm:px-6 pb-4 sm:pb-6 border-t border-white/50">
                             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 pt-4 sm:pt-6">
-                                {['ferie', 'malattia', 'permesso', 'smartworking', 'fuori-sede', 'congedo-parentale'].map((tipo) => (
+                                {['ferie', 'malattia', 'permesso', 'smartworking', 'fuori-sede', 'congedo-parentale','maternità','congedo-matrimoniale' ].map((tipo) => (
                                     <div
                                         key={tipo}
                                         className={`flex items-center gap-3 px-4 py-3 rounded-xl border-2 shadow-md bg-gradient-to-r ${getTipoColor(tipo)} text-white`}

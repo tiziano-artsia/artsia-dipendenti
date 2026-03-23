@@ -45,7 +45,7 @@ export async function connectDB() {
  */
 export type Role = "dipendente" | "manager" | "admin";
 export type Team = "Sviluppo" | "Digital" | "Bottega" | "Admin";
-export type AbsenceType = "ferie" | "permesso" | "smartworking" | "malattia" | "festivita" | "fuori-sede" | "congedo-parentale";
+export type AbsenceType = "ferie" | "permesso" | "smartworking" | "malattia" | "festivita" | "fuori-sede" | "congedo-parentale" | "maternità" | "congedo-matrimoniale";
 export type AbsenceStatus = "pending" | "approved" | "rejected";
 
 export type EmployeeDoc = {
@@ -74,7 +74,7 @@ export type AbsenceDoc = {
     tipo: string;
     data:string;
     id: number;
-    employeeId: any;
+    employeeId: number;
     type: AbsenceType;
     dataInizio: string; // YYYY-MM-DD
     dataFine: string;
@@ -124,7 +124,7 @@ const absenceSchema = new Schema<AbsenceDoc>(
         type: {
             type: String,
             required: true,
-            enum: ["ferie", "permesso", "smartworking", "malattia", "festivita", "fuori-sede", "congedo-parentale"]
+            enum: ["ferie" , "permesso" , "smartworking" , "malattia" , "festivita" , "fuori-sede" , "congedo-parentale" , "maternità" , "congedo-matrimoniale"]
         },
         dataInizio: { type: String, required: true }, // YYYY-MM-DD
         dataFine: { type: String, required: true },
@@ -207,7 +207,7 @@ export async function getAbsences(filter: Partial<Pick<AbsenceDoc, "employeeId" 
 
 export async function createAbsence(data: {
     employeeId: number;
-    type: string;
+    type: AbsenceType;
     dataInizio: string;
     dataFine: string;
     durata: number;

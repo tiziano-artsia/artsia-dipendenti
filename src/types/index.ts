@@ -49,7 +49,7 @@ export interface EmployeePresence {
     name: string;
     team: 'Sviluppo' | 'Digital' | 'Bottega' | 'Admin';
     fullRemote: boolean;
-    status: 'smart' | 'ufficio' | 'assente';
+    status: 'smart' | 'ufficio' | 'assente' | 'fuori-sede';
     absenceType?: string;
 }
 
@@ -60,7 +60,7 @@ export interface PresenceEmployee {
     surname?: string;
     team: Team;
     fullRemote: boolean;
-    status: 'smart' | 'ufficio' | 'assente';
+    status: 'smart' | 'ufficio' | 'assente' | 'fuori-sede';
     absenceType?: string;
 }
 
@@ -68,6 +68,7 @@ export interface UseDailyPresencesReturn {
     smart: EmployeePresence[];
     office: EmployeePresence[];
     assente: EmployeePresence[];
+    fuoriSede: EmployeePresence[];
     loading: boolean;
     total: number;
 }

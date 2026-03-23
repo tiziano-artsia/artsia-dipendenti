@@ -1,15 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
-import {connectDB, EmployeeModel, AbsenceModel, type EmployeeDoc, type Team} from '@/lib/db';
+import {connectDB, EmployeeModel, AbsenceModel, type EmployeeDoc} from '@/lib/db';
 import type {PresenceEmployee} from "@/types";
-
-
 
 export async function GET(request: NextRequest) {
     try {
         await connectDB();
 
         const { searchParams } = new URL(request.url);
-        const date = searchParams.get('date') || new Date().toISOString().split('T')[0]; // YYYY-MM-DD
+        const date = searchParams.get('date') || new Date().toISOString().split('T')[0];
 
         const employees = await EmployeeModel.find({
             role: { $ne: "admin" }
@@ -34,19 +32,26 @@ export async function GET(request: NextRequest) {
             let status: PresenceEmployee['status'] = 'ufficio';
             let absenceType: string | undefined;
 
+            // Priorità: smartworking > ferie/malattia > fuori-sede > ufficio
             const smartworkingAbsence = todayAbsences.find(abs => abs.type === 'smartworking');
             if (smartworkingAbsence) {
                 status = 'smart';
                 absenceType = smartworkingAbsence.type;
             } else {
-                const otherAbsence = todayAbsences.find(abs =>
+                const ferieMalattia = todayAbsences.find(abs =>
                     ['ferie', 'malattia'].includes(abs.type)
                 );
-                if (otherAbsence) {
+                if (ferieMalattia) {
                     status = 'assente';
-                    absenceType = otherAbsence.type;
+                    absenceType = ferieMalattia.type;
+                } else {
+                    const fuoriSedeAbsence = todayAbsences.find(abs => abs.type === 'fuori-sede');
+                    if (fuoriSedeAbsence) {
+                        status = 'fuori-sede';
+                        absenceType = fuoriSedeAbsence.type;
+                    }
+                    // Altrimenti status = 'ufficio' (default)
                 }
-                // Se nessuna assenza → ufficio
             }
 
             presences.push({
@@ -58,8 +63,6 @@ export async function GET(request: NextRequest) {
                 absenceType
             });
         }
-
-
 
         const filteredPresences = presences.filter(p =>
             ['Sviluppo', 'Digital'].includes(p.team)

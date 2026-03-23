@@ -22,7 +22,8 @@ import {
     MapPin,
     Baby,
     List,
-    Plus, ChevronRight, ChevronLeft, CalendarDays, FolderArchive
+    Plus, ChevronRight, ChevronLeft, CalendarDays, FolderArchive,
+    Gem
 } from 'lucide-react';
 import type {AbsenceDoc} from "@/lib/db";
 import toast, {Toaster} from "react-hot-toast";
@@ -416,6 +417,9 @@ export default function MieiDati() {
         if (tipoLower === 'festivita' || tipoLower === 'festività') return Calendar;
         if (tipoLower === 'fuori-sede') return MapPin;
         if (tipoLower === 'congedo-parentale') return Baby;
+        if (tipoLower === 'congedo-parentale') return Baby;
+        if (tipo.toLowerCase().includes('maternità')) return Baby;
+        if (tipoLower === 'congedo-matrimoniale') return Gem ;
         return Calendar;
     };
 
@@ -428,6 +432,8 @@ export default function MieiDati() {
                         tipoLower === 'festivita' || tipoLower === 'festività' ? 'Festività' :
                             tipoLower === 'fuori-sede' ? 'Fuori Sede' :
                                 tipoLower === 'congedo-parentale' ? 'Congedo Parentale' :
+                                    tipoLower === 'maternità' ? 'Maternità' :
+                                        tipoLower === 'congedo-matrimoniale' ? 'Congedo Matrimoniale' :
                                     'Altro';
     };
 
@@ -439,6 +445,8 @@ export default function MieiDati() {
         if (t === 'smartworking') return 'from-blue-500 to-blue-600 border-blue-400';
         if (t === 'fuori-sede') return 'from-cyan-500 to-cyan-600 border-cyan-400';
         if (t === 'congedo-parentale') return 'from-pink-500 to-pink-600 border-pink-400';
+        if (t === 'maternità') return 'from-pink-500 to-pink-600 border-pink-400';
+        if (t === 'congedo-matrimoniale') return 'from-amber-400 to-yellow-500 border-amber-400';
         return 'from-gray-500 to-gray-600 border-gray-400';
     };
     const formattaData = (dataIso: string): string => {
@@ -672,6 +680,8 @@ export default function MieiDati() {
                                             <option value="smartworking">🏠 Smartworking</option>
                                             <option value="fuori-sede">📍 Fuori Sede</option>
                                             <option value="congedo-parentale">👶 Congedo Parentale</option>
+                                            <option value="maternità">🤰Maternità</option>
+                                            <option value="congedo-matrimoniale">🤍 Congedo Matrimoniale</option>
                                         </select>
                                     </div>
                                     <div>
@@ -795,11 +805,18 @@ export default function MieiDati() {
                                     );
 
                                     const renderRiga = (assenza: typeof assenzeFiltrate[0], index: number) => {
-                                        const tipoLower = (assenza.tipo || '').toLowerCase().trim();
+                                        const tipoLower = assenza.tipo
+                                                ?.toLowerCase()
+                                                .trim()
+                                                .replace(/\s+/g, '-')
+                                            || '';
+
                                         const isPermesso = tipoLower === 'permesso';
                                         const TipoIcon = getTipoIcon(assenza.tipo);
                                         const canCancel = (() => {
+
                                             const dataString = assenza.dataInizio || assenza.data;
+
                                             if (!dataString || dataString === 'N/D') return false;
                                             try {
                                                 let dataRichiesta: Date;
@@ -815,6 +832,7 @@ export default function MieiDati() {
                                                 dataRichiesta.setHours(0, 0, 0, 0);
                                                 if (oggi2 > dataRichiesta) return false;
                                                 if (tipoLower === 'smartworking') return true;
+                                                if (tipoLower === 'fuori-sede') return true;
                                                 return assenza.stato === 'pending';
                                             } catch {
                                                 return false;
@@ -1446,6 +1464,8 @@ export default function MieiDati() {
                                     <option value="smartworking">🏠 Smartworking</option>
                                     <option value="fuori-sede">✈️ Fuori Sede</option>
                                     <option value="congedo-parentale">👶 Congedo Parentale</option>
+                                    <option value="maternità">🤰Maternità</option>
+                                    <option value="congedo-matrimoniale">🤍 Congedo Matrimoniale</option>
                                 </select>
                             </div>
 

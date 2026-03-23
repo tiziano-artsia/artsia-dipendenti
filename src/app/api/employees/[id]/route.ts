@@ -6,9 +6,9 @@ const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
 
 export async function PUT(
     req: NextRequest,
-    { params }: { params: Promise<{ id: string }> }  // ✅ Promise!
+    { params }: { params: Promise<{ id: string }> }
 ) {
-    console.log('🚀 PUT START');
+
 
     try {
         await connectDB();

@@ -42,9 +42,11 @@ export default function useDailyPresences(date: string): UseDailyPresencesReturn
     const smart = presences.filter((p: EmployeePresence) => p.status === 'smart');
     const office = presences.filter((p: EmployeePresence) => p.status === 'ufficio');
     const assente = presences.filter((p: EmployeePresence) => p.status === 'assente');
+    const fuoriSede = presences.filter((p: EmployeePresence) => p.status === 'fuori-sede');
 
     return {
         smart,
+        fuoriSede,
         office,
         loading,
         assente,

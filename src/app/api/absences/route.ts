@@ -48,7 +48,7 @@ export async function GET(request: NextRequest) {
         const { searchParams } = request.nextUrl;
         const employeeIdParam = searchParams.get('employeeId');
 
-        console.log('📊 GET Absences:', { role: user.role, userId: user.id, filter: employeeIdParam || 'tutti' });
+        //console.log('📊 GET Absences:', { role: user.role, userId: user.id, filter: employeeIdParam || 'tutti' });
 
         const filter: any = {};
         if (user.role !== 'admin') {
@@ -85,7 +85,7 @@ export async function POST(request: NextRequest) {
 
         const tipiValidi = new Set([
             'ferie', 'permesso', 'smartworking', 'malattia',
-            'festivita', 'fuori-sede', 'congedo-parentale'
+            'festivita', 'fuori-sede', 'congedo-parentale','maternità','congedo-matrimoniale'
         ]);
 
         if (!tipiValidi.has(typeNorm)) {
@@ -126,7 +126,6 @@ export async function POST(request: NextRequest) {
         // ── CALCOLA dataFine ──────────────────────────────────
         const dataFineISO = calcolaDataFine(dataInizioISO, durata, typeNorm);
 
-        console.log(`📅 dataInizio: ${dataInizioISO} | dataFine: ${dataFineISO} | durata: ${durata} | tipo: ${typeNorm}`);
 
         let status = body.status || 'pending';
         let approvedBy = body.approvedBy || null;
@@ -185,21 +184,24 @@ export async function POST(request: NextRequest) {
                     );
                 }
             } else {
-                console.log('🏠 Dipendente fullRemote: skip controllo presenze');
+                console.log('Dipendente fullRemote: skip controllo presenze');
             }
 
             status = 'approved';
             approvedBy = user.id;
-            console.log('✅ Auto-approvato: smartworking');
+            //console.log(' Auto-approvato: smartworking');
         }
 
         // ── FESTIVITA ─────────────────────────────────────────
         if (typeNorm === 'festivita') {
             status = 'approved';
             approvedBy = user.id;
-            console.log('✅ Auto-approvato: festivita');
         }
-
+        // ── FUORI SEDE ─────────────────────────────────────────────
+        if (typeNorm === 'fuori-sede') {
+            status = 'approved';
+            approvedBy = user.id;
+        }
         // ── CREA ASSENZA ──────────────────────────────────────
         const newAbsence = await createAbsence({
             employeeId: Number(body.employeeId || user.id),
@@ -232,7 +234,11 @@ export async function POST(request: NextRequest) {
                         'permesso': 'Permesso',
                         'malattia': 'Malattia',
                         'fuori-sede': 'Fuori Sede',
-                        'congedo-parentale': 'Congedo Parentale'
+                        'congedo-parentale': 'Congedo Parentale',
+                        'maternità': 'Maternità',
+                        'congedo-matrimoniale': 'Congedo Matrimoniale',
+                        'smartworking': 'Smartworking',
+                        'festivita': 'Festività'
                     };
 
                     const tipoLabel = tipoLabels[typeNorm] || 'Assenza';
@@ -250,7 +256,7 @@ export async function POST(request: NextRequest) {
                                 relatedRequestId: String(newAbsence.id),
                                 url: `/dashboard/approvazioni`
                             });
-                            console.log(`🔔 Notifica inviata ad admin ${admin.name} (ID: ${admin.id})`);
+                            //console.log(`🔔 Notifica inviata ad admin ${admin.name} (ID: ${admin.id})`);
                         } catch (notifError) {
                             console.error(`❌ Errore notifica admin ${admin.id}:`, notifError);
                         }
@@ -281,7 +287,7 @@ export async function PATCH(request: NextRequest) {
         const body = await request.json();
         const { id, action } = body;
 
-        console.log('🔍 PATCH:', { id, action, user: user.email });
+        //console.log('🔍 PATCH:', { id, action, user: user.email });
 
         if (!id || !['approve', 'reject'].includes(action)) {
             return NextResponse.json({ error: 'id e action (approve/reject) obbligatori' }, { status: 400 });
@@ -304,7 +310,7 @@ export async function PATCH(request: NextRequest) {
             return NextResponse.json({ error: 'Errore aggiornamento' }, { status: 404 });
         }
 
-        console.log('✅ Aggiornato:', { id, status: action });
+        //console.log('✅ Aggiornato:', { id, status: action });
 
         try {
             const typeNorm = absence.type?.toLowerCase() || absence.tipo?.toLowerCase();
@@ -315,6 +321,8 @@ export async function PATCH(request: NextRequest) {
                 'malattia': 'Malattia',
                 'fuori-sede': 'Fuori Sede',
                 'congedo-parentale': 'Congedo Parentale',
+                'maternità': 'Maternità',
+                'congendo-matrimoniale': 'Congendo Matrimoniale',
                 'smartworking': 'Smartworking',
                 'festivita': 'Festività'
             };
@@ -341,7 +349,7 @@ export async function PATCH(request: NextRequest) {
                 url: `/dashboard/miei-dati`
             });
 
-            console.log(`✅ Notifica ${action} inviata al dipendente ${absence.employeeId}`);
+            //console.log(`✅ Notifica ${action} inviata al dipendente ${absence.employeeId}`);
         } catch (notifError) {
             console.error('❌ Errore invio notifica dipendente:', notifError);
         }
