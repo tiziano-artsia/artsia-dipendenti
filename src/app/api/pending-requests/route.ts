@@ -1,40 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { EmployeeModel, AbsenceModel } from '@/lib/db';
 import jwt from 'jsonwebtoken';
-import type { ObjectId } from 'mongoose';
 
 const JWT_SECRET = process.env.JWT_SECRET!;
 
-interface PopulatedAbsence {
-    _id: ObjectId;
-    employeeId: {
-        _id: ObjectId;
-        nome: string;
-        email: string;
-        team?: string;
-    };
-    type: string;
-    dataInizio: string | Date;
-    durata: number;
-    status: string;
-    motivo?: string;
-}
-
-interface PendingRequest {
-    id: string;
-    employeeId: string;
-    dipendente: string;
-    team: string;
-    tipo: string;
-    data: string;
-    durata: string;
-    stato: string;
-    motivo?: string;
-}
-
+// @ts-ignore
 export async function GET(request: NextRequest) {
     try {
-        // Auth
         const authHeader = request.headers.get('authorization');
         if (!authHeader?.startsWith('Bearer ')) {
             return NextResponse.json({ error: 'Non autenticato' }, { status: 401 });
@@ -47,20 +19,18 @@ export async function GET(request: NextRequest) {
             return NextResponse.json({ error: 'Non autorizzato' }, { status: 403 });
         }
 
-        // Query PENDING + populate
-        const absences: PopulatedAbsence[] = await AbsenceModel.find({
+        const absences = await AbsenceModel.find({
             status: 'pending',
-            type: { $in: ['ferie', 'permesso', 'smartworking', 'fuori-sede'] } // + nuovi tipi
+            type: { $in: ['ferie', 'permesso', 'smartworking', 'fuori-sede'] }
         })
             .populate('employeeId', 'nome email team')
-            .lean();
+            .lean() as any[];
 
-        // Format response
-        const formatted: PendingRequest[] = absences.map((abs) => ({
-            id: abs._id!.toString(),
-            employeeId: abs.employeeId._id!.toString(),
-            dipendente: abs.employeeId.nome,
-            team: abs.employeeId.team || 'Sviluppo',
+        const formatted = absences.map((abs: any) => ({
+            id: abs._id?.toString(),
+            employeeId: abs.employeeId?._id?.toString() || abs.employeeId,
+            dipendente: abs.employeeId?.nome,
+            team: abs.employeeId?.team || 'Sviluppo',
             tipo: abs.type === 'smartworking' ? 'Smartworking' :
                 abs.type === 'fuori-sede' ? 'Fuori Sede' :
                     abs.type === 'ferie' ? 'Ferie' : 'Permesso',
@@ -78,6 +48,6 @@ export async function GET(request: NextRequest) {
 
     } catch (error) {
         console.error('Pending requests error:', error);
-        return NextResponse.json({ error: 'Errore server interno' }, { status: 500 });
+        return NextResponse.json({ error: 'Errore server' }, { status: 500 });
     }
 }
