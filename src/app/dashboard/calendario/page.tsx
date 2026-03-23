@@ -43,6 +43,7 @@ interface Absence {
 }
 
 interface Employee {
+    role: string;
     id: number;
     name: string;
     team: string;
@@ -486,9 +487,9 @@ export default function Calendario() {
         const [anno, mese, giorno] = dataISO.split('-');
         return `${giorno}/${mese}/${anno}`;
     };
-
+/*
     const exportExcelMensile = () => {
-        // ✅ INIZIALIZZA tutti i dipendenti con valori a 0
+        //  INIZIALIZZA tutti i dipendenti con valori a 0
         const totaliPerDipendente: Record<
             string,
             {
@@ -499,6 +500,8 @@ export default function Calendario() {
                 festivita: number;
                 'fuori-sede': number;
                 'congedo-parentale': number;
+                'maternià': number;
+                'congedo-matrimoniale': number;
                 motivi: string[];
             }
         > = {};
@@ -665,6 +668,214 @@ export default function Calendario() {
 
         toast.success('📊 Excel esportato con successo!');
     };
+*/
+
+    const exportExcelMensile = () => {
+        const giorniTotaliMese = getGiorniMese(mese, anno);
+
+        const dipendentiOrdinati = employees
+            .filter(emp => emp.role !== "admin")
+            .sort((a, b) => a.name.localeCompare(b.name));
+
+        // 1. Inizializza matrice e totali
+        const matrice: Record<number, Record<string, string[]>> = {}; // ← ARRAY per sovrapposizioni
+        const totaliPerDipendente: Record<string, Record<string, number>> = {};
+
+        for (let giorno = 1; giorno <= giorniTotaliMese; giorno++) {
+            matrice[giorno] = {};
+            dipendentiOrdinati.forEach(emp => {
+                matrice[giorno][emp.name] = [];
+            });
+        }
+
+        dipendentiOrdinati.forEach(emp => {
+            totaliPerDipendente[emp.name] = {
+                'Ferie': 0,
+                'Permesso': 0,
+                'Malattia': 0,
+                'Smartworking': 0,
+                'Fuori Sede': 0,
+                'Congedo Parentale': 0,
+                'Maternità': 0,
+                'Congedo Matrimoniale': 0,
+                'Festività': 0
+            };
+        });
+
+        // 2. Popola matrice e totali
+        const assenzeDelMese = assenze
+            .filter((a) => a.stato !== 'rejected')
+            .filter((a) => {
+                const raw = a.dataInizio;
+                let date: Date | null = null;
+                if (raw.includes('/')) {
+                    const [g, m, y] = raw.split('/');
+                    date = new Date(Number(y), Number(m) - 1, Number(g));
+                } else if (raw.includes('-')) {
+                    const [y, m, g] = raw.split('-');
+                    date = new Date(Number(y), Number(m) - 1, Number(g));
+                }
+                return date && !isNaN(date.getTime()) &&
+                    date.getMonth() === mese && date.getFullYear() === anno;
+            });
+
+        assenzeDelMese.forEach((a) => {
+            const empName = getEmployeeById(a.employeeId)?.name || 'N/D';
+
+            // Salta se è admin
+            if (!dipendentiOrdinati.find(emp => emp.name === empName)) return;
+
+            const tipoLabel = getNomeAssenza(a.tipo);
+            const durata = Number(a.durata) || 1;
+
+            // Estrai dataInizio
+            let dataInizio: Date;
+            const rawInizio = a.dataInizio;
+            if (rawInizio.includes('/')) {
+                const [g, m, y] = rawInizio.split('/');
+                dataInizio = new Date(Number(y), Number(m) - 1, Number(g));
+            } else {
+                const [y, m, g] = rawInizio.split('-');
+                dataInizio = new Date(Number(y), Number(m) - 1, Number(g));
+            }
+
+            // Estrai dataFine
+            let dataFine: Date;
+            const rawFine = a.dataFine || a.dataInizio;
+            if (rawFine.includes('/')) {
+                const [g, m, y] = rawFine.split('/');
+                dataFine = new Date(Number(y), Number(m) - 1, Number(g));
+            } else {
+                const [y, m, g] = rawFine.split('-');
+                dataFine = new Date(Number(y), Number(m) - 1, Number(g));
+            }
+
+            //  Riempi matrice da dataInizio a dataFine (AGGIUNGE a lista esistente)
+            let currentDate = new Date(dataInizio);
+            while (currentDate <= dataFine) {
+                const giorno = currentDate.getDate();
+                if (currentDate.getMonth() === mese && currentDate.getFullYear() === anno) {
+                    // AGGIUNGE alla lista esistente (gestisce sovrapposizioni)
+                    if (!matrice[giorno][empName].includes(tipoLabel)) {
+                        matrice[giorno][empName].push(tipoLabel);
+                    }
+                }
+                currentDate.setDate(currentDate.getDate() + 1);
+            }
+
+            // Incrementa totali
+            if (totaliPerDipendente[empName]) {
+                totaliPerDipendente[empName][tipoLabel] += durata;
+            }
+        });
+
+        // ========== SHEET 1: CALENDARIO ASSENZE ==========
+        const datiSheet1: (string | number)[][] = [];
+        datiSheet1.push([`CALENDARIO ASSENZE ${nomiMesi[mese]} ${anno}`]);
+        datiSheet1.push([]);
+
+        const headerRow = ['Data'];
+        dipendentiOrdinati.forEach(emp => headerRow.push(emp.name));
+        datiSheet1.push(headerRow);
+
+        for (let giorno = 1; giorno <= giorniTotaliMese; giorno++) {
+            const dataFormattata = `${String(giorno).padStart(2, '0')}/${String(mese + 1).padStart(2, '0')}/${anno}`;
+            const row: (string | number)[] = [dataFormattata];
+            dipendentiOrdinati.forEach(emp => {
+                const assenzeGiorno = matrice[giorno][emp.name];
+                row.push(assenzeGiorno.length > 0 ? assenzeGiorno.join(' - ') : '-');
+            });
+            datiSheet1.push(row);
+        }
+
+        // ========== SHEET 2: TOTALI RIASSUNTIVI ==========
+        const datiSheet2: (string | number)[][] = [];
+        datiSheet2.push([`TOTALI ASSENZE ${nomiMesi[mese]} ${anno}`]);
+        datiSheet2.push([]);
+
+        // Determina quali tipi sono presenti
+        const tipiPresenti = new Set<string>();
+        Object.values(totaliPerDipendente).forEach(totali => {
+            Object.entries(totali).forEach(([tipo, valore]) => {
+                if (valore > 0) tipiPresenti.add(tipo);
+            });
+        });
+
+        const tipiOrdinati = Array.from(tipiPresenti).sort();
+
+        // Header dinamico
+        const headerSheet2 = ['Dipendente', ...tipiOrdinati];
+        datiSheet2.push(headerSheet2);
+
+        // Righe con totali per dipendente
+        dipendentiOrdinati.forEach(emp => {
+            const row: (string | number)[] = [emp.name];
+            tipiOrdinati.forEach(tipo => {
+                const valore = totaliPerDipendente[emp.name][tipo] || 0;
+                if (valore > 0) {
+                    if (tipo === 'Permesso') {
+                        row.push(`${valore} h`);
+                    } else {
+                        row.push(`${valore} gg`);
+                    }
+                } else {
+                    row.push('-');
+                }
+            });
+            datiSheet2.push(row);
+        });
+
+        // ========== CREA WORKBOOK ==========
+        const workbook = XLSX.utils.book_new();
+
+        const worksheet1 = XLSX.utils.aoa_to_sheet(datiSheet1);
+        const colWidths1 = [{wch: 12}];
+        dipendentiOrdinati.forEach(() => colWidths1.push({wch: 20})); // Più largo per sovrapposizioni
+        worksheet1['!cols'] = colWidths1;
+        XLSX.utils.book_append_sheet(workbook, worksheet1, 'Calendario Assenze');
+
+        const worksheet2 = XLSX.utils.aoa_to_sheet(datiSheet2);
+        const colWidths2 = [{wch: 25}];
+        tipiOrdinati.forEach(() => colWidths2.push({wch: 15}));
+        worksheet2['!cols'] = colWidths2;
+        XLSX.utils.book_append_sheet(workbook, worksheet2, 'Totali Riassuntivi');
+
+        // Scarica
+        const excelBuffer = XLSX.write(workbook, {bookType: 'xlsx', type: 'array'});
+        const blob = new Blob([excelBuffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(blob);
+        link.download = `assenze_${nomiMesi[mese]}_${anno}.xlsx`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(link.href);
+
+        toast.success('📊 Excel esportato!');
+    };
+
+    function getNomeAssenza(tipo: string): string {
+        const mapping: Record<string, string> = {
+            'ferie': 'Ferie',
+            'permesso': 'Permesso',
+            'malattia': 'Malattia',
+            'smartworking': 'Smartworking',
+            'fuori-sede': 'Fuori Sede',
+            'congedo-parentale': 'Congedo Parentale',
+            'maternità': 'Maternità',
+            'congedo-matrimoniale': 'Congedo Matrimoniale',
+            'festivita': 'Festività'
+        };
+
+        const tipoNorm = tipo
+            ?.toLowerCase()
+            ?.normalize('NFD')
+            ?.replace(/[\u0300-\u036f]/g, '')
+            ?.replace(/\s+/g, '-') || '';
+
+        return mapping[tipoNorm] || 'Assenza';
+    }
 
     // FUNZIONI PER VISTA SETTIMANALE
     const getInizioSettimana = (date: Date): Date => {
