@@ -1,11 +1,40 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { EmployeeModel, AbsenceModel } from '@/lib/db';
 import jwt from 'jsonwebtoken';
+import type { ObjectId } from 'mongoose';
 
 const JWT_SECRET = process.env.JWT_SECRET!;
 
+interface PopulatedAbsence {
+    _id: ObjectId;
+    employeeId: {
+        _id: ObjectId;
+        nome: string;
+        email: string;
+        team?: string;
+    };
+    type: string;
+    dataInizio: string | Date;
+    durata: number;
+    status: string;
+    motivo?: string;
+}
+
+interface PendingRequest {
+    id: string;
+    employeeId: string;
+    dipendente: string;
+    team: string;
+    tipo: string;
+    data: string;
+    durata: string;
+    stato: string;
+    motivo?: string;
+}
+
 export async function GET(request: NextRequest) {
     try {
+        // Auth
         const authHeader = request.headers.get('authorization');
         if (!authHeader?.startsWith('Bearer ')) {
             return NextResponse.json({ error: 'Non autenticato' }, { status: 401 });
@@ -18,31 +47,37 @@ export async function GET(request: NextRequest) {
             return NextResponse.json({ error: 'Non autorizzato' }, { status: 403 });
         }
 
-        // Solo PENDING requests
-        const absences = await AbsenceModel.find({
+        // Query PENDING + populate
+        const absences: PopulatedAbsence[] = await AbsenceModel.find({
             status: 'pending',
-            type: { $in: ['ferie', 'permesso', 'smartworking'] }
+            type: { $in: ['ferie', 'permesso', 'smartworking', 'fuori-sede'] } // + nuovi tipi
         })
             .populate('employeeId', 'nome email team')
             .lean();
 
-        // Formatta per frontend
-        const formatted = absences.map(abs => ({
-            id: abs._id,
-            employeeId: abs.employeeId._id,
+        // Format response
+        const formatted: PendingRequest[] = absences.map((abs) => ({
+            id: abs._id!.toString(),
+            employeeId: abs.employeeId._id!.toString(),
             dipendente: abs.employeeId.nome,
             team: abs.employeeId.team || 'Sviluppo',
             tipo: abs.type === 'smartworking' ? 'Smartworking' :
-                abs.type === 'ferie' ? 'Ferie' : 'Permesso',
+                abs.type === 'fuori-sede' ? 'Fuori Sede' :
+                    abs.type === 'ferie' ? 'Ferie' : 'Permesso',
             data: new Date(abs.dataInizio).toLocaleDateString('it-IT'),
-            durata: abs.durata + (typeof abs.durata === 'number' ? ' giorni' : ' ore'),
+            durata: `${abs.durata} ${abs.durata === 1 ? 'giorno' : 'giorni'}`,
             stato: abs.status,
-            motivo: abs.motivo
+            motivo: abs.motivo || ''
         }));
 
-        return NextResponse.json({ success: true, data: formatted });
+        return NextResponse.json({
+            success: true,
+            data: formatted,
+            count: formatted.length
+        });
+
     } catch (error) {
         console.error('Pending requests error:', error);
-        return NextResponse.json({ error: 'Errore server' }, { status: 500 });
+        return NextResponse.json({ error: 'Errore server interno' }, { status: 500 });
     }
 }
