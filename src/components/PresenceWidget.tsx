@@ -215,7 +215,6 @@ const PresenceWidget: React.FC = () => {
                                 >
                                     <div className="w-3 h-3 bg-orange-500 rounded-full flex-shrink-0" />
                                     <span className="font-medium text-zinc-800 truncate">{emp.name}</span>
-                                    {emp.surname && <span className="text-zinc-500">({emp.surname})</span>}
                                 </div>
                             ))}
                             {fuoriSede.length > 8 && (
