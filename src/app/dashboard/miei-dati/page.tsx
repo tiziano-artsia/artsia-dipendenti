@@ -1536,7 +1536,7 @@ export default function MieiDati() {
                                                     durata: String(giorni)
                                                 });
                                             }}
-                                            min={new Date().toISOString().split('T')[0]}
+                                            //min={new Date().toISOString().split('T')[0]}
                                             max={form.tipo === 'smartworking' ? (() => {
                                                 const max = new Date();
                                                 max.setDate(max.getDate() + 30);
@@ -1563,7 +1563,7 @@ export default function MieiDati() {
                                                     : '';
                                                 setForm({...form, dataFine: nuovaFine, durata: String(giorni)});
                                             }}
-                                            min={form.dataInizio || new Date().toISOString().split('T')[0]}
+                                            //min={form.dataInizio || new Date().toISOString().split('T')[0]}
                                             max={form.tipo === 'smartworking' ? (() => {
                                                 const max = new Date();
                                                 max.setDate(max.getDate() + 30);
