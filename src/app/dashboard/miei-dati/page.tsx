@@ -513,7 +513,37 @@ export default function MieiDati() {
 
     const nomeUtente = user?.name || `Utente ${user?.id || ''}`;
 
+    const countWorkingDays = (dataInizio: string, dataFine: string): number => {
+        if (!dataInizio || !dataFine) return 0;
 
+        const start = new Date(dataInizio);
+        const end = new Date(dataFine);
+
+        start.setHours(0, 0, 0, 0);
+        end.setHours(0, 0, 0, 0);
+
+        if (start > end) return 0;
+
+        let count = 0;
+        const current = new Date(start);
+
+        while (current <= end) {
+            const day = current.getDay();
+            const dateStr = `${current.getFullYear()}-${String(current.getMonth() + 1).padStart(2, '0')}-${String(current.getDate()).padStart(2, '0')}`;
+            const holidays = getItalianHolidays(current.getFullYear());
+
+            const isWeekend = day === 0 || day === 6;
+            const isHoliday = holidays.includes(dateStr);
+
+            if (!isWeekend && !isHoliday) {
+                count++;
+            }
+
+            current.setDate(current.getDate() + 1);
+        }
+
+        return count;
+    };
     if (loading) {
         return (
             <div
@@ -1524,11 +1554,11 @@ export default function MieiDati() {
                                             value={form.dataInizio}
                                             onChange={(e) => {
                                                 const nuovaInizio = e.target.value;
-                                                // Se dataFine è precedente alla nuova dataInizio, reset
                                                 const nuovaFine = form.dataFine && form.dataFine < nuovaInizio ? '' : form.dataFine;
                                                 const giorni = nuovaInizio && nuovaFine
-                                                    ? Math.round((new Date(nuovaFine).getTime() - new Date(nuovaInizio).getTime()) / (1000 * 60 * 60 * 24)) + 1
+                                                    ? countWorkingDays(nuovaInizio, nuovaFine)
                                                     : '';
+
                                                 setForm({
                                                     ...form,
                                                     dataInizio: nuovaInizio,
@@ -1559,9 +1589,14 @@ export default function MieiDati() {
                                             onChange={(e) => {
                                                 const nuovaFine = e.target.value;
                                                 const giorni = form.dataInizio && nuovaFine
-                                                    ? Math.round((new Date(nuovaFine).getTime() - new Date(form.dataInizio).getTime()) / (1000 * 60 * 60 * 24)) + 1
+                                                    ? countWorkingDays(form.dataInizio, nuovaFine)
                                                     : '';
-                                                setForm({...form, dataFine: nuovaFine, durata: String(giorni)});
+
+                                                setForm({
+                                                    ...form,
+                                                    dataFine: nuovaFine,
+                                                    durata: String(giorni)
+                                                });
                                             }}
                                             //min={form.dataInizio || new Date().toISOString().split('T')[0]}
                                             max={form.tipo === 'smartworking' ? (() => {
@@ -1583,8 +1618,8 @@ export default function MieiDati() {
                                     className="px-5 py-4 bg-gradient-to-r from-emerald-50 to-green-50 border-2 border-emerald-300 rounded-xl sm:rounded-2xl flex items-center gap-3 shadow-md">
                                     <CheckCircle className="w-5 h-5 text-emerald-600 shrink-0"/>
                                     <span className="text-base sm:text-lg font-black text-emerald-800">
-                        Durata : <span className="text-2xl">{form.durata}</span> {Number(form.durata) === 1 ? 'giorno' : 'giorni'}
-                    </span>
+            Durata : <span className="text-2xl">{form.durata}</span> {Number(form.durata) === 1 ? 'giorno' : 'giorni'}
+        </span>
                                 </div>
                             )}
 
