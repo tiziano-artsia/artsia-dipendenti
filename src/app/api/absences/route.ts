@@ -32,8 +32,17 @@ function getUserFromToken(request: NextRequest): JWTPayload | null {
 
 function calcolaDataFine(dataInizio: string, durata: number, tipo: string): string {
     if (tipo === 'permesso') return dataInizio;
+
     const [y, m, d] = dataInizio.split('-').map(Number);
     const fine = new Date(y, m - 1, d);
+
+    // Congedo matrimoniale: conta tutti i giorni consecutivi, inclusi sabato e domenica
+    if (tipo === 'congedo-matrimoniale') {
+        fine.setDate(fine.getDate() + durata - 1);
+        return `${fine.getFullYear()}-${String(fine.getMonth() + 1).padStart(2, '0')}-${String(fine.getDate()).padStart(2, '0')}`;
+    }
+
+    // Altri tipi: stesso comportamento attuale
     fine.setDate(fine.getDate() + durata - 1);
     return `${fine.getFullYear()}-${String(fine.getMonth() + 1).padStart(2, '0')}-${String(fine.getDate()).padStart(2, '0')}`;
 }

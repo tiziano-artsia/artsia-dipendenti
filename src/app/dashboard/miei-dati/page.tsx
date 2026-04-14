@@ -513,16 +513,25 @@ export default function MieiDati() {
 
     const nomeUtente = user?.name || `Utente ${user?.id || ''}`;
 
-    const countWorkingDays = (dataInizio: string, dataFine: string): number => {
+    const countDays = (
+        dataInizio: string,
+        dataFine: string,
+        tipo?: string
+    ): number => {
         if (!dataInizio || !dataFine) return 0;
 
         const start = new Date(dataInizio);
         const end = new Date(dataFine);
-
         start.setHours(0, 0, 0, 0);
         end.setHours(0, 0, 0, 0);
 
         if (start > end) return 0;
+
+        // Congedo matrimoniale: conta tutti i giorni, inclusi sabato e domenica
+        if ((tipo || '').toLowerCase() === 'congedo-matrimoniale') {
+            const diffMs = end.getTime() - start.getTime();
+            return Math.floor(diffMs / (1000 * 60 * 60 * 24)) + 1;
+        }
 
         let count = 0;
         const current = new Date(start);
@@ -535,9 +544,7 @@ export default function MieiDati() {
             const isWeekend = day === 0 || day === 6;
             const isHoliday = holidays.includes(dateStr);
 
-            if (!isWeekend && !isHoliday) {
-                count++;
-            }
+            if (!isWeekend && !isHoliday) count++;
 
             current.setDate(current.getDate() + 1);
         }
@@ -1556,7 +1563,7 @@ export default function MieiDati() {
                                                 const nuovaInizio = e.target.value;
                                                 const nuovaFine = form.dataFine && form.dataFine < nuovaInizio ? '' : form.dataFine;
                                                 const giorni = nuovaInizio && nuovaFine
-                                                    ? countWorkingDays(nuovaInizio, nuovaFine)
+                                                    ? countDays(nuovaInizio, nuovaFine, form.tipo)
                                                     : '';
 
                                                 setForm({
@@ -1589,7 +1596,7 @@ export default function MieiDati() {
                                             onChange={(e) => {
                                                 const nuovaFine = e.target.value;
                                                 const giorni = form.dataInizio && nuovaFine
-                                                    ? countWorkingDays(form.dataInizio, nuovaFine)
+                                                    ? countDays(form.dataInizio, nuovaFine, form.tipo)
                                                     : '';
 
                                                 setForm({

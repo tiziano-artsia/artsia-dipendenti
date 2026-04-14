@@ -385,13 +385,18 @@ export default function Calendario() {
     const getAssenzePerData = (dataStr: string): Absence[] => {
         const assenzeGiorno = assenze.filter((assenza) => {
             const raw = assenza as unknown as Record<string, any>;
-            const tipo = assenza.tipo ?? raw.type;
+            const tipo = (assenza.tipo ?? raw.type ?? '').toLowerCase();
             const dataAssenza = assenza.dataInizio;
 
+            if (!dataAssenza) return false;
+
+            // Match diretto
             if (dataAssenza === dataStr) return true;
 
+            // I permessi valgono solo sul giorno specifico
             if (tipo === 'permesso') return false;
 
+            // Se arriva in formato italiano dd/mm/yyyy
             if (dataAssenza.includes('/')) {
                 const [giorno, mese, anno] = dataAssenza.split('/');
                 const dataItalianaISO = `${anno}-${mese.padStart(2, '0')}-${giorno.padStart(2, '0')}`;
@@ -409,30 +414,50 @@ export default function Calendario() {
                     dataInizio = new Date(anno, mese - 1, giorno);
                 }
 
-                let giorniLavorativiContati = 0;
-                let dataCorrente = new Date(dataInizio);
-                dataCorrente.setDate(dataCorrente.getDate() - 1);
+                let dataFine: Date;
 
-                while (giorniLavorativiContati < assenza.durata) {
-                    dataCorrente.setDate(dataCorrente.getDate() + 1);
-                    const info = getInfoGiorno(
-                        dataCorrente.getDate(),
-                        dataCorrente.getMonth(),
-                        dataCorrente.getFullYear()
-                    );
-                    if (info.isLavorativo) giorniLavorativiContati++;
+                // SOLO il congedo matrimoniale include sabato e domenica
+                if (tipo === 'congedo-matrimoniale') {
+                    dataFine = new Date(dataInizio);
+                    dataFine.setDate(dataFine.getDate() + Number(assenza.durata) - 1);
+                } else {
+                    let giorniLavorativiContati = 0;
+                    let dataCorrente = new Date(dataInizio);
+                    dataCorrente.setDate(dataCorrente.getDate() - 1);
+
+                    while (giorniLavorativiContati < Number(assenza.durata)) {
+                        dataCorrente.setDate(dataCorrente.getDate() + 1);
+
+                        const info = getInfoGiorno(
+                            dataCorrente.getDate(),
+                            dataCorrente.getMonth(),
+                            dataCorrente.getFullYear()
+                        );
+
+                        if (info.isLavorativo) giorniLavorativiContati++;
+                    }
+
+                    dataFine = dataCorrente;
                 }
 
-                const dataFine = dataCorrente;
                 const [anno, mese, giorno] = dataStr.split('-').map(Number);
                 const dataCheck = new Date(anno, mese - 1, giorno);
+                dataCheck.setHours(0, 0, 0, 0);
+                dataInizio.setHours(0, 0, 0, 0);
+                dataFine.setHours(0, 0, 0, 0);
 
                 if (dataCheck >= dataInizio && dataCheck <= dataFine) {
+                    // SOLO congedo matrimoniale visibile anche nei weekend
+                    if (tipo === 'congedo-matrimoniale') {
+                        return true;
+                    }
+
                     const infoCheck = getInfoGiorno(
                         dataCheck.getDate(),
                         dataCheck.getMonth(),
                         dataCheck.getFullYear()
                     );
+
                     if (infoCheck.isLavorativo) return true;
                 }
             } catch (error) {
@@ -449,7 +474,6 @@ export default function Calendario() {
                 const stato = a.stato ?? raw.status;
 
                 if (filtriAttivi.length > 0 && !filtriAttivi.includes(tipo)) return false;
-
                 if (stato === 'rejected') return false;
 
                 return true;
@@ -467,10 +491,10 @@ export default function Calendario() {
                         note: undefined,
                     } as Absence;
                 }
+
                 return a;
             });
     };
-
     const getEmployeeById = (employeeId: number): Employee | null => {
         const empId = Number(employeeId);
         return employees.find((e) => Number(e.id) === empId) || null;
@@ -483,6 +507,9 @@ export default function Calendario() {
         setAssenzeModale(assenze);
         setModalAperto(true);
     };
+
+
+
 
     const formattaDataItaliana = (dataISO: string) => {
         const [anno, mese, giorno] = dataISO.split('-');
