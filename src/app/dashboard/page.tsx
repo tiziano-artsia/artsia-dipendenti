@@ -26,6 +26,7 @@ import { useUserPayslips } from '@/hooks/useUserPayslips';
 import toast, {Toaster} from "react-hot-toast";
 import PresenceWidget from "@/components/PresenceWidget";
 import OfficeKeysWidget from "@/components/OfficeKeysWidget";
+import {Avviso} from "@/components/Avviso";
 
 export default function Dashboard() {
     const { user, logout, token } = useAuth();
@@ -200,6 +201,7 @@ export default function Dashboard() {
 
             <div className="max-w-7xl mx-auto relative z-10 space-y-4 sm:space-y-6 md:space-y-8">
                 {/* Header - Layout modificato per desktop */}
+                <Avviso />
                 <div className="bg-white/70 backdrop-blur-3xl rounded-2xl sm:rounded-3xl shadow-2xl p-4 sm:p-6 md:p-10 border border-white/60 hover:shadow-3xl transition-all duration-700">
                     {/* Mobile: tutto in colonna */}
                     <div className="flex flex-col gap-4 sm:gap-6 md:hidden">
