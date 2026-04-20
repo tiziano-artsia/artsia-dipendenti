@@ -4,7 +4,7 @@ import {
     createAbsence,
     updateAbsenceStatus,
     getEmployeesByRole,
-    EmployeeModel, connectDB, getTotaleInSmart
+    EmployeeModel, connectDB, getTotaleInSmart, deleteAbsence
 } from '@/lib/db';
 import { sendNotification } from '@/lib/sendNotification';
 import jwt from 'jsonwebtoken';
@@ -359,5 +359,32 @@ export async function PATCH(request: NextRequest) {
     } catch (error) {
         console.error('❌ PATCH error:', error);
         return NextResponse.json({ error: 'Errore aggiornamento' }, { status: 500 });
+    }
+}
+
+
+export async function DELETE(request: NextRequest) {
+    try {
+        const user = getUserFromToken(request);
+        if (!user) {
+            return NextResponse.json({ error: 'Non autenticato' }, { status: 401 });
+        }
+
+        const pathname = request.nextUrl.pathname;
+        const idMatch = pathname.match(/\/api\/absences\/([^\/]+)\/?$/);
+        const absenceId = idMatch ? idMatch[1] : null;
+
+        if (!absenceId) {
+            return NextResponse.json({ error: 'ID mancante' }, { status: 400 });
+        }
+
+        const success = await deleteAbsence(absenceId, user.id);
+        if (!success) {
+            return NextResponse.json({ error: 'Non trovata/autorizzata' }, { status: 404 });
+        }
+
+        return NextResponse.json({ success: true, deleted: absenceId });
+    } catch (error) {
+        return NextResponse.json({ error: 'Errore server' }, { status: 500 });
     }
 }
