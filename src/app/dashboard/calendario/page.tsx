@@ -378,96 +378,68 @@ export default function Calendario() {
         return {
             isWeekend: isWeekend(date),
             isFestivo: isFestivo(date),
-            isLavorativo: !isWeekend(date) && !isFestivo(date),
+            isLavorativo: !isFestivo(date),
         };
     };
 
+
     const getAssenzePerData = (dataStr: string): Absence[] => {
+        const parseDate = (value?: string): Date | null => {
+            if (!value) return null;
+
+            if (value.includes('/')) {
+                const [g, m, a] = value.split('/').map(Number);
+                return new Date(a, m - 1, g);
+            }
+
+            const [a, m, g] = value.split('-').map(Number);
+            return new Date(a, m - 1, g);
+        };
+
         const assenzeGiorno = assenze.filter((assenza) => {
             const raw = assenza as unknown as Record<string, any>;
-            const tipo = (assenza.tipo ?? raw.type ?? '').toLowerCase();
+            const tipo = String(assenza.tipo ?? raw.type ?? '').toLowerCase();
             const dataAssenza = assenza.dataInizio;
 
             if (!dataAssenza) return false;
 
-            // Match diretto
-            if (dataAssenza === dataStr) return true;
+            const dataInizio = parseDate(dataAssenza);
+            const dataFine = parseDate(assenza.dataFine ?? assenza.dataInizio);
+            const dataCheck = parseDate(dataStr);
 
-            // I permessi valgono solo sul giorno specifico
-            if (tipo === 'permesso') return false;
+            if (!dataInizio || !dataFine || !dataCheck) return false;
 
-            // Se arriva in formato italiano dd/mm/yyyy
-            if (dataAssenza.includes('/')) {
-                const [giorno, mese, anno] = dataAssenza.split('/');
-                const dataItalianaISO = `${anno}-${mese.padStart(2, '0')}-${giorno.padStart(2, '0')}`;
-                if (dataItalianaISO === dataStr) return true;
+            dataInizio.setHours(0, 0, 0, 0);
+            dataFine.setHours(0, 0, 0, 0);
+            dataCheck.setHours(0, 0, 0, 0);
+
+            // Permesso solo sul giorno esatto
+            if (tipo === 'permesso') {
+                return dataInizio.getTime() === dataCheck.getTime();
             }
 
-            try {
-                let dataInizio: Date;
-
-                if (dataAssenza.includes('/')) {
-                    const [g, m, a] = dataAssenza.split('/').map(Number);
-                    dataInizio = new Date(a, m - 1, g);
-                } else {
-                    const [anno, mese, giorno] = dataAssenza.split('-').map(Number);
-                    dataInizio = new Date(anno, mese - 1, giorno);
-                }
-
-                let dataFine: Date;
-
-                // SOLO il congedo matrimoniale include sabato e domenica
-                if (tipo === 'congedo-matrimoniale') {
-                    dataFine = new Date(dataInizio);
-                    dataFine.setDate(dataFine.getDate() + Number(assenza.durata) - 1);
-                }else if(tipo === 'malattia' && userTeam == 'Bottega' && tipo === 'ferie' && tipo === 'permesso')  {
-                    dataFine = new Date(dataInizio);
-                    dataFine.setDate(dataFine.getDate() + Number(assenza.durata) - 1);
-                } else {
-                    let giorniLavorativiContati = 0;
-                    let dataCorrente = new Date(dataInizio);
-                    dataCorrente.setDate(dataCorrente.getDate() - 1);
-
-                    while (giorniLavorativiContati < Number(assenza.durata)) {
-                        dataCorrente.setDate(dataCorrente.getDate() + 1);
-
-                        const info = getInfoGiorno(
-                            dataCorrente.getDate(),
-                            dataCorrente.getMonth(),
-                            dataCorrente.getFullYear()
-                        );
-
-                        if (info.isLavorativo) giorniLavorativiContati++;
-                    }
-
-                    dataFine = dataCorrente;
-                }
-
-                const [anno, mese, giorno] = dataStr.split('-').map(Number);
-                const dataCheck = new Date(anno, mese - 1, giorno);
-                dataCheck.setHours(0, 0, 0, 0);
-                dataInizio.setHours(0, 0, 0, 0);
-                dataFine.setHours(0, 0, 0, 0);
-
-                if (dataCheck >= dataInizio && dataCheck <= dataFine) {
-                    // SOLO congedo matrimoniale visibile anche nei weekend
-                    if (tipo === 'congedo-matrimoniale') {
-                        return true;
-                    }
-
-                    const infoCheck = getInfoGiorno(
-                        dataCheck.getDate(),
-                        dataCheck.getMonth(),
-                        dataCheck.getFullYear()
-                    );
-
-                    if (infoCheck.isLavorativo) return true;
-                }
-            } catch (error) {
-                console.warn('Errore calcolo range assenza', dataAssenza, error);
+            // Fuori range => non mostrare
+            if (dataCheck < dataInizio || dataCheck > dataFine) {
+                return false;
             }
 
-            return false;
+            // Congedo matrimoniale visibile anche nei weekend
+            if (tipo === 'congedo-matrimoniale') {
+                return true;
+            }
+
+            const infoCheck = getInfoGiorno(
+                dataCheck.getDate(),
+                dataCheck.getMonth(),
+                dataCheck.getFullYear()
+            );
+
+            // Bottega: sabato valido per ferie e malattia, domenica no
+            if (userTeam === 'Bottega' && ['ferie', 'malattia'].includes(tipo)) {
+                return dataCheck.getDay() !== 0 && !infoCheck.isFestivo;
+            }
+
+            return infoCheck.isLavorativo;
         });
 
         return assenzeGiorno
@@ -518,6 +490,25 @@ export default function Calendario() {
         const [anno, mese, giorno] = dataISO.split('-');
         return `${giorno}/${mese}/${anno}`;
     };
+
+
+    const parseAbsenceDate = (dateStr?: string): Date | null => {
+        if (!dateStr) return null;
+
+        if (dateStr.includes('/')) {
+            const [g, m, a] = dateStr.split('/').map(Number);
+            return new Date(a, m - 1, g);
+        }
+
+        const [a, m, g] = dateStr.split('-').map(Number);
+        return new Date(a, m - 1, g);
+    };
+
+
+
+
+
+
 /*
     const exportExcelMensile = () => {
         //  INIZIALIZZA tutti i dipendenti con valori a 0
@@ -1378,7 +1369,6 @@ export default function Calendario() {
             </div>
         );
     };
-
     if (loading) {
         return (
             <div
@@ -1838,7 +1828,7 @@ export default function Calendario() {
                                                         <div
                                                             key={`${assenza.id}-${idx}`}
                                                             title={`${nomeCompleto} - ${assenza.tipo} - ${assenza.durata} ${assenza.tipo === 'permesso' ? 'ore' : 'giorni'}`}
-                                                            className={`h-2 sm:h-auto sm:px-2 sm:py-1.5 rounded-sm sm:rounded-lg shadow-sm sm:shadow-md border sm:font-bold group-hover:scale-105 transition-all cursor-pointer active:scale-95 bg-gradient-to-r ${getTipoColor(
+                                                            className={`h-2 sm:h-auto sm:px-2 sm:py-1.5   rounded-sm sm:rounded-lg shadow-sm sm:shadow-md border sm:font-bold group-hover:scale-105 transition-all cursor-pointer active:scale-95 bg-gradient-to-r ${getTipoColor(
                                                                 assenza.tipo
                                                             )} border-${assenza.tipo}-400/60 sm:text-white`}
                                                         >
@@ -1971,41 +1961,37 @@ export default function Calendario() {
 
                                                     {/* Dal - Al (solo non smart/permesso) */}
                                                     {assenza.tipo !== 'smartworking' && assenza.tipo !== 'permesso' && (() => {
-                                                        const parsaData = (dateStr: string): Date => {
-                                                            if (!dateStr) return new Date(NaN);
+                                                        const parseDate = (dateStr?: string): Date | null => {
+                                                            if (!dateStr) return null;
+
                                                             if (dateStr.includes('/')) {
                                                                 const [g, m, a] = dateStr.split('/').map(Number);
                                                                 return new Date(a, m - 1, g);
                                                             }
+
                                                             const [a, m, g] = dateStr.split('-').map(Number);
                                                             return new Date(a, m - 1, g);
                                                         };
 
-                                                        const dataInizio = parsaData(assenza.dataInizio);
-                                                        let giorniLavorativiContati = 0;
-                                                        let dataCorrente = new Date(dataInizio);
-                                                        dataCorrente.setDate(dataCorrente.getDate() - 1);
+                                                        const dataInizio = parseDate(assenza.dataInizio);
+                                                        const dataFine = parseDate(assenza.dataFine ?? assenza.dataInizio);
 
-                                                        while (giorniLavorativiContati < assenza.durata) {
-                                                            dataCorrente.setDate(dataCorrente.getDate() + 1);
-                                                            const info = getInfoGiorno(
-                                                                dataCorrente.getDate(),
-                                                                dataCorrente.getMonth(),
-                                                                dataCorrente.getFullYear()
-                                                            );
-                                                            if (info.isLavorativo) giorniLavorativiContati++;
-                                                        }
-                                                        const dataFine = dataCorrente;
+                                                        if (!dataInizio || !dataFine) return null;
 
                                                         return (
                                                             <div className="flex flex-wrap gap-2 sm:gap-3">
                                                                 <div className="px-3 sm:px-4 md:px-5 py-2 sm:py-2.5 md:py-3 bg-gradient-to-r from-blue-100 to-indigo-100 border-2 border-blue-300 rounded-xl sm:rounded-2xl font-black text-blue-800 text-sm sm:text-base md:text-lg shadow-lg inline-flex items-center gap-2 sm:gap-3 flex-1">
-                                                                    <Calendar className="w-4 h-4 sm:w-5 sm:h-5 shrink-0"/>
-                                                                    <span>Dal <span className="font-black">{dataInizio.toLocaleDateString('it-IT')}</span></span>
+                                                                    <Calendar className="w-4 h-4 sm:w-5 sm:h-5 shrink-0" />
+                                                                    <span>
+                    Dal <span className="font-black">{dataInizio.toLocaleDateString('it-IT')}</span>
+                </span>
                                                                 </div>
+
                                                                 <div className="px-3 sm:px-4 md:px-5 py-2 sm:py-2.5 md:py-3 bg-gradient-to-r from-purple-100 to-violet-100 border-2 border-purple-300 rounded-xl sm:rounded-2xl font-black text-purple-800 text-sm sm:text-base md:text-lg shadow-lg inline-flex items-center gap-2 sm:gap-3 flex-1">
-                                                                    <Calendar className="w-4 h-4 sm:w-5 sm:h-5 shrink-0"/>
-                                                                    <span>Al <span className="font-black">{dataFine.toLocaleDateString('it-IT')}</span></span>
+                                                                    <Calendar className="w-4 h-4 sm:w-5 sm:h-5 shrink-0" />
+                                                                    <span>
+                    Al <span className="font-black">{dataFine.toLocaleDateString('it-IT')}</span>
+                </span>
                                                                 </div>
                                                             </div>
                                                         );
