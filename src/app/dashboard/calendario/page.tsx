@@ -420,6 +420,9 @@ export default function Calendario() {
                 if (tipo === 'congedo-matrimoniale') {
                     dataFine = new Date(dataInizio);
                     dataFine.setDate(dataFine.getDate() + Number(assenza.durata) - 1);
+                }else if(tipo === 'malattia' && userTeam == 'Bottega' && tipo === 'ferie' && tipo === 'permesso')  {
+                    dataFine = new Date(dataInizio);
+                    dataFine.setDate(dataFine.getDate() + Number(assenza.durata) - 1);
                 } else {
                     let giorniLavorativiContati = 0;
                     let dataCorrente = new Date(dataInizio);
