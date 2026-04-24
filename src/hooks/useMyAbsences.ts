@@ -67,7 +67,7 @@ export function useMyAbsences() {
     }, [fetchAssenze]);
 
     const submitRequest = async (form: { tipo: string; data: string; durata: number; motivo: string }) => {
-        console.log('📤 Submit form:', form);
+        console.log(' Submit form:', form);
 
         if (!token) {
             return false;

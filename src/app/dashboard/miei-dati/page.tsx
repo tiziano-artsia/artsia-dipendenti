@@ -308,13 +308,13 @@ export default function MieiDati() {
 
         const payloadBase: any = {
             tipo: form.tipo,
-            durata: 1,  // ✅ SEMPRE 1 per smartworking (1 gg = 1 richiesta)
+            durata: 1,  //  SEMPRE 1 per smartworking (1 gg = 1 richiesta)
             motivo: form.motivo.trim(),
         };
 
         try {
             if (form.tipo === 'smartworking') {
-                // ✅ 1 GIORNO = 1 RICHIESTA SEPARATA
+                //  1 GIORNO = 1 RICHIESTA SEPARATA
                 const results = await Promise.allSettled(
                     form.giorniSmart.map(async (giorno: string) => {
                         const payloadSingolo: any = {
@@ -322,7 +322,7 @@ export default function MieiDati() {
                             data: giorno,  // Ogni giorno ha la SUA data
                         };
 
-                        console.log(`📅 Invio: ${giorno} (durata: 1gg)`, payloadSingolo);
+                        console.log(` Invio: ${giorno} (durata: 1gg)`, payloadSingolo);
                         return submitRequest(payloadSingolo);
                     })
                 );
@@ -333,13 +333,13 @@ export default function MieiDati() {
 
                 if (successes === form.giorniSmart.length) {
                     toast.success(
-                        `✅ ${successes} giorni smartworking inviati!`,
+                        ` ${successes} giorni smartworking inviati!`,
                         { duration: 4000 }
                     );
                 } else {
                     toast.error(
-                        `⚠️ ${successes}/${form.giorniSmart.length} giorni inviati`,
-                        { duration: 5000 }
+                        ` Ops qualcosa è andato storto prova a riprovare più tardi`,
+                        { duration: 4000 }
                     );
                 }
             } else {

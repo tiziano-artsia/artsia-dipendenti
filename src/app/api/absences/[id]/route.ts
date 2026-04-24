@@ -170,7 +170,7 @@ export async function POST(request: NextRequest) {
                 const inPresenza: number = totalePersone - totaleInSmart - 1;
                 const minimoPresenza: number = totalePersone - SMART_CONFIG.MAX_PERSONE_IN_SMART;
 
-                console.log(`👥 Totale: ${totalePersone} | In smart: ${totaleInSmart} | In presenza dopo: ${inPresenza} | Minimo: ${minimoPresenza}`);
+                console.log(` Totale: ${totalePersone} | In smart: ${totaleInSmart} | In presenza dopo: ${inPresenza} | Minimo: ${minimoPresenza}`);
 
                 if (inPresenza < minimoPresenza) {
                     return NextResponse.json(
