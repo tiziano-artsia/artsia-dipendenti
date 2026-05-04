@@ -329,7 +329,7 @@ export default function Calendario() {
 
     const isWeekend = (date: Date): boolean => {
         const day = date.getDay();
-        return day === 0 || day === 6; // domenica o sabato
+        return day === 0; // domenica o sabato
     };
 
     const getFestiviFissi = (anno: number): Date[] => [
@@ -378,68 +378,96 @@ export default function Calendario() {
         return {
             isWeekend: isWeekend(date),
             isFestivo: isFestivo(date),
-            isLavorativo: !isFestivo(date),
+            isLavorativo: !isWeekend(date) && !isFestivo(date),
         };
     };
 
-
     const getAssenzePerData = (dataStr: string): Absence[] => {
-        const parseDate = (value?: string): Date | null => {
-            if (!value) return null;
-
-            if (value.includes('/')) {
-                const [g, m, a] = value.split('/').map(Number);
-                return new Date(a, m - 1, g);
-            }
-
-            const [a, m, g] = value.split('-').map(Number);
-            return new Date(a, m - 1, g);
-        };
-
         const assenzeGiorno = assenze.filter((assenza) => {
             const raw = assenza as unknown as Record<string, any>;
-            const tipo = String(assenza.tipo ?? raw.type ?? '').toLowerCase();
+            const tipo = (assenza.tipo ?? raw.type ?? '').toLowerCase();
             const dataAssenza = assenza.dataInizio;
 
             if (!dataAssenza) return false;
 
-            const dataInizio = parseDate(dataAssenza);
-            const dataFine = parseDate(assenza.dataFine ?? assenza.dataInizio);
-            const dataCheck = parseDate(dataStr);
+            // Match diretto
+            if (dataAssenza === dataStr) return true;
 
-            if (!dataInizio || !dataFine || !dataCheck) return false;
+            // I permessi valgono solo sul giorno specifico
+            if (tipo === 'permesso') return false;
 
-            dataInizio.setHours(0, 0, 0, 0);
-            dataFine.setHours(0, 0, 0, 0);
-            dataCheck.setHours(0, 0, 0, 0);
-
-            // Permesso solo sul giorno esatto
-            if (tipo === 'permesso') {
-                return dataInizio.getTime() === dataCheck.getTime();
+            // Se arriva in formato italiano dd/mm/yyyy
+            if (dataAssenza.includes('/')) {
+                const [giorno, mese, anno] = dataAssenza.split('/');
+                const dataItalianaISO = `${anno}-${mese.padStart(2, '0')}-${giorno.padStart(2, '0')}`;
+                if (dataItalianaISO === dataStr) return true;
             }
 
-            // Fuori range => non mostrare
-            if (dataCheck < dataInizio || dataCheck > dataFine) {
-                return false;
+            try {
+                let dataInizio: Date;
+
+                if (dataAssenza.includes('/')) {
+                    const [g, m, a] = dataAssenza.split('/').map(Number);
+                    dataInizio = new Date(a, m - 1, g);
+                } else {
+                    const [anno, mese, giorno] = dataAssenza.split('-').map(Number);
+                    dataInizio = new Date(anno, mese - 1, giorno);
+                }
+
+                let dataFine: Date;
+
+                // SOLO il congedo matrimoniale include sabato e domenica
+                if (tipo === 'congedo-matrimoniale') {
+                    dataFine = new Date(dataInizio);
+                    dataFine.setDate(dataFine.getDate() + Number(assenza.durata) - 1);
+                }else if(tipo === 'malattia' && userTeam == 'Bottega' && tipo === 'ferie' && tipo === 'permesso')  {
+                    dataFine = new Date(dataInizio);
+                    dataFine.setDate(dataFine.getDate() + Number(assenza.durata) - 1);
+                } else {
+                    let giorniLavorativiContati = 0;
+                    let dataCorrente = new Date(dataInizio);
+                    dataCorrente.setDate(dataCorrente.getDate() - 1);
+
+                    while (giorniLavorativiContati < Number(assenza.durata)) {
+                        dataCorrente.setDate(dataCorrente.getDate() + 1);
+
+                        const info = getInfoGiorno(
+                            dataCorrente.getDate(),
+                            dataCorrente.getMonth(),
+                            dataCorrente.getFullYear()
+                        );
+
+                        if (info.isLavorativo) giorniLavorativiContati++;
+                    }
+
+                    dataFine = dataCorrente;
+                }
+
+                const [anno, mese, giorno] = dataStr.split('-').map(Number);
+                const dataCheck = new Date(anno, mese - 1, giorno);
+                dataCheck.setHours(0, 0, 0, 0);
+                dataInizio.setHours(0, 0, 0, 0);
+                dataFine.setHours(0, 0, 0, 0);
+
+                if (dataCheck >= dataInizio && dataCheck <= dataFine) {
+                    // SOLO congedo matrimoniale visibile anche nei weekend
+                    if (tipo === 'congedo-matrimoniale') {
+                        return true;
+                    }
+
+                    const infoCheck = getInfoGiorno(
+                        dataCheck.getDate(),
+                        dataCheck.getMonth(),
+                        dataCheck.getFullYear()
+                    );
+
+                    if (infoCheck.isLavorativo) return true;
+                }
+            } catch (error) {
+                console.warn('Errore calcolo range assenza', dataAssenza, error);
             }
 
-            // Congedo matrimoniale visibile anche nei weekend
-            if (tipo === 'congedo-matrimoniale') {
-                return true;
-            }
-
-            const infoCheck = getInfoGiorno(
-                dataCheck.getDate(),
-                dataCheck.getMonth(),
-                dataCheck.getFullYear()
-            );
-
-            // Bottega: sabato valido per ferie e malattia, domenica no
-            if (userTeam === 'Bottega' && ['ferie', 'malattia'].includes(tipo)) {
-                return dataCheck.getDay() !== 0 && !infoCheck.isFestivo;
-            }
-
-            return infoCheck.isLavorativo;
+            return false;
         });
 
         return assenzeGiorno
@@ -490,207 +518,188 @@ export default function Calendario() {
         const [anno, mese, giorno] = dataISO.split('-');
         return `${giorno}/${mese}/${anno}`;
     };
-
-
-    const parseAbsenceDate = (dateStr?: string): Date | null => {
-        if (!dateStr) return null;
-
-        if (dateStr.includes('/')) {
-            const [g, m, a] = dateStr.split('/').map(Number);
-            return new Date(a, m - 1, g);
-        }
-
-        const [a, m, g] = dateStr.split('-').map(Number);
-        return new Date(a, m - 1, g);
-    };
-
-
-
-
-
-
-/*
-    const exportExcelMensile = () => {
-        //  INIZIALIZZA tutti i dipendenti con valori a 0
-        const totaliPerDipendente: Record<
-            string,
-            {
-                ferie: number;
-                permesso: number;
-                malattia: number;
-                smartworking: number;
-                festivita: number;
-                'fuori-sede': number;
-                'congedo-parentale': number;
-                'maternià': number;
-                'congedo-matrimoniale': number;
-                motivi: string[];
-            }
-        > = {};
-
-        //  CALCOLA i giorni festivi del mese corrente
-        const giorniFestiviDelMese: number[] = [];
-        const giorniTotaliMese = getGiorniMese(mese, anno);
-
-        for (let giorno = 1; giorno <= giorniTotaliMese; giorno++) {
-            const info = getInfoGiorno(giorno, mese, anno);
-            if (info.isFestivo) {
-                giorniFestiviDelMese.push(giorno);
-            }
-        }
-
-        //  Prima loop: crea entry per TUTTI i dipendenti
-        employees.forEach((emp) => {
-            totaliPerDipendente[emp.name] = {
-                ferie: 0,
-                permesso: 0,
-                malattia: 0,
-                smartworking: 0,
-                festivita: giorniFestiviDelMese.length, //  Assegna automaticamente i giorni festivi
-                'fuori-sede': 0,
-                'congedo-parentale': 0,
-                motivi: [],
-            };
-        });
-
-        //  Secondo loop: aggiungi le assenze dove presenti
-        const assenzeDelMese = assenze
-            .filter((a) => a.stato !== 'rejected')
-            .filter((a) => {
-                const raw = a.dataInizio;
-                let date: Date | null = null;
-
-                if (raw.includes('/')) {
-                    const [g, m, y] = raw.split('/');
-                    date = new Date(Number(y), Number(m) - 1, Number(g));
-                } else if (raw.includes('-')) {
-                    const [y, m, g] = raw.split('-');
-                    date = new Date(Number(y), Number(m) - 1, Number(g));
+    /*
+        const exportExcelMensile = () => {
+            //  INIZIALIZZA tutti i dipendenti con valori a 0
+            const totaliPerDipendente: Record<
+                string,
+                {
+                    ferie: number;
+                    permesso: number;
+                    malattia: number;
+                    smartworking: number;
+                    festivita: number;
+                    'fuori-sede': number;
+                    'congedo-parentale': number;
+                    'maternià': number;
+                    'congedo-matrimoniale': number;
+                    motivi: string[];
                 }
+            > = {};
 
-                if (!date || isNaN(date.getTime())) return false;
-                return date.getMonth() === mese && date.getFullYear() === anno;
-            });
+            //  CALCOLA i giorni festivi del mese corrente
+            const giorniFestiviDelMese: number[] = [];
+            const giorniTotaliMese = getGiorniMese(mese, anno);
 
-        assenzeDelMese.forEach((a) => {
-            const empName = getEmployeeById(a.employeeId)?.name || 'N/D';
+            for (let giorno = 1; giorno <= giorniTotaliMese; giorno++) {
+                const info = getInfoGiorno(giorno, mese, anno);
+                if (info.isFestivo) {
+                    giorniFestiviDelMese.push(giorno);
+                }
+            }
 
-            // Se il dipendente non esiste ancora, crealo
-            if (!totaliPerDipendente[empName]) {
-                totaliPerDipendente[empName] = {
+            //  Prima loop: crea entry per TUTTI i dipendenti
+            employees.forEach((emp) => {
+                totaliPerDipendente[emp.name] = {
                     ferie: 0,
                     permesso: 0,
                     malattia: 0,
                     smartworking: 0,
-                    festivita: giorniFestiviDelMese.length,
+                    festivita: giorniFestiviDelMese.length, //  Assegna automaticamente i giorni festivi
                     'fuori-sede': 0,
                     'congedo-parentale': 0,
                     motivi: [],
                 };
-            }
+            });
 
-            // Aggiungi motivo
-            if (a.motivo && a.motivo.trim() !== '') {
-                totaliPerDipendente[empName].motivi.push(a.motivo);
-            }
+            //  Secondo loop: aggiungi le assenze dove presenti
+            const assenzeDelMese = assenze
+                .filter((a) => a.stato !== 'rejected')
+                .filter((a) => {
+                    const raw = a.dataInizio;
+                    let date: Date | null = null;
 
-            // Normalizza il tipo
-            const tipoNorm = a.tipo
-                .toLowerCase()
-                .normalize('NFD')
-                .replace(/[\u0300-\u036f]/g, '')
-                .replace(/\s+/g, '-');
+                    if (raw.includes('/')) {
+                        const [g, m, y] = raw.split('/');
+                        date = new Date(Number(y), Number(m) - 1, Number(g));
+                    } else if (raw.includes('-')) {
+                        const [y, m, g] = raw.split('-');
+                        date = new Date(Number(y), Number(m) - 1, Number(g));
+                    }
 
-            // Incrementa contatore
-            if (tipoNorm === 'ferie') {
-                totaliPerDipendente[empName].ferie += a.durata;
-            } else if (tipoNorm === 'permesso') {
-                totaliPerDipendente[empName].permesso += a.durata;
-            } else if (tipoNorm === 'malattia') {
-                totaliPerDipendente[empName].malattia += a.durata;
-            } else if (tipoNorm === 'smartworking') {
-                totaliPerDipendente[empName].smartworking += a.durata;
-            } else if (tipoNorm === 'fuori-sede') {
-                totaliPerDipendente[empName]['fuori-sede'] += a.durata;
-            } else if (tipoNorm === 'congedo-parentale') {
-                totaliPerDipendente[empName]['congedo-parentale'] += a.durata;
-            }
-        });
+                    if (!date || isNaN(date.getTime())) return false;
+                    return date.getMonth() === mese && date.getFullYear() === anno;
+                });
 
-        const dipendentiOrdinati = Object.keys(totaliPerDipendente).sort();
+            assenzeDelMese.forEach((a) => {
+                const empName = getEmployeeById(a.employeeId)?.name || 'N/D';
 
-        // Verifica quali colonne hanno valori > 0
-        const haFestivita = giorniFestiviDelMese.length > 0;
-        const haFuoriSede = dipendentiOrdinati.some((nome) => totaliPerDipendente[nome]['fuori-sede'] > 0);
-        const haCongedoParentale = dipendentiOrdinati.some((nome) => totaliPerDipendente[nome]['congedo-parentale'] > 0);
+                // Se il dipendente non esiste ancora, crealo
+                if (!totaliPerDipendente[empName]) {
+                    totaliPerDipendente[empName] = {
+                        ferie: 0,
+                        permesso: 0,
+                        malattia: 0,
+                        smartworking: 0,
+                        festivita: giorniFestiviDelMese.length,
+                        'fuori-sede': 0,
+                        'congedo-parentale': 0,
+                        motivi: [],
+                    };
+                }
 
-        const datiSheet: (string | number)[][] = [];
-        datiSheet.push([`TOTALE MENSILE DI ${nomiMesi[mese]} ${anno}`]);
-        datiSheet.push([]);
+                // Aggiungi motivo
+                if (a.motivo && a.motivo.trim() !== '') {
+                    totaliPerDipendente[empName].motivi.push(a.motivo);
+                }
 
-        // Header dinamico
-        const headerRow = ['', 'Dipendente', 'Ferie (giorni)', 'Permesso (ore)', 'Malattia (giorni)', 'Smartworking (giorni)'];
+                // Normalizza il tipo
+                const tipoNorm = a.tipo
+                    .toLowerCase()
+                    .normalize('NFD')
+                    .replace(/[\u0300-\u036f]/g, '')
+                    .replace(/\s+/g, '-');
 
-        if (haFestivita) headerRow.push('Festività (giorni)');
-        if (haFuoriSede) headerRow.push('Fuori Sede (giorni)');
-        if (haCongedoParentale) headerRow.push('Congedo Parentale (giorni)');
+                // Incrementa contatore
+                if (tipoNorm === 'ferie') {
+                    totaliPerDipendente[empName].ferie += a.durata;
+                } else if (tipoNorm === 'permesso') {
+                    totaliPerDipendente[empName].permesso += a.durata;
+                } else if (tipoNorm === 'malattia') {
+                    totaliPerDipendente[empName].malattia += a.durata;
+                } else if (tipoNorm === 'smartworking') {
+                    totaliPerDipendente[empName].smartworking += a.durata;
+                } else if (tipoNorm === 'fuori-sede') {
+                    totaliPerDipendente[empName]['fuori-sede'] += a.durata;
+                } else if (tipoNorm === 'congedo-parentale') {
+                    totaliPerDipendente[empName]['congedo-parentale'] += a.durata;
+                }
+            });
 
-        headerRow.push('Motivi');
+            const dipendentiOrdinati = Object.keys(totaliPerDipendente).sort();
 
-        datiSheet.push(headerRow);
+            // Verifica quali colonne hanno valori > 0
+            const haFestivita = giorniFestiviDelMese.length > 0;
+            const haFuoriSede = dipendentiOrdinati.some((nome) => totaliPerDipendente[nome]['fuori-sede'] > 0);
+            const haCongedoParentale = dipendentiOrdinati.some((nome) => totaliPerDipendente[nome]['congedo-parentale'] > 0);
 
-        // Righe dipendenti
-        dipendentiOrdinati.forEach((nome, index) => {
-            const totali = totaliPerDipendente[nome];
-            const motiviStringa = totali.motivi.length > 0 ? totali.motivi.join(' - ') : '';
+            const datiSheet: (string | number)[][] = [];
+            datiSheet.push([`TOTALE MENSILE DI ${nomiMesi[mese]} ${anno}`]);
+            datiSheet.push([]);
 
-            const row: (string | number)[] = [index + 1, nome, totali.ferie, totali.permesso, totali.malattia, totali.smartworking];
+            // Header dinamico
+            const headerRow = ['', 'Dipendente', 'Ferie (giorni)', 'Permesso (ore)', 'Malattia (giorni)', 'Smartworking (giorni)'];
 
-            if (haFestivita) row.push(totali.festivita);
-            if (haFuoriSede) row.push(totali['fuori-sede']);
-            if (haCongedoParentale) row.push(totali['congedo-parentale']);
+            if (haFestivita) headerRow.push('Festività (giorni)');
+            if (haFuoriSede) headerRow.push('Fuori Sede (giorni)');
+            if (haCongedoParentale) headerRow.push('Congedo Parentale (giorni)');
 
-            row.push(motiviStringa);
+            headerRow.push('Motivi');
 
-            datiSheet.push(row);
-        });
+            datiSheet.push(headerRow);
 
-        // Crea workbook
-        const workbook = XLSX.utils.book_new();
-        const worksheet = XLSX.utils.aoa_to_sheet(datiSheet);
+            // Righe dipendenti
+            dipendentiOrdinati.forEach((nome, index) => {
+                const totali = totaliPerDipendente[nome];
+                const motiviStringa = totali.motivi.length > 0 ? totali.motivi.join(' - ') : '';
 
-        // Larghezza colonne
-        const colWidths = [{wch: 5}, {wch: 25}, {wch: 18}, {wch: 18}, {wch: 18}, {wch: 20}];
+                const row: (string | number)[] = [index + 1, nome, totali.ferie, totali.permesso, totali.malattia, totali.smartworking];
 
-        if (haFestivita) colWidths.push({wch: 20});
-        if (haFuoriSede) colWidths.push({wch: 20});
-        if (haCongedoParentale) colWidths.push({wch: 25});
+                if (haFestivita) row.push(totali.festivita);
+                if (haFuoriSede) row.push(totali['fuori-sede']);
+                if (haCongedoParentale) row.push(totali['congedo-parentale']);
 
-        colWidths.push({wch: 40});
+                row.push(motiviStringa);
 
-        worksheet['!cols'] = colWidths;
+                datiSheet.push(row);
+            });
 
-        XLSX.utils.book_append_sheet(workbook, worksheet, 'Totali Mensili');
+            // Crea workbook
+            const workbook = XLSX.utils.book_new();
+            const worksheet = XLSX.utils.aoa_to_sheet(datiSheet);
 
-        // Genera buffer
-        const excelBuffer = XLSX.write(workbook, {bookType: 'xlsx', type: 'array'});
+            // Larghezza colonne
+            const colWidths = [{wch: 5}, {wch: 25}, {wch: 18}, {wch: 18}, {wch: 18}, {wch: 20}];
 
-        // Crea Blob e download
-        const blob = new Blob([excelBuffer], {
-            type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-        });
+            if (haFestivita) colWidths.push({wch: 20});
+            if (haFuoriSede) colWidths.push({wch: 20});
+            if (haCongedoParentale) colWidths.push({wch: 25});
 
-        const link = document.createElement('a');
-        link.href = URL.createObjectURL(blob);
-        link.download = `totali_assenze_${nomiMesi[mese]}_${anno}.xlsx`;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        URL.revokeObjectURL(link.href);
+            colWidths.push({wch: 40});
 
-        toast.success('📊 Excel esportato con successo!');
-    };
-*/
+            worksheet['!cols'] = colWidths;
+
+            XLSX.utils.book_append_sheet(workbook, worksheet, 'Totali Mensili');
+
+            // Genera buffer
+            const excelBuffer = XLSX.write(workbook, {bookType: 'xlsx', type: 'array'});
+
+            // Crea Blob e download
+            const blob = new Blob([excelBuffer], {
+                type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            });
+
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = `totali_assenze_${nomiMesi[mese]}_${anno}.xlsx`;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(link.href);
+
+            toast.success('📊 Excel esportato con successo!');
+        };
+    */
 
     const exportExcelMensile = () => {
         const giorniTotaliMese = getGiorniMese(mese, anno);
@@ -1369,6 +1378,7 @@ export default function Calendario() {
             </div>
         );
     };
+
     if (loading) {
         return (
             <div
@@ -1828,7 +1838,7 @@ export default function Calendario() {
                                                         <div
                                                             key={`${assenza.id}-${idx}`}
                                                             title={`${nomeCompleto} - ${assenza.tipo} - ${assenza.durata} ${assenza.tipo === 'permesso' ? 'ore' : 'giorni'}`}
-                                                            className={`h-2 sm:h-auto sm:px-2 sm:py-1.5   rounded-sm sm:rounded-lg shadow-sm sm:shadow-md border sm:font-bold group-hover:scale-105 transition-all cursor-pointer active:scale-95 bg-gradient-to-r ${getTipoColor(
+                                                            className={`h-2 sm:h-auto sm:px-2 sm:py-1.5 rounded-sm sm:rounded-lg shadow-sm sm:shadow-md border sm:font-bold group-hover:scale-105 transition-all cursor-pointer active:scale-95 bg-gradient-to-r ${getTipoColor(
                                                                 assenza.tipo
                                                             )} border-${assenza.tipo}-400/60 sm:text-white`}
                                                         >
@@ -1961,37 +1971,41 @@ export default function Calendario() {
 
                                                     {/* Dal - Al (solo non smart/permesso) */}
                                                     {assenza.tipo !== 'smartworking' && assenza.tipo !== 'permesso' && (() => {
-                                                        const parseDate = (dateStr?: string): Date | null => {
-                                                            if (!dateStr) return null;
-
+                                                        const parsaData = (dateStr: string): Date => {
+                                                            if (!dateStr) return new Date(NaN);
                                                             if (dateStr.includes('/')) {
                                                                 const [g, m, a] = dateStr.split('/').map(Number);
                                                                 return new Date(a, m - 1, g);
                                                             }
-
                                                             const [a, m, g] = dateStr.split('-').map(Number);
                                                             return new Date(a, m - 1, g);
                                                         };
 
-                                                        const dataInizio = parseDate(assenza.dataInizio);
-                                                        const dataFine = parseDate(assenza.dataFine ?? assenza.dataInizio);
+                                                        const dataInizio = parsaData(assenza.dataInizio);
+                                                        let giorniLavorativiContati = 0;
+                                                        let dataCorrente = new Date(dataInizio);
+                                                        dataCorrente.setDate(dataCorrente.getDate() - 1);
 
-                                                        if (!dataInizio || !dataFine) return null;
+                                                        while (giorniLavorativiContati < assenza.durata) {
+                                                            dataCorrente.setDate(dataCorrente.getDate() + 1);
+                                                            const info = getInfoGiorno(
+                                                                dataCorrente.getDate(),
+                                                                dataCorrente.getMonth(),
+                                                                dataCorrente.getFullYear()
+                                                            );
+                                                            if (info.isLavorativo) giorniLavorativiContati++;
+                                                        }
+                                                        const dataFine = dataCorrente;
 
                                                         return (
                                                             <div className="flex flex-wrap gap-2 sm:gap-3">
                                                                 <div className="px-3 sm:px-4 md:px-5 py-2 sm:py-2.5 md:py-3 bg-gradient-to-r from-blue-100 to-indigo-100 border-2 border-blue-300 rounded-xl sm:rounded-2xl font-black text-blue-800 text-sm sm:text-base md:text-lg shadow-lg inline-flex items-center gap-2 sm:gap-3 flex-1">
-                                                                    <Calendar className="w-4 h-4 sm:w-5 sm:h-5 shrink-0" />
-                                                                    <span>
-                    Dal <span className="font-black">{dataInizio.toLocaleDateString('it-IT')}</span>
-                </span>
+                                                                    <Calendar className="w-4 h-4 sm:w-5 sm:h-5 shrink-0"/>
+                                                                    <span>Dal <span className="font-black">{dataInizio.toLocaleDateString('it-IT')}</span></span>
                                                                 </div>
-
                                                                 <div className="px-3 sm:px-4 md:px-5 py-2 sm:py-2.5 md:py-3 bg-gradient-to-r from-purple-100 to-violet-100 border-2 border-purple-300 rounded-xl sm:rounded-2xl font-black text-purple-800 text-sm sm:text-base md:text-lg shadow-lg inline-flex items-center gap-2 sm:gap-3 flex-1">
-                                                                    <Calendar className="w-4 h-4 sm:w-5 sm:h-5 shrink-0" />
-                                                                    <span>
-                    Al <span className="font-black">{dataFine.toLocaleDateString('it-IT')}</span>
-                </span>
+                                                                    <Calendar className="w-4 h-4 sm:w-5 sm:h-5 shrink-0"/>
+                                                                    <span>Al <span className="font-black">{dataFine.toLocaleDateString('it-IT')}</span></span>
                                                                 </div>
                                                             </div>
                                                         );
