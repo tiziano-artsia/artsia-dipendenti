@@ -420,27 +420,29 @@ export default function Calendario() {
                 if (tipo === 'congedo-matrimoniale') {
                     dataFine = new Date(dataInizio);
                     dataFine.setDate(dataFine.getDate() + Number(assenza.durata) - 1);
-                }else if(tipo === 'malattia' && userTeam == 'Bottega' && tipo === 'ferie' && tipo === 'permesso')  {
-                    dataFine = new Date(dataInizio);
-                    dataFine.setDate(dataFine.getDate() + Number(assenza.durata) - 1);
-                } else {
-                    let giorniLavorativiContati = 0;
-                    let dataCorrente = new Date(dataInizio);
-                    dataCorrente.setDate(dataCorrente.getDate() - 1);
+                }else { // @ts-ignore
+                    if(tipo === 'malattia' && userTeam == 'Bottega' && tipo === 'ferie' && tipo === 'permesso')  {
+                                        dataFine = new Date(dataInizio);
+                                        dataFine.setDate(dataFine.getDate() + Number(assenza.durata) - 1);
+                                    } else {
+                                        let giorniLavorativiContati = 0;
+                                        let dataCorrente = new Date(dataInizio);
+                                        dataCorrente.setDate(dataCorrente.getDate() - 1);
 
-                    while (giorniLavorativiContati < Number(assenza.durata)) {
-                        dataCorrente.setDate(dataCorrente.getDate() + 1);
+                                        while (giorniLavorativiContati < Number(assenza.durata)) {
+                                            dataCorrente.setDate(dataCorrente.getDate() + 1);
 
-                        const info = getInfoGiorno(
-                            dataCorrente.getDate(),
-                            dataCorrente.getMonth(),
-                            dataCorrente.getFullYear()
-                        );
+                                            const info = getInfoGiorno(
+                                                dataCorrente.getDate(),
+                                                dataCorrente.getMonth(),
+                                                dataCorrente.getFullYear()
+                                            );
 
-                        if (info.isLavorativo) giorniLavorativiContati++;
-                    }
+                                            if (info.isLavorativo) giorniLavorativiContati++;
+                                        }
 
-                    dataFine = dataCorrente;
+                                        dataFine = dataCorrente;
+                                    }
                 }
 
                 const [anno, mese, giorno] = dataStr.split('-').map(Number);
