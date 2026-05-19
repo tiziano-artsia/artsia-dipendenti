@@ -24,8 +24,11 @@ export async function GET(request: NextRequest) {
                 'smartworking': 'Smartworking',
                 'permesso': 'Permesso',
                 'festivita': 'Festività',
+                'festivita-soppresse': 'Festività Soppresse',
                 'fuori-sede': 'Fuori Sede',
-                'congedo-parentale': 'Congedo Parentale'
+                'congedo-parentale': 'Congedo Parentale',
+                'maternità': 'Maternità',
+                'congedo-matrimoniale': 'Congedo Matrimoniale'
             };
 
             return {
@@ -65,6 +68,7 @@ export async function POST(request: NextRequest) {
             'smartworking',
             'malattia',
             'festivita',
+            'festivita-soppresse',
             'fuori-sede',
             'congedo-parentale'
         ];

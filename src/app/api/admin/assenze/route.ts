@@ -60,7 +60,8 @@ export async function POST(request: NextRequest) {
             'smartworking',
             'fuori-sede',
             'congedo-parentale',
-            'festivita'
+            'festivita',
+            'festivita-soppresse'
         ]);
 
         if (!tipiValidi.has(tipo)) {

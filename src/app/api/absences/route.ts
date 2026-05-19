@@ -94,7 +94,7 @@ export async function POST(request: NextRequest) {
 
         const tipiValidi = new Set([
             'ferie', 'permesso', 'smartworking', 'malattia',
-            'festivita', 'fuori-sede', 'congedo-parentale','maternità','congedo-matrimoniale'
+            'festivita', 'festivita-soppresse', 'fuori-sede', 'congedo-parentale','maternità','congedo-matrimoniale'
         ]);
 
         if (!tipiValidi.has(typeNorm)) {

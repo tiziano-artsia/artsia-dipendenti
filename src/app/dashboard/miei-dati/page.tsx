@@ -415,6 +415,7 @@ export default function MieiDati() {
         if (tipoLower === 'smartworking') return Home;
         if (tipoLower === 'malattia') return Bed;
         if (tipoLower === 'festivita' || tipoLower === 'festività') return Calendar;
+        if (tipoLower === 'festivita-soppresse') return Calendar;
         if (tipoLower === 'fuori-sede') return MapPin;
         if (tipoLower === 'congedo-parentale') return Baby;
         if (tipoLower === 'congedo-parentale') return Baby;
@@ -424,17 +425,20 @@ export default function MieiDati() {
     };
 
     const getTipoLabel = (tipo: string) => {
-        const tipoLower = tipo?.toLowerCase().replace(/\s+/g, '-') || '';
-        return tipoLower === 'ferie' ? 'Ferie' :
-            tipoLower === 'malattia' ? 'Malattia' :
-                tipoLower === 'smartworking' ? 'Smartworking' :
-                    tipoLower === 'permesso' ? 'Permesso' :
-                        tipoLower === 'festivita' || tipoLower === 'festività' ? 'Festività' :
-                            tipoLower === 'fuori-sede' ? 'Fuori Sede' :
-                                tipoLower === 'congedo-parentale' ? 'Congedo Parentale' :
-                                    tipoLower === 'maternità' ? 'Maternità' :
-                                        tipoLower === 'congedo-matrimoniale' ? 'Congedo Matrimoniale' :
-                                    'Altro';
+        const tipoLower = tipo?.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\s+/g, '-') || '';
+        const map: Record<string, string> = {
+            'ferie': 'Ferie',
+            'malattia': 'Malattia',
+            'smartworking': 'Smartworking',
+            'permesso': 'Permesso',
+            'festivita': 'Festività',
+            'festivita-soppresse': 'Festività Soppresse',
+            'fuori-sede': 'Fuori Sede',
+            'congedo-parentale': 'Congedo Parentale',
+            'maternita': 'Maternità',
+            'congedo-matrimoniale': 'Congedo Matrimoniale',
+        };
+        return map[tipoLower] || 'Altro';
     };
 
     const getTipoColor = (tipo: string): string => {
@@ -447,6 +451,7 @@ export default function MieiDati() {
         if (t === 'congedo-parentale') return 'from-pink-500 to-pink-600 border-pink-400';
         if (t === 'maternità') return 'from-pink-500 to-pink-600 border-pink-400';
         if (t === 'congedo-matrimoniale') return 'from-amber-400 to-yellow-500 border-amber-400';
+        if (t === 'festivita-soppresse') return 'from-violet-500 to-purple-600 border-violet-400';
         return 'from-gray-500 to-gray-600 border-gray-400';
     };
     const formattaData = (dataIso: string): string => {
@@ -718,7 +723,8 @@ export default function MieiDati() {
                                             <option value="fuori-sede">📍 Fuori Sede</option>
                                             <option value="congedo-parentale">👶 Congedo Parentale</option>
                                             <option value="maternità">🤰Maternità</option>
-                                            <option value="congedo-matrimoniale">🤍 Congedo Matrimoniale</option>
+                                            <option value="congedo-matrimoniale">Congedo Matrimoniale</option>
+                                            <option value="festivita-soppresse">📆 Festività Soppresse</option>
                                         </select>
                                     </div>
                                     <div>
@@ -1503,6 +1509,7 @@ export default function MieiDati() {
                                     <option value="congedo-parentale">👶 Congedo Parentale</option>
                                     <option value="maternità">🤰Maternità</option>
                                     <option value="congedo-matrimoniale">🤍 Congedo Matrimoniale</option>
+                                    <option value="festivita-soppresse">📆 Festività Soppresse</option>
                                 </select>
                             </div>
 

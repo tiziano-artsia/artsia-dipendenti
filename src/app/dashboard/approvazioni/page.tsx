@@ -15,6 +15,7 @@ const getTipoColor = (tipo: string) => {
     if (t === 'smartworking')      return 'from-emerald-500 to-green-600';
     if (t === 'fuori-sede')        return 'from-cyan-500 to-teal-600';
     if (t === 'congedo-parentale') return 'from-pink-500 to-rose-600';
+    if (t === 'festivita-soppresse') return 'from-violet-500 to-purple-600';
     return 'from-zinc-500 to-slate-600';
 };
 
@@ -26,6 +27,7 @@ const getTipoEmoji = (tipo: string) => {
     if (t === 'smartworking')      return '🏠';
     if (t === 'fuori-sede')        return '📍';
     if (t === 'congedo-parentale') return '👶';
+    if (t === 'festivita-soppresse') return '📆';
     return '📋';
 };
 

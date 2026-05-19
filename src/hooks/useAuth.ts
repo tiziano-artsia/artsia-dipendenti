@@ -20,6 +20,22 @@ export interface AuthContextType {
     loading: boolean;
 }
 
+/** Restituisce true se il JWT è scaduto (o non valido) */
+function isTokenExpired(token: string): boolean {
+    try {
+        const payload = JSON.parse(atob(token.split('.')[1]));
+        // exp è in secondi
+        return Date.now() >= payload.exp * 1000;
+    } catch {
+        return true;
+    }
+}
+
+function clearSession() {
+    localStorage.removeItem('user');
+    localStorage.removeItem('token');
+}
+
 export function useAuth() {
     const [user, setUser] = useState<Employee | null>(null);
     const [token, setToken] = useState<string | null>(null);  // ← AGGIUNGI
@@ -28,6 +44,13 @@ export function useAuth() {
     useEffect(() => {
         const storedUser = localStorage.getItem('user');
         const storedToken = localStorage.getItem('token');  // ← AGGIUNGI
+
+        if (storedToken && isTokenExpired(storedToken)) {
+            // Token scaduto: pulisci subito senza loggare l'utente
+            clearSession();
+            setLoading(false);
+            return;
+        }
 
         if (storedUser) {
             try {
@@ -42,6 +65,33 @@ export function useAuth() {
         }
 
         setLoading(false);
+    }, []);
+
+    // Intercetta globalmente i 401 da fetch (token scaduto durante la sessione)
+    useEffect(() => {
+        const originalFetch = window.fetch.bind(window);
+        window.fetch = async (...args) => {
+            const response = await originalFetch(...args);
+            if (response.status === 401) {
+                const cloned = response.clone();
+                try {
+                    const data = await cloned.json();
+                    if (data?.error?.toLowerCase().includes('scadut') ||
+                        data?.error?.toLowerCase().includes('expired') ||
+                        data?.error?.toLowerCase().includes('invalid token') ||
+                        data?.error?.toLowerCase().includes('non autenticato')) {
+                        clearSession();
+                        setUser(null);
+                        setToken(null);
+                        window.location.href = '/login';
+                    }
+                } catch { /* risposta non JSON, ignora */ }
+            }
+            return response;
+        };
+        return () => {
+            window.fetch = originalFetch;
+        };
     }, []);
 
     const login = (userData: Employee, loginToken?: string) => {  // ← TOKEN PARAM
@@ -60,8 +110,7 @@ export function useAuth() {
         } catch (error) {
             console.error('Error deleting biometric credentials:', error);
         }
-        localStorage.removeItem('user');
-        localStorage.removeItem('token');  // ← PULISCI TOKEN
+        clearSession();
         setUser(null);
         setToken(null);  // ← RESET TOKEN
     };
@@ -70,4 +119,5 @@ export function useAuth() {
 
     return { user, token, login, logout, loading };  // ← TOKEN ESPORTO
 }
+
 

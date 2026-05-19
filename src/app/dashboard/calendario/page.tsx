@@ -36,7 +36,7 @@ interface Absence {
     dataInizio: string;
     dataFine?: string;
     durata: number;
-    tipo: "ferie" | "permesso" | "smartworking" | "malattia" | "festivita" |
+    tipo: "ferie" | "permesso" | "smartworking" | "malattia" | "festivita" | "festivita-soppresse" |
         "fuori-sede" | "congedo-parentale" | "maternità" | "congedo-matrimoniale";
     stato: "pending" | "approved" | "rejected";
     motivo?: string;
@@ -62,6 +62,7 @@ const getTipoLabel = (tipo: string): string => {
         'permesso': 'Permesso',
         'smartworking': 'Smartworking',
         'festivita': 'Festività',
+        'festivita-soppresse': 'Festività Soppresse',
         'fuori-sede': 'Fuori Sede',
         'congedo-parentale': 'Congedo Parentale',
         'maternità': 'Maternità',
@@ -77,6 +78,7 @@ const getTipoEmoji = (tipo: string): string => {
         'malattia': '🤒',
         'permesso': '⏰',
         'smartworking': '🏠',
+        'festivita-soppresse': '📆',
         'fuori-sede': '🏢️',
         'congedo-parentale': '👶',
         'maternità': '🤰',
@@ -95,6 +97,7 @@ const getTipoColor = (tipo: string): string => {
     if (t === 'congedo-parentale') return 'from-pink-500 to-pink-600 border-pink-400';
     if (t === 'maternità') return 'from-pink-400 to-rose-500 border-pink-400';
     if (t === 'congedo-matrimoniale') return 'from-amber-400 to-yellow-500 border-amber-400';
+    if (t === 'festivita-soppresse') return 'from-violet-500 to-purple-600 border-violet-400';
     return 'from-gray-500 to-gray-600 border-gray-400';
 };
 
@@ -152,7 +155,7 @@ export default function Calendario() {
             employeeId: item.employeeId,
             dataInizio: item.date || item.dataInizio,
             durata: item.duration || item.durata,
-            tipo: (item.type || item.tipo) as 'ferie' | 'permesso' | 'smartworking' | 'malattia' | 'fuori-sede' | 'congedo-parentale',
+            tipo: (item.type || item.tipo) as 'ferie' | 'permesso' | 'smartworking' | 'malattia' | 'fuori-sede' | 'congedo-parentale' | 'festivita-soppresse',
             stato: (item.status || item.stato) as 'pending' | 'approved' | 'rejected',
             motivo: item.reason || item.motivo,
         }));
@@ -547,6 +550,7 @@ export default function Calendario() {
                     malattia: number;
                     smartworking: number;
                     festivita: number;
+                    'festivita-soppresse': number;
                     'fuori-sede': number;
                     'congedo-parentale': number;
                     'maternià': number;
@@ -574,6 +578,7 @@ export default function Calendario() {
                     malattia: 0,
                     smartworking: 0,
                     festivita: giorniFestiviDelMese.length, //  Assegna automaticamente i giorni festivi
+                    'festivita-soppresse': 0,
                     'fuori-sede': 0,
                     'congedo-parentale': 0,
                     motivi: [],
@@ -610,6 +615,7 @@ export default function Calendario() {
                         malattia: 0,
                         smartworking: 0,
                         festivita: giorniFestiviDelMese.length,
+                        'festivita-soppresse': 0,
                         'fuori-sede': 0,
                         'congedo-parentale': 0,
                         motivi: [],
@@ -641,6 +647,8 @@ export default function Calendario() {
                     totaliPerDipendente[empName]['fuori-sede'] += a.durata;
                 } else if (tipoNorm === 'congedo-parentale') {
                     totaliPerDipendente[empName]['congedo-parentale'] += a.durata;
+                } else if (tipoNorm === 'festivita-soppresse') {
+                    totaliPerDipendente[empName]['festivita-soppresse'] += a.durata;
                 }
             });
 
@@ -650,6 +658,7 @@ export default function Calendario() {
             const haFestivita = giorniFestiviDelMese.length > 0;
             const haFuoriSede = dipendentiOrdinati.some((nome) => totaliPerDipendente[nome]['fuori-sede'] > 0);
             const haCongedoParentale = dipendentiOrdinati.some((nome) => totaliPerDipendente[nome]['congedo-parentale'] > 0);
+            const haFestivitaSoppresse = dipendentiOrdinati.some((nome) => totaliPerDipendente[nome]['festivita-soppresse'] > 0);
 
             const datiSheet: (string | number)[][] = [];
             datiSheet.push([`TOTALE MENSILE DI ${nomiMesi[mese]} ${anno}`]);
@@ -661,6 +670,7 @@ export default function Calendario() {
             if (haFestivita) headerRow.push('Festività (giorni)');
             if (haFuoriSede) headerRow.push('Fuori Sede (giorni)');
             if (haCongedoParentale) headerRow.push('Congedo Parentale (giorni)');
+            if (haFestivitaSoppresse) headerRow.push('Festività Soppresse (giorni)');
 
             headerRow.push('Motivi');
 
@@ -676,6 +686,7 @@ export default function Calendario() {
                 if (haFestivita) row.push(totali.festivita);
                 if (haFuoriSede) row.push(totali['fuori-sede']);
                 if (haCongedoParentale) row.push(totali['congedo-parentale']);
+                if (haFestivitaSoppresse) row.push(totali['festivita-soppresse']);
 
                 row.push(motiviStringa);
 
@@ -692,6 +703,7 @@ export default function Calendario() {
             if (haFestivita) colWidths.push({wch: 20});
             if (haFuoriSede) colWidths.push({wch: 20});
             if (haCongedoParentale) colWidths.push({wch: 25});
+            if (haFestivitaSoppresse) colWidths.push({wch: 28});
 
             colWidths.push({wch: 40});
 
@@ -914,7 +926,8 @@ export default function Calendario() {
             'congedo-parentale': 'Congedo Parentale',
             'maternità': 'Maternità',
             'congedo-matrimoniale': 'Congedo Matrimoniale',
-            'festivita': 'Festività'
+            'festivita': 'Festività',
+            'festivita-soppresse': 'Festività Soppresse'
         };
 
         const tipoNorm = tipo
@@ -1552,7 +1565,7 @@ export default function Calendario() {
                     </div>
 
                     <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 sm:gap-3">
-                        {['smartworking', 'ferie', 'malattia', 'permesso', 'fuori-sede', 'congedo-parentale','maternità','congedo-matrimoniale'].map((tipo) => (
+                        {['smartworking', 'ferie', 'malattia', 'permesso', 'fuori-sede', 'congedo-parentale','maternità','congedo-matrimoniale','festivita-soppresse'].map((tipo) => (
                             <button
                                 key={tipo}
                                 onClick={() => setFiltriAttivi((prev) => (prev.includes(tipo) ? prev.filter((t) => t !== tipo) : [...prev, tipo]))}
@@ -1603,7 +1616,7 @@ export default function Calendario() {
                     {legendaAperta && (
                         <div className="px-4 sm:px-6 pb-4 sm:pb-6 border-t border-white/50">
                             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 pt-4 sm:pt-6">
-                                {['ferie', 'malattia', 'permesso', 'smartworking', 'fuori-sede', 'congedo-parentale','maternità','congedo-matrimoniale' ].map((tipo) => (
+                                {['ferie', 'malattia', 'permesso', 'smartworking', 'fuori-sede', 'congedo-parentale','maternità','congedo-matrimoniale','festivita-soppresse' ].map((tipo) => (
                                     <div
                                         key={tipo}
                                         className={`flex items-center gap-3 px-4 py-3 rounded-xl border-2 shadow-md bg-gradient-to-r ${getTipoColor(tipo)} text-white`}
@@ -2129,6 +2142,7 @@ export default function Calendario() {
                                     <option value="smartworking">🏠 Smartworking</option>
                                     <option value="fuori-sede">✈️ Fuori Sede</option>
                                     <option value="congedo-parentale">👶 Congedo Parentale</option>
+                                    <option value="festivita-soppresse">📆 Festività Soppresse</option>
                                 </select>
                             </div>
 

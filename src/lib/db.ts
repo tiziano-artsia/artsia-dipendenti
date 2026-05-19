@@ -45,7 +45,7 @@ export async function connectDB() {
  */
 export type Role = "dipendente" | "manager" | "admin";
 export type Team = "Sviluppo" | "Digital" | "Bottega" | "Admin";
-export type AbsenceType = "ferie" | "permesso" | "smartworking" | "malattia" | "festivita" | "fuori-sede" | "congedo-parentale" | "maternità" | "congedo-matrimoniale";
+export type AbsenceType = "ferie" | "permesso" | "smartworking" | "malattia" | "festivita" | "festivita-soppresse" | "fuori-sede" | "congedo-parentale" | "maternità" | "congedo-matrimoniale";
 export type AbsenceStatus = "pending" | "approved" | "rejected";
 
 export type EmployeeDoc = {
@@ -124,7 +124,7 @@ const absenceSchema = new Schema<AbsenceDoc>(
         type: {
             type: String,
             required: true,
-            enum: ["ferie" , "permesso" , "smartworking" , "malattia" , "festivita" , "fuori-sede" , "congedo-parentale" , "maternità" , "congedo-matrimoniale"]
+            enum: ["ferie" , "permesso" , "smartworking" , "malattia" , "festivita" , "festivita-soppresse" , "fuori-sede" , "congedo-parentale" , "maternità" , "congedo-matrimoniale"]
         },
         dataInizio: { type: String, required: true }, // YYYY-MM-DD
         dataFine: { type: String, required: true },
@@ -144,6 +144,11 @@ const absenceSchema = new Schema<AbsenceDoc>(
 export const EmployeeModel: Model<EmployeeDoc> =
     mongoose.models.Employee || mongoose.model<EmployeeDoc>("Employee", employeeSchema);
 
+// Cancella il modello cached in development per evitare che l'enum obsoleto
+// venga riutilizzato dopo un hot-reload di Next.js
+if (process.env.NODE_ENV === 'development' && mongoose.models.Absence) {
+    delete (mongoose.models as any).Absence;
+}
 export const AbsenceModel: Model<AbsenceDoc> =
     mongoose.models.Absence || mongoose.model<AbsenceDoc>("Absence", absenceSchema);
 

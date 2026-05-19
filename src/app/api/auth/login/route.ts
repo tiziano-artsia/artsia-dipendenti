@@ -19,7 +19,7 @@ export async function POST(request: NextRequest) {
             );
         }
 
-        const user = await authenticateUser(email, password);  // ✅ Type-safe
+        const user = await authenticateUser(email, password);  //  Type-safe
 
         if (!user) {
             return NextResponse.json(
@@ -31,7 +31,7 @@ export async function POST(request: NextRequest) {
         const token = jwt.sign(
             { id: user.id, name: user.name, email: user.email, role: user.role },
             JWT_SECRET,
-            { expiresIn: '7d' }
+            { expiresIn: '1d' }
         );
 
         console.log('✅ LOGIN:', user.email, user.role);

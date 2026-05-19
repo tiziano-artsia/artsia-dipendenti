@@ -267,6 +267,7 @@ export default function AdminAssenze() {
                             <option value="fuori-sede">📍 Fuori sede</option>
                             <option value="festivita">🎉 Festività</option>
                             <option value="congedo-parentale">👨‍👩‍👧 Congedo parentale</option>
+                            <option value="festivita-soppresse">📆 Festività Soppresse</option>
                             <option value="maternita">🤰 Maternità</option>
                             <option value="congedo-matrimoniale">💒 Congedo matrimoniale</option>
                         </select>
